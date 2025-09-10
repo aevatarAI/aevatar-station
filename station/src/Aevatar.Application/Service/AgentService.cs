@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Application.Grains.Agents.Configuration;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
@@ -44,7 +45,6 @@ public class AgentService : ApplicationService, IAgentService
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
-    private readonly IOptionsMonitor<SystemLLMMetaInfoOptions> _systemLLMConfigOptions;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -55,8 +55,7 @@ public class AgentService : ApplicationService, IAgentService
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
-        IIndexingService indexingService,
-        IOptionsMonitor<SystemLLMMetaInfoOptions> systemLLMConfigOptions)
+        IIndexingService indexingService)
     {
         _clusterClient = clusterClient;
         _logger = logger;
@@ -67,7 +66,6 @@ public class AgentService : ApplicationService, IAgentService
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
-        _systemLLMConfigOptions = systemLLMConfigOptions;
     }
 
     public async Task<List<AgentTypeDto>> GetAllAgents()
@@ -100,9 +98,6 @@ public class AgentService : ApplicationService, IAgentService
                     // Get default values for backward compatibility
                     paramDto.DefaultValues =
                         GetConfigurationDefaultValues(kvp.Value.InitializationData.DtoType);
-
-                    // Check if agent has SystemLLMConfig and add it
-                    paramDto.SystemLLMConfigs = GetSystemLLMConfigsForAgent(kvp.Value.InitializationData);
                 }
             }
 
@@ -763,29 +758,28 @@ public class AgentService : ApplicationService, IAgentService
 
         return subAgentGrainIds;
     }
-    private DynamicDropDownContext CreateSchemaContextAsync() => new () { AIModelConfigs = _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs };
-
-    /// <summary>
-    /// Gets SystemLLM configurations for agent based on SystemLLM or modelId properties
-    /// </summary>
-    private List<SystemLLMConfig>? GetSystemLLMConfigsForAgent(Configuration initializationData)
+    private async Task<DynamicDropDownContext> CreateSchemaContextAsync()
     {
-        if (initializationData?.DtoType == null)
+        try
         {
-            return null;
+            // Get schema configuration from silo's SchemaConfigurationGAgent
+            var schemaConfigGrain = _clusterClient.GetGrain<ISchemaConfigurationGAgent>("default");
+            var context = await schemaConfigGrain.GetSchemaContextAsync();
+            
+            _logger.LogInformation("[AgentService] Retrieved schema context from silo with {ConfigCount} AI model configurations", 
+                context.AIModelConfigs?.Count ?? 0);
+            
+            return context;
         }
-
-        // Check for SystemLLM or modelId properties (case insensitive)
-        var properties = initializationData.DtoType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        var hasRelevantProperty = properties.Any(p => 
-            string.Equals(p.Name, "SystemLLM", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(p.Name, "modelId", StringComparison.OrdinalIgnoreCase));
-
-        if (hasRelevantProperty)
+        catch (Exception ex)
         {
-            return _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
+            _logger.LogError(ex, "[AgentService] Failed to retrieve schema context from silo, using empty context");
+            
+            // Return empty context as fallback
+            return new DynamicDropDownContext
+            {
+                AIModelConfigs = new List<SystemLLMConfigDto>()
+            };
         }
-
-        return null;
     }
 }

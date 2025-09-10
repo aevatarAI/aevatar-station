@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.ComponentModel;
+using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.Basic;
 using Aevatar.GAgents.GroupChat.Core.Dto;
 using Aevatar.GAgents.MCP.Options;
@@ -17,7 +18,7 @@ public class ChatAIGAgentConfigDto : GroupMemberConfigDto
 
     [Id(1)] 
     [Description("The system LLM configuration to use for AI chat functionality")]
-    [DynamicDropDown]
+    [DynamicDropDown("SystemLLMConfigs")]
     public string SystemLLM { get; set; } = "OpenAI";
 
     [Id(2)] 
