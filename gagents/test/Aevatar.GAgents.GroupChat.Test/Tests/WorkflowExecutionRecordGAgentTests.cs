@@ -52,8 +52,8 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         state.Status.ShouldBe(WorkflowExecutionStatus.Running);
         state.WorkUnitInfos.Count.ShouldBe(1);
         state.WorkUnitInfos.ShouldContain(o => o.GrainId == workerGrainId.ToString());
-        state.WorkUnitRecords.Count.ShouldBe(1);
-        state.WorkUnitRecords.ShouldContain(o => o.TargetAgentId == workerGrainId.ToString());
+        // Records are now created dynamically when StartExecuteWorkUnitEvent is received
+        state.WorkUnitRecords.Count.ShouldBe(0);
     }
 
     [Fact]

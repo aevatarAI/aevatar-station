@@ -30,26 +30,22 @@ public class WorkUnitExecutionRecord
     // Source agent (sender) information
     [Id(0)]
     public string? SourceAgentId { get; set; }
-    [Id(1)]
-    public string? SourceAgentName { get; set; }
     
     // Target agent (receiver) information  
-    [Id(2)]
+    [Id(1)]
     public string TargetAgentId { get; set; }
-    [Id(3)]
-    public string? TargetAgentName { get; set; }
     
     // Execution timing
-    [Id(4)]
+    [Id(2)]
     public DateTime StartTime { get; set; }
-    [Id(5)]
+    [Id(3)]
     public DateTime? EndTime { get; set; }
     
     // Execution details
-    [Id(6)]
+    [Id(4)]
     public WorkflowExecutionStatus Status { get; set; }
-    [Id(7)]
+    [Id(5)]
     public string InputData { get; set; }
-    [Id(8)]
+    [Id(6)]
     public string OutputData { get; set; }
 }
