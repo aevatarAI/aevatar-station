@@ -454,6 +454,35 @@ jobs:
             fi
           }
 
+
+          update_env_var() {
+            local deployment="$1"
+            local namespace="$2"
+            local env_name="$3"
+            local image_tag="$4"
+
+            # Get current env value
+            local current_value
+            current_value=$(kubectl get deployment "${deployment}" -n "${namespace}" \
+              -o jsonpath="{.spec.template.spec.containers[0].env[?(@.name==\"${env_name}\")].value}")
+
+            if [[ -z "$current_value" ]]; then
+              echo "❌ Env var ${env_name} not found in deployment ${deployment}"
+              return 1
+            fi
+
+            # Replace tag with new image_tag
+            local new_value
+            new_value=$(echo "$current_value" | sed "s/:.*/:${image_tag}/")
+
+            echo "🔄 Updating ${deployment} -> ${env_name}"
+            echo "   Current: $current_value"
+            echo "   New:     $new_value"
+
+            # Apply the change
+            kubectl set env deployment "${deployment}" -n "${namespace}" "${env_name}=${new_value}"
+          }
+
           echo "## ✅ Aevatar Ephemeral Test Deployment Summary" >> "$SUMMARY_FILE"
           echo "- Namespace: \`$NS\`" >> "$SUMMARY_FILE"
           echo "- Image Tag: \`$IMAGE_TAG\`" >> "$SUMMARY_FILE"
@@ -474,24 +503,9 @@ jobs:
             DEVELOPER_HOST_IMAGE="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.host:${IMAGE_TAG}"
             update_image_via_api "1" "$DEVELOPER_HOST_IMAGE" "Aevatar.Developer.Host"
 
-            echo "================================================"
-            echo "UPDATE CLIENT BASE IMAGE"
-            echo "================================================"
-            CURRENT_CLIENT_IMAGE_VALUE=$(kubectl get deployment ${PROJECT}-httpapi-host -n ${NS} -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="HostDeploy__HostClientImageName")].value}')
-            NEW_CLIENT_IMAGE_VALUE=$(echo "$CURRENT_VALUE" | sed "s/:.*/:${IMAGE_TAG}/")
-            echo $NEW_CLIENT_IMAGE_VALUE
-            
-            kubectl set env deployment ${PROJECT}-httpapi-host -n ${NS} HostDeploy__HostClientImageName="$NEW_CLIENT_IMAGE_VALUE"
-
-            DEVELOPER_SILO_IMAGE="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.silo:${IMAGE_TAG}"
-            update_image_via_api "0" "$DEVELOPER_SILO_IMAGE" "Aevatar.Developer.Silo"
-
-            echo "================================================"
-            echo "UPDATE SILO BASE IMAGE"
-            echo "================================================"
-            CURRENT_SILO_IMAGE_VALUE=$(kubectl get deployment ${PROJECT}-httpapi-host -n ${NS} -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="HostDeploy__HostSiloImageName")].value}')
-            NEW_SILO_IMAGE_VALUE=$(echo "$CURRENT_VALUE" | sed "s/:.*/:${IMAGE_TAG}/")
-            kubectl set env deployment ${PROJECT}-httpapi-host -n ${NS} HostDeploy__HostSiloImageName="$NEW_SILO_IMAGE_VALUE"
+            # update httpapi.host env once developer services are updated
+            update_env_var "${PROJECT}-httpapi-host" "$NS" "HostDeploy__HostClientImageName" "$IMAGE_TAG"
+            update_env_var "${PROJECT}-httpapi-host" "$NS" "HostDeploy__HostSiloImageName" "$IMAGE_TAG"
 
           elif [[ "$SERVICE" == "Aevatar.AuthServer" ]]; then
             update_deployment_if_exists "${PROJECT}-authserver"
@@ -505,25 +519,12 @@ jobs:
             # Update Developer.Host via API (hostType=1 for client)
             FULL_IMAGE_NAME="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.host:${IMAGE_TAG}"
             update_image_via_api "1" "$FULL_IMAGE_NAME" "Aevatar.Developer.Host"
-
-            echo "================================================"
-            echo "UPDATE CLIENT BASE IMAGE"
-            echo "================================================"
-
-            CURRENT_CLIENT_IMAGE_VALUE=$(kubectl get deployment ${PROJECT}-httpapi-host -n ${NS} -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="HostDeploy__HostClientImageName")].value}')
-            NEW_CLIENT_IMAGE_VALUE=$(echo "$CURRENT_VALUE" | sed "s/:.*/:${IMAGE_TAG}/")
-            kubectl set env deployment ${PROJECT}-httpapi-host -n ${NS} HostDeploy__HostClientImageName="$NEW_CLIENT_IMAGE_VALUE"
+            update_env_var "${PROJECT}-httpapi-host" "$NS" "HostDeploy__HostClientImageName" "$IMAGE_TAG"
           elif [[ "$SERVICE" == "Aevatar.Developer.Silo" ]]; then
             # Update Developer.Silo via API (hostType=0 for silo)
             FULL_IMAGE_NAME="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.silo:${IMAGE_TAG}"
             update_image_via_api "0" "$FULL_IMAGE_NAME" "Aevatar.Developer.Silo"
-
-            echo "================================================"
-            echo "UPDATE SILO BASE IMAGE"
-            echo "================================================"
-            CURRENT_SILO_IMAGE_VALUE=$(kubectl get deployment ${PROJECT}-httpapi-host -n ${NS} -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="HostDeploy__HostSiloImageName")].value}')
-            NEW_SILO_IMAGE_VALUE=$(echo "$CURRENT_VALUE" | sed "s/:.*/:${IMAGE_TAG}/")
-            kubectl set env deployment ${PROJECT}-httpapi-host -n ${NS} HostDeploy__HostSiloImageName="$NEW_SILO_IMAGE_VALUE"
+            update_env_var "${PROJECT}-httpapi-host" "$NS" "HostDeploy__HostSiloImageName" "$IMAGE_TAG"
           else
             echo "::error ::❌ Invalid service input: $SERVICE"
             echo "- ❌ Invalid service: \`$SERVICE\`" >> "$SUMMARY_FILE"
