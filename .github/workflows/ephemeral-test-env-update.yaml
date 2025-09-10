@@ -507,6 +507,9 @@ jobs:
             DEVELOPER_HOST_IMAGE="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.host:${IMAGE_TAG}"
             update_image_via_api "1" "$DEVELOPER_HOST_IMAGE" "Aevatar.Developer.Host"
 
+            DEVELOPER_SILO_IMAGE="${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/aevatar.developer.silo:${IMAGE_TAG}"
+            update_image_via_api "0" "$DEVELOPER_SILO_IMAGE" "Aevatar.Developer.Silo"
+
             # update httpapi.host env once developer services are updated
             update_env_var "${PROJECT}-httpapi-host" "$NS" "HostDeploy__HostClientImageName" "$IMAGE_TAG"
             update_env_var "${PROJECT}-httpapi-host" "$NS" "HostDeploy__HostSiloImageName" "$IMAGE_TAG"
