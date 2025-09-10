@@ -63,15 +63,4 @@ namespace Aevatar.Controllers
         }
 
     }
-
-    /// <summary>
-    /// 生成工作流请求DTO
-    /// </summary>
-    public class GenerateWorkflowRequestDto
-    {
-        /// <summary>
-        /// 用户目标描述
-        /// </summary>
-        public string UserGoal { get; set; } = string.Empty;
-    }
 }
