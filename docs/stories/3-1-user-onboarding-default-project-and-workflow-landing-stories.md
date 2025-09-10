@@ -182,6 +182,6 @@ As a user joining via invite or after deleting my only project, I want onboardin
 
 **Given** I previously deleted my only project
 **When** I next log in without other projects
-**Then** a new default project is created and I am redirected to its Workflow page
+**Then** no new default project is created and I am redirected organisation projects page
 
 
