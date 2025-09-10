@@ -6,4 +6,5 @@ public enum LLMProviderEnum
     OpenAI,
     DeepSeek,
     Google,
+    BytePlus,
 }
