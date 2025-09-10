@@ -48,4 +48,8 @@ public class WorkUnitExecutionRecord
     public string InputData { get; set; }
     [Id(6)]
     public string OutputData { get; set; }
+    
+    // Current state snapshot
+    [Id(7)]
+    public string? CurrentStateSnapshot { get; set; }
 }

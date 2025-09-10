@@ -21,26 +21,60 @@ public class WorkflowExecutionRecordGAgent :
     /// <summary>
     /// Capture the current state snapshot of a target GAgent
     /// </summary>
-    private Task<string?> CaptureAgentStateAsync(string targetAgentId)
+    private async Task<string?> CaptureAgentStateAsync(string targetAgentId)
     {
         try
         {
-            // For now, we'll create a simple snapshot with basic info
-            // In the future, this could be enhanced to call specific GAgent methods
-            var snapshot = new
-            {
-                targetAgentId = targetAgentId,
-                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                note = "Basic state snapshot - enhanced state capture can be implemented later"
-            };
+            var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
             
-            return Task.FromResult<string?>(System.Text.Json.JsonSerializer.Serialize(snapshot));
+            // Parse the GrainId to get the Guid
+            if (GrainId.TryParse(targetAgentId, out var grainId))
+            {
+                // Get the target GAgent
+                var targetGAgent = await gAgentFactory.GetGAgentAsync(grainId);
+                
+                // Try to get state if the grain supports IStateGAgent interface
+                if (targetGAgent is IStateGAgent<StateBase> stateGAgent)
+                {
+                    var state = await stateGAgent.GetStateAsync();
+                    var snapshot = new
+                    {
+                        targetAgentId = targetAgentId,
+                        timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        stateType = state.GetType().Name,
+                        state = state
+                    };
+                    return System.Text.Json.JsonSerializer.Serialize(snapshot);
+                }
+                else
+                {
+                    // Fallback to basic info if state is not accessible
+                    var basicSnapshot = new
+                    {
+                        targetAgentId = targetAgentId,
+                        timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        note = "State not accessible - GAgent does not implement IStateGAgent<StateBase>"
+                    };
+                    return System.Text.Json.JsonSerializer.Serialize(basicSnapshot);
+                }
+            }
         }
         catch (Exception ex)
         {
             Logger.LogWarning("Failed to capture agent state for {TargetAgentId}: {Error}", targetAgentId, ex.Message);
-            return Task.FromResult<string?>(null);
+            
+            // Create fallback snapshot with error info
+            var errorSnapshot = new
+            {
+                targetAgentId = targetAgentId,
+                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                error = ex.Message,
+                note = "State capture failed - see error for details"
+            };
+            return System.Text.Json.JsonSerializer.Serialize(errorSnapshot);
         }
+        
+        return null;
     }
 
     [EventHandler]
@@ -87,6 +121,13 @@ public class WorkflowExecutionRecordGAgent :
     [EventHandler]
     public async Task HandleEventAsync(ChatResponseEvent @event)
     {
+        // Check if this event belongs to the current workflow
+        if (@event.BlackboardId != State.WorkflowId)
+        {
+            return; // Not our workflow, ignore
+        }
+        
+        // The publisher of ChatResponseEvent is the target agent that processed the request
         var targetAgentId = @event.PublisherGrainId.ToString();
         
         // Capture current state snapshot of target agent after completion
@@ -105,7 +146,7 @@ public class WorkflowExecutionRecordGAgent :
                 RaiseEvent(new FinishExecuteWorkUnitLogEvent
                 {
                     TargetAgentId = targetAgentId,
-                    SourceAgentId = record.SourceAgentId,
+                    SourceAgentId = record.SourceAgentId, // Use the original SourceAgentId from the record
                     OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content),
                     CurrentStateSnapshot = stateSnapshot
                 });
@@ -178,6 +219,7 @@ public class WorkflowExecutionRecordGAgent :
                             existingRecord.StartTime = DateTime.UtcNow;
                             existingRecord.Status = WorkflowExecutionStatus.Running;
                             existingRecord.InputData = startExecuteWorkUnitLogEvent.InputData;
+                            existingRecord.CurrentStateSnapshot = startExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                         }
                         else
                         {
@@ -186,6 +228,7 @@ public class WorkflowExecutionRecordGAgent :
                             {
                                 existingRecord.InputData = startExecuteWorkUnitLogEvent.InputData;
                                 existingRecord.SourceAgentId = startExecuteWorkUnitLogEvent.SourceAgentId;
+                                existingRecord.CurrentStateSnapshot = startExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                             }
                         }
                     }
@@ -198,7 +241,8 @@ public class WorkflowExecutionRecordGAgent :
                         SourceAgentId = startExecuteWorkUnitLogEvent.SourceAgentId,
                         StartTime = DateTime.UtcNow,
                         Status = WorkflowExecutionStatus.Running,
-                        InputData = startExecuteWorkUnitLogEvent.InputData
+                        InputData = startExecuteWorkUnitLogEvent.InputData,
+                        CurrentStateSnapshot = startExecuteWorkUnitLogEvent.CurrentStateSnapshot
                     };
                     state.WorkUnitRecords.Add(newRecord);
                 }
@@ -216,6 +260,7 @@ public class WorkflowExecutionRecordGAgent :
                         targetRecord.EndTime = DateTime.UtcNow;
                         targetRecord.Status = WorkflowExecutionStatus.Completed;
                         targetRecord.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                        targetRecord.CurrentStateSnapshot = finishExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                     }
                 }
                 else
@@ -230,6 +275,7 @@ public class WorkflowExecutionRecordGAgent :
                         targetRecord.EndTime = DateTime.UtcNow;
                         targetRecord.Status = WorkflowExecutionStatus.Completed;
                         targetRecord.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                        targetRecord.CurrentStateSnapshot = finishExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                     }
                 }
                 break;

@@ -64,7 +64,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         await groupAgent.RegisterAsync(recordAgent);
         var workerGrainId = groupAgent.GetGrainId();
 
-        await StartExecuteWorkflowAsync(groupAgent, workerGrainId);
+        var workflowId = await StartExecuteWorkflowAsync(groupAgent, workerGrainId);
 
         var finishExecuteWorkflowEvent = new GroupChatFinishEvent
         {
@@ -85,7 +85,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         await groupAgent.RegisterAsync(recordAgent);
         var workerGrainId = groupAgent.GetGrainId();
 
-        await StartExecuteWorkflowAsync(groupAgent, workerGrainId);
+        var workflowId = await StartExecuteWorkflowAsync(groupAgent, workerGrainId);
 
         var startExecuteGrain = new StartExecuteWorkUnitEvent
         {
@@ -104,12 +104,13 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
     [Fact]
     public async Task Handle_ChatResponseEvent_Test()
     {
-        var groupAgent = await _agentFactory.GetGAgentAsync<IGroupGAgent>(Guid.NewGuid());
+        var workerGuid = Guid.NewGuid();
+        var groupAgent = await _agentFactory.GetGAgentAsync<IGroupGAgent>(workerGuid);
         var recordAgent = await _agentFactory.GetGAgentAsync<IWorkflowExecutionRecordGAgent>(Guid.NewGuid());
         await groupAgent.RegisterAsync(recordAgent);
         var workerGrainId = groupAgent.GetGrainId();
 
-        await StartExecuteWorkflowAsync(groupAgent, workerGrainId);
+        var workflowId = await StartExecuteWorkflowAsync(groupAgent, workerGrainId);
 
         var startExecuteGrain = new StartExecuteWorkUnitEvent
         {
@@ -126,6 +127,8 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
 
         var finishExecuteGrainA = new ChatResponseEvent
         {
+            BlackboardId = workflowId,
+            MemberId = workerGuid,
             PublisherGrainId = workerGrainId,
             ChatResponse = new ChatResponse
             {
@@ -144,15 +147,18 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
     [Fact]
     public async Task IncorrectSequence_Test()
     {
-        var groupAgent = await _agentFactory.GetGAgentAsync<IGroupGAgent>(Guid.NewGuid());
+        var workerGuid = Guid.NewGuid();
+        var groupAgent = await _agentFactory.GetGAgentAsync<IGroupGAgent>(workerGuid);
         var recordAgent = await _agentFactory.GetGAgentAsync<IWorkflowExecutionRecordGAgent>(Guid.NewGuid());
         await groupAgent.RegisterAsync(recordAgent);
         var workerGrainId = groupAgent.GetGrainId();
 
-        await StartExecuteWorkflowAsync(groupAgent, workerGrainId);
+        var workflowId = await StartExecuteWorkflowAsync(groupAgent, workerGrainId);
 
         var finishExecuteGrainA = new ChatResponseEvent
         {
+            BlackboardId = workflowId,
+            MemberId = workerGuid,
             PublisherGrainId = workerGrainId,
             ChatResponse = new ChatResponse
             {
@@ -181,7 +187,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         grainARecord.InputData.ShouldBe(JsonSerializer.Serialize(startExecuteGrain.CoordinatorMessages));
     }
 
-    private async Task StartExecuteWorkflowAsync(IGroupGAgent groupAgent, GrainId workerGrainId)
+    private async Task<Guid> StartExecuteWorkflowAsync(IGroupGAgent groupAgent, GrainId workerGrainId)
     {
         var startExecuteWorkflowEvent = new StartExecuteWorkflowEvent
         {
@@ -199,5 +205,6 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
 
         await groupAgent.PublishEventAsync(startExecuteWorkflowEvent);
         await Task.Delay(1000);
+        return startExecuteWorkflowEvent.WorkflowId;
     }
 }
