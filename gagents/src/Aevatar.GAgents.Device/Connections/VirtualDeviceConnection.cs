@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace Aevatar.GAgents.Device.Connections;
 
 /// <summary>
-/// 虚拟设备连接实现 - 用于开发、测试和演示
+/// Virtual device connection implementation - for development, testing and demonstration
 /// </summary>
 public class VirtualDeviceConnection : IDeviceConnection
 {
@@ -44,60 +44,60 @@ public class VirtualDeviceConnection : IDeviceConnection
 
     public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("正在连接虚拟设备: {DeviceId} ({DeviceName})", DeviceId, DeviceName);
+        _logger.LogInformation("Connecting to virtual device: {DeviceId} ({DeviceName})", DeviceId, DeviceName);
         
-        ChangeStatus(DeviceConnectionStatus.Connecting, "正在连接");
+        ChangeStatus(DeviceConnectionStatus.Connecting, "Connecting");
         
-        // 模拟连接延迟
+        // Simulate connection delay
         await Task.Delay(1000, cancellationToken);
         
         if (cancellationToken.IsCancellationRequested)
         {
-            ChangeStatus(DeviceConnectionStatus.Disconnected, "连接被取消");
+            ChangeStatus(DeviceConnectionStatus.Disconnected, "Connection cancelled");
             return false;
         }
         
-        // 模拟连接成功率（95%）
+        // Simulate connection success rate (95%)
         if (_random.NextDouble() < 0.95)
         {
-            ChangeStatus(DeviceConnectionStatus.Connected, "连接成功");
+            ChangeStatus(DeviceConnectionStatus.Connected, "Connection successful");
             StartSimulation();
-            _logger.LogInformation("虚拟设备连接成功: {DeviceId}", DeviceId);
+            _logger.LogInformation("Virtual device connected successfully: {DeviceId}", DeviceId);
             return true;
         }
         else
         {
-            ChangeStatus(DeviceConnectionStatus.Error, "连接失败");
-            _logger.LogWarning("虚拟设备连接失败: {DeviceId}", DeviceId);
+            ChangeStatus(DeviceConnectionStatus.Error, "Connection failed");
+            _logger.LogWarning("Virtual device connection failed: {DeviceId}", DeviceId);
             return false;
         }
     }
 
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
-        _logger.LogInformation("正在断开虚拟设备连接: {DeviceId}", DeviceId);
+        _logger.LogInformation("Disconnecting virtual device: {DeviceId}", DeviceId);
         
         StopSimulation();
-        ChangeStatus(DeviceConnectionStatus.Disconnected, "主动断开");
+        ChangeStatus(DeviceConnectionStatus.Disconnected, "Manually disconnected");
         
-        // 模拟断开延迟
+        // Simulate disconnect delay
         await Task.Delay(500, cancellationToken);
         
-        _logger.LogInformation("虚拟设备已断开连接: {DeviceId}", DeviceId);
+        _logger.LogInformation("Virtual device disconnected: {DeviceId}", DeviceId);
     }
 
     public Task<object?> ReadPropertyAsync(string propertyName, CancellationToken cancellationToken = default)
     {
         if (_status != DeviceConnectionStatus.Connected)
-            throw new InvalidOperationException("设备未连接");
+            throw new InvalidOperationException("Device not connected");
 
         if (!_properties.TryGetValue(propertyName, out var property))
-            throw new ArgumentException($"属性 '{propertyName}' 不存在", nameof(propertyName));
+            throw new ArgumentException($"Property '{propertyName}' does not exist", nameof(propertyName));
 
         if (!property.IsReadable)
-            throw new InvalidOperationException($"属性 '{propertyName}' 不可读");
+            throw new InvalidOperationException($"Property '{propertyName}' is not readable");
 
-        _logger.LogDebug("读取虚拟设备属性: {PropertyName} = {Value}", propertyName, property.Value);
+        _logger.LogDebug("Reading virtual device property: {PropertyName} = {Value}", propertyName, property.Value);
         
         return Task.FromResult(property.Value);
     }
@@ -105,38 +105,38 @@ public class VirtualDeviceConnection : IDeviceConnection
     public Task<bool> WritePropertyAsync(string propertyName, object value, CancellationToken cancellationToken = default)
     {
         if (_status != DeviceConnectionStatus.Connected)
-            throw new InvalidOperationException("设备未连接");
+            throw new InvalidOperationException("Device not connected");
 
         if (!_properties.TryGetValue(propertyName, out var property))
-            throw new ArgumentException($"属性 '{propertyName}' 不存在", nameof(propertyName));
+            throw new ArgumentException($"Property '{propertyName}' does not exist", nameof(propertyName));
 
         if (!property.IsWritable)
-            throw new InvalidOperationException($"属性 '{propertyName}' 不可写");
+            throw new InvalidOperationException($"Property '{propertyName}' is not writable");
 
-        // 验证值类型
+        // Validate value type
         if (value != null && !property.PropertyType.IsAssignableFrom(value.GetType()))
         {
-            // 尝试类型转换
+            // Try type conversion
             try
             {
                 value = Convert.ChangeType(value, property.PropertyType);
             }
             catch
             {
-                throw new ArgumentException($"值类型不匹配，期望 {property.PropertyType.Name}，实际 {value.GetType().Name}");
+                throw new ArgumentException($"Value type mismatch, expected {property.PropertyType.Name}, actual {value.GetType().Name}");
             }
         }
 
-        // 验证数值范围
+        // Validate numeric range
         if (property.MinValue != null || property.MaxValue != null)
         {
             if (value is IComparable comparable)
             {
                 if (property.MinValue != null && comparable.CompareTo(property.MinValue) < 0)
-                    throw new ArgumentOutOfRangeException(nameof(value), $"值小于最小值 {property.MinValue}");
+                    throw new ArgumentOutOfRangeException(nameof(value), $"Value less than minimum {property.MinValue}");
                 
                 if (property.MaxValue != null && comparable.CompareTo(property.MaxValue) > 0)
-                    throw new ArgumentOutOfRangeException(nameof(value), $"值大于最大值 {property.MaxValue}");
+                    throw new ArgumentOutOfRangeException(nameof(value), $"Value greater than maximum {property.MaxValue}");
             }
         }
 
@@ -144,10 +144,10 @@ public class VirtualDeviceConnection : IDeviceConnection
         property.Value = value;
         property.LastUpdated = DateTime.UtcNow;
 
-        _logger.LogInformation("写入虚拟设备属性: {PropertyName} = {Value} (旧值: {OldValue})", 
+        _logger.LogInformation("Writing virtual device property: {PropertyName} = {Value} (old value: {OldValue})", 
             propertyName, value, oldValue);
 
-        // 触发属性变化事件
+        // Trigger property change event
         PropertyChanged?.Invoke(this, new DevicePropertyChangedEventArgs
         {
             PropertyName = propertyName,
@@ -162,32 +162,32 @@ public class VirtualDeviceConnection : IDeviceConnection
     public Task<DeviceActionResult> ExecuteActionAsync(string actionName, Dictionary<string, object>? parameters = null, CancellationToken cancellationToken = default)
     {
         if (_status != DeviceConnectionStatus.Connected)
-            throw new InvalidOperationException("设备未连接");
+            throw new InvalidOperationException("Device not connected");
 
         if (!_supportedActions.TryGetValue(actionName, out var action))
-            throw new ArgumentException($"操作 '{actionName}' 不存在", nameof(actionName));
+            throw new ArgumentException($"Action '{actionName}' does not exist", nameof(actionName));
 
         var startTime = DateTime.UtcNow;
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         try
         {
-            _logger.LogInformation("执行虚拟设备操作: {ActionName}", actionName);
+            _logger.LogInformation("Executing virtual device action: {ActionName}", actionName);
 
-            // 验证参数
+            // Validate parameters
             parameters ??= new Dictionary<string, object>();
             foreach (var param in action.Parameters)
             {
                 if (param.Value.IsRequired && !parameters.ContainsKey(param.Key))
-                    throw new ArgumentException($"缺少必需参数: {param.Key}");
+                    throw new ArgumentException($"Missing required parameter: {param.Key}");
             }
 
-            // 模拟操作执行
+            // Simulate action execution
             var result = SimulateActionExecution(actionName, parameters);
             
             stopwatch.Stop();
 
-            _logger.LogInformation("虚拟设备操作执行完成: {ActionName}, 耗时: {ElapsedMs}ms", 
+            _logger.LogInformation("Virtual device action execution completed: {ActionName}, duration: {ElapsedMs}ms", 
                 actionName, stopwatch.ElapsedMilliseconds);
 
             return Task.FromResult(new DeviceActionResult
@@ -202,7 +202,7 @@ public class VirtualDeviceConnection : IDeviceConnection
         {
             stopwatch.Stop();
             
-            _logger.LogError(ex, "虚拟设备操作执行失败: {ActionName}", actionName);
+            _logger.LogError(ex, "Virtual device action execution failed: {ActionName}", actionName);
 
             return Task.FromResult(new DeviceActionResult
             {
@@ -216,17 +216,17 @@ public class VirtualDeviceConnection : IDeviceConnection
 
     public Task<DeviceHealthStatus> GetHealthStatusAsync(CancellationToken cancellationToken = default)
     {
-        var isHealthy = _status == DeviceConnectionStatus.Connected && _random.NextDouble() > 0.1; // 10%概率不健康
+        var isHealthy = _status == DeviceConnectionStatus.Connected && _random.NextDouble() > 0.1; // 10% probability unhealthy
         
         var healthStatus = new DeviceHealthStatus
         {
             IsHealthy = isHealthy,
-            StatusDescription = isHealthy ? "设备运行正常" : "设备存在警告",
+            StatusDescription = isHealthy ? "Device running normally" : "Device has warnings",
             LastCheckTime = DateTime.UtcNow,
             Details = new Dictionary<string, object>
             {
                 ["ConnectionStatus"] = _status.ToString(),
-                ["Uptime"] = DateTime.UtcNow - (DateTime.UtcNow.AddHours(-1)), // 模拟运行时间
+                ["Uptime"] = DateTime.UtcNow - (DateTime.UtcNow.AddHours(-1)), // Simulate uptime
                 ["MemoryUsage"] = $"{_random.Next(30, 80)}%",
                 ["CPUUsage"] = $"{_random.Next(5, 25)}%",
                 ["Temperature"] = $"{_random.Next(35, 65)}°C"
@@ -242,27 +242,26 @@ public class VirtualDeviceConnection : IDeviceConnection
         {
             StopSimulation();
             _disposed = true;
-            _logger.LogInformation("虚拟设备连接已释放: {DeviceId}", DeviceId);
+            _logger.LogInformation("Virtual device connection disposed: {DeviceId}", DeviceId);
         }
     }
 
     private void InitializeVirtualDevice()
     {
-        // 根据设备类型初始化不同的属性和操作
+        // Initialize different properties and actions based on device type
         switch (DeviceType.ToLowerInvariant())
         {
             case "smartlight":
-            case "智能灯泡":
+            case "smart light":
                 InitializeSmartLight();
                 break;
                 
             case "temperaturesensor":
-            case "温度传感器":
+            case "temperature sensor":
                 InitializeTemperatureSensor();
                 break;
                 
             case "thermostat":
-            case "温控器":
                 InitializeThermostat();
                 break;
                 
@@ -274,12 +273,12 @@ public class VirtualDeviceConnection : IDeviceConnection
 
     private void InitializeSmartLight()
     {
-        // 智能灯泡属性
+        // Smart light properties
         _properties["Power"] = new DeviceProperty
         {
             Name = "Power",
-            DisplayName = "电源状态",
-            Description = "灯泡的开关状态",
+            DisplayName = "Power Status",
+            Description = "Light bulb power on/off status",
             PropertyType = typeof(bool),
             Value = false,
             IsReadable = true,
@@ -289,8 +288,8 @@ public class VirtualDeviceConnection : IDeviceConnection
         _properties["Brightness"] = new DeviceProperty
         {
             Name = "Brightness",
-            DisplayName = "亮度",
-            Description = "灯泡亮度百分比",
+            DisplayName = "Brightness",
+            Description = "Light bulb brightness percentage",
             PropertyType = typeof(int),
             Value = 100,
             IsReadable = true,
@@ -303,41 +302,41 @@ public class VirtualDeviceConnection : IDeviceConnection
         _properties["Color"] = new DeviceProperty
         {
             Name = "Color",
-            DisplayName = "颜色",
-            Description = "灯泡颜色（RGB十六进制）",
+            DisplayName = "Color",
+            Description = "Light bulb color (RGB hex)",
             PropertyType = typeof(string),
             Value = "#FFFFFF",
             IsReadable = true,
             IsWritable = true
         };
 
-        // 智能灯泡操作
+        // Smart light actions
         _supportedActions["TurnOn"] = new DeviceAction
         {
             Name = "TurnOn",
-            DisplayName = "开灯",
-            Description = "打开智能灯泡"
+            DisplayName = "Turn On",
+            Description = "Turn on the smart light bulb"
         };
 
         _supportedActions["TurnOff"] = new DeviceAction
         {
             Name = "TurnOff",
-            DisplayName = "关灯",
-            Description = "关闭智能灯泡"
+            DisplayName = "Turn Off",
+            Description = "Turn off the smart light bulb"
         };
 
         _supportedActions["SetBrightness"] = new DeviceAction
         {
             Name = "SetBrightness",
-            DisplayName = "设置亮度",
-            Description = "设置灯泡亮度",
+            DisplayName = "Set Brightness",
+            Description = "Set light bulb brightness",
             Parameters = new Dictionary<string, DeviceActionParameter>
             {
                 ["brightness"] = new DeviceActionParameter
                 {
                     Name = "brightness",
-                    DisplayName = "亮度值",
-                    Description = "亮度百分比 (0-100)",
+                    DisplayName = "Brightness Value",
+                    Description = "Brightness percentage (0-100)",
                     ParameterType = typeof(int),
                     IsRequired = true
                 }
@@ -347,12 +346,12 @@ public class VirtualDeviceConnection : IDeviceConnection
 
     private void InitializeTemperatureSensor()
     {
-        // 温度传感器属性
+        // Temperature sensor properties
         _properties["Temperature"] = new DeviceProperty
         {
             Name = "Temperature",
-            DisplayName = "温度",
-            Description = "当前环境温度",
+            DisplayName = "Temperature",
+            Description = "Current ambient temperature",
             PropertyType = typeof(double),
             Value = 25.0,
             IsReadable = true,
@@ -365,8 +364,8 @@ public class VirtualDeviceConnection : IDeviceConnection
         _properties["Humidity"] = new DeviceProperty
         {
             Name = "Humidity",
-            DisplayName = "湿度",
-            Description = "当前环境湿度",
+            DisplayName = "Humidity",
+            Description = "Current ambient humidity",
             PropertyType = typeof(double),
             Value = 60.0,
             IsReadable = true,
@@ -376,23 +375,23 @@ public class VirtualDeviceConnection : IDeviceConnection
             MaxValue = 100.0
         };
 
-        // 温度传感器操作
+        // Temperature sensor actions
         _supportedActions["Calibrate"] = new DeviceAction
         {
             Name = "Calibrate",
-            DisplayName = "校准",
-            Description = "校准温度传感器"
+            DisplayName = "Calibrate",
+            Description = "Calibrate temperature sensor"
         };
     }
 
     private void InitializeThermostat()
     {
-        // 温控器属性
+        // Thermostat properties
         _properties["CurrentTemperature"] = new DeviceProperty
         {
             Name = "CurrentTemperature",
-            DisplayName = "当前温度",
-            Description = "当前室内温度",
+            DisplayName = "Current Temperature",
+            Description = "Current indoor temperature",
             PropertyType = typeof(double),
             Value = 22.0,
             IsReadable = true,
@@ -403,8 +402,8 @@ public class VirtualDeviceConnection : IDeviceConnection
         _properties["TargetTemperature"] = new DeviceProperty
         {
             Name = "TargetTemperature",
-            DisplayName = "目标温度",
-            Description = "目标室内温度",
+            DisplayName = "Target Temperature",
+            Description = "Target indoor temperature",
             PropertyType = typeof(double),
             Value = 24.0,
             IsReadable = true,
@@ -417,26 +416,26 @@ public class VirtualDeviceConnection : IDeviceConnection
         _properties["Mode"] = new DeviceProperty
         {
             Name = "Mode",
-            DisplayName = "工作模式",
-            Description = "温控器工作模式",
+            DisplayName = "Working Mode",
+            Description = "Thermostat working mode",
             PropertyType = typeof(string),
             Value = "Auto",
             IsReadable = true,
             IsWritable = true
         };
 
-        // 温控器操作
+        // Thermostat actions
         _supportedActions["SetMode"] = new DeviceAction
         {
             Name = "SetMode",
-            DisplayName = "设置模式",
-            Description = "设置温控器工作模式",
+            DisplayName = "Set Mode",
+            Description = "Set thermostat working mode",
             Parameters = new Dictionary<string, DeviceActionParameter>
             {
                 ["mode"] = new DeviceActionParameter
                 {
                     Name = "mode",
-                    DisplayName = "工作模式",
+                    DisplayName = "Working Mode",
                     Description = "Auto/Heat/Cool/Off",
                     ParameterType = typeof(string),
                     IsRequired = true
@@ -447,12 +446,12 @@ public class VirtualDeviceConnection : IDeviceConnection
 
     private void InitializeGenericDevice()
     {
-        // 通用设备属性
+        // Generic device properties
         _properties["Status"] = new DeviceProperty
         {
             Name = "Status",
-            DisplayName = "状态",
-            Description = "设备状态",
+            DisplayName = "Status",
+            Description = "Device status",
             PropertyType = typeof(string),
             Value = "Ready",
             IsReadable = true,
@@ -462,20 +461,20 @@ public class VirtualDeviceConnection : IDeviceConnection
         _properties["Value"] = new DeviceProperty
         {
             Name = "Value",
-            DisplayName = "数值",
-            Description = "设备数值",
+            DisplayName = "Value",
+            Description = "Device value",
             PropertyType = typeof(double),
             Value = 0.0,
             IsReadable = true,
             IsWritable = true
         };
 
-        // 通用设备操作
+        // Generic device actions
         _supportedActions["Reset"] = new DeviceAction
         {
             Name = "Reset",
-            DisplayName = "重置",
-            Description = "重置设备"
+            DisplayName = "Reset",
+            Description = "Reset device"
         };
     }
 
@@ -486,7 +485,7 @@ public class VirtualDeviceConnection : IDeviceConnection
 
         if (oldStatus != newStatus)
         {
-            _logger.LogInformation("虚拟设备状态变化: {DeviceId}, {OldStatus} -> {NewStatus}, 原因: {Reason}", 
+            _logger.LogInformation("Virtual device status change: {DeviceId}, {OldStatus} -> {NewStatus}, reason: {Reason}", 
                 DeviceId, oldStatus, newStatus, reason);
 
             StatusChanged?.Invoke(this, new DeviceConnectionStatusChangedEventArgs
@@ -501,7 +500,7 @@ public class VirtualDeviceConnection : IDeviceConnection
 
     private void StartSimulation()
     {
-        // 启动模拟定时器，定期更新传感器数据
+        // Start simulation timer to periodically update sensor data
         _simulationTimer = new Timer(SimulateDeviceData, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10));
     }
 
@@ -517,7 +516,7 @@ public class VirtualDeviceConnection : IDeviceConnection
 
         try
         {
-            // 模拟传感器数据变化
+            // Simulate sensor data changes
             foreach (var property in _properties.Values.Where(p => p.IsReadable && !p.IsWritable))
             {
                 var oldValue = property.Value;
@@ -571,7 +570,7 @@ public class VirtualDeviceConnection : IDeviceConnection
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "模拟设备数据时发生错误: {DeviceId}", DeviceId);
+            _logger.LogError(ex, "Error occurred while simulating device data: {DeviceId}", DeviceId);
         }
     }
 
@@ -594,7 +593,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
-                return "灯泡已打开";
+                return "Light bulb turned on";
 
             case "TurnOff":
                 if (_properties.TryGetValue("Power", out var powerOffProp))
@@ -611,7 +610,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
-                return "灯泡已关闭";
+                return "Light bulb turned off";
 
             case "SetBrightness":
                 if (parameters.TryGetValue("brightness", out var brightnessObj) && 
@@ -630,7 +629,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
-                return $"亮度已设置为 {parameters["brightness"]}%";
+                return $"Brightness set to {parameters["brightness"]}%";
 
             case "SetMode":
                 if (parameters.TryGetValue("mode", out var modeObj) && 
@@ -649,15 +648,15 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
-                return $"模式已设置为 {parameters["mode"]}";
+                return $"Mode set to {parameters["mode"]}";
 
             case "Calibrate":
-                // 模拟校准延迟
+                // Simulate calibration delay
                 Thread.Sleep(2000);
-                return "传感器校准完成";
+                return "Sensor calibration completed";
 
             case "Reset":
-                // 重置所有可写属性到默认值
+                // Reset all writable properties to default values
                 foreach (var prop in _properties.Values.Where(p => p.IsWritable))
                 {
                     var oldValue = prop.Value;
@@ -675,10 +674,10 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
-                return "设备已重置";
+                return "Device reset";
 
             default:
-                return $"操作 {actionName} 执行完成";
+                return $"Action {actionName} execution completed";
         }
     }
 }

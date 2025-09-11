@@ -8,7 +8,7 @@ using Volo.Abp.Modularity;
 namespace Aevatar.GAgents.Device;
 
 /// <summary>
-/// Aevatar设备GAgent模块
+/// Aevatar Device GAgent Module
 /// </summary>
 [DependsOn(
     typeof(AevatarGAgentsCommonModule)
@@ -19,38 +19,38 @@ public class AevatarGAgentsDeviceModule : AbpModule
     {
         var services = context.Services;
         
-        // 注册虚拟设备连接服务
+        // Register virtual device connection service
         services.AddTransient<VirtualDeviceConnection>(provider =>
         {
             var logger = provider.GetRequiredService<ILogger<VirtualDeviceConnection>>();
             return new VirtualDeviceConnection("default", "Default Device", "Generic", logger);
         });
         
-        // 注册设备连接工厂服务（如果需要的话）
+        // Register device connection factory service (if needed)
         services.AddSingleton<IDeviceConnectionFactory, DeviceConnectionFactory>();
         
-        // 可以在这里注册其他设备相关的服务
-        // 例如：设备发现服务、设备管理服务等
+        // Can register other device-related services here
+        // For example: device discovery service, device management service, etc.
     }
 }
 
 /// <summary>
-/// 设备连接工厂接口
+/// Device connection factory interface
 /// </summary>
 public interface IDeviceConnectionFactory
 {
     /// <summary>
-    /// 创建虚拟设备连接
+    /// Create virtual device connection
     /// </summary>
-    /// <param name="deviceId">设备ID</param>
-    /// <param name="deviceName">设备名称</param>
-    /// <param name="deviceType">设备类型</param>
-    /// <returns>设备连接实例</returns>
+    /// <param name="deviceId">Device ID</param>
+    /// <param name="deviceName">Device name</param>
+    /// <param name="deviceType">Device type</param>
+    /// <returns>Device connection instance</returns>
     VirtualDeviceConnection CreateVirtualConnection(string deviceId, string deviceName, string deviceType);
 }
 
 /// <summary>
-/// 设备连接工厂实现
+/// Device connection factory implementation
 /// </summary>
 public class DeviceConnectionFactory : IDeviceConnectionFactory
 {

@@ -5,136 +5,136 @@ using Aevatar.GAgents.Device.Abstractions;
 namespace Aevatar.GAgents.Device.State;
 
 /// <summary>
-/// 设备GAgent状态类
+/// Device GAgent state class
 /// </summary>
 [GenerateSerializer]
 public class DeviceGAgentState : AIGAgentStateBase
 {
     /// <summary>
-    /// 设备连接配置
+    /// Device connection configuration
     /// </summary>
     [Id(0)] public DeviceConnectionConfig? ConnectionConfig { get; set; }
     
     /// <summary>
-    /// 设备ID
+    /// Device ID
     /// </summary>
     [Id(1)] public string DeviceId { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备名称
+    /// Device name
     /// </summary>
     [Id(2)] public string DeviceName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备类型
+    /// Device type
     /// </summary>
     [Id(3)] public string DeviceType { get; set; } = string.Empty;
     
     /// <summary>
-    /// 是否已连接
+    /// Whether connected
     /// </summary>
     [Id(4)] public bool IsConnected { get; set; }
     
     /// <summary>
-    /// 连接状态
+    /// Connection status
     /// </summary>
     [Id(5)] public DeviceConnectionStatus ConnectionStatus { get; set; } = DeviceConnectionStatus.Disconnected;
     
     /// <summary>
-    /// 连接时间
+    /// Connection time
     /// </summary>
     [Id(6)] public DateTime? ConnectedAt { get; set; }
     
     /// <summary>
-    /// 最后状态更新时间
+    /// Last status update time
     /// </summary>
     [Id(7)] public DateTime LastStatusUpdate { get; set; } = DateTime.UtcNow;
     
     /// <summary>
-    /// 是否启用监控
+    /// Whether monitoring is enabled
     /// </summary>
     [Id(8)] public bool MonitoringEnabled { get; set; }
     
     /// <summary>
-    /// 监控间隔（秒）
+    /// Monitoring interval (seconds)
     /// </summary>
     [Id(9)] public int MonitoringIntervalSeconds { get; set; } = 30;
     
     /// <summary>
-    /// 监控状态变化时间
+    /// Monitoring state change time
     /// </summary>
     [Id(10)] public DateTime? MonitoringStateChangedAt { get; set; }
     
     /// <summary>
-    /// 最后错误消息
+    /// Last error message
     /// </summary>
     [Id(11)] public string? LastErrorMessage { get; set; }
     
     /// <summary>
-    /// 属性变化历史记录
+    /// Property change history records
     /// </summary>
     [Id(12)] public List<DevicePropertyChangeRecord> PropertyChangeHistory { get; set; } = new();
     
     /// <summary>
-    /// 最后属性变化时间
+    /// Last property change time
     /// </summary>
     [Id(13)] public DateTime? LastPropertyChangeAt { get; set; }
     
     /// <summary>
-    /// 设备统计信息
+    /// Device statistics
     /// </summary>
     [Id(14)] public DeviceStatistics Statistics { get; set; } = new();
 }
 
 /// <summary>
-/// 设备连接配置
+/// Device connection configuration
 /// </summary>
 [GenerateSerializer]
 public class DeviceConnectionConfig
 {
     /// <summary>
-    /// 设备ID
+    /// Device ID
     /// </summary>
     [Id(0)] public string DeviceId { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备名称
+    /// Device name
     /// </summary>
     [Id(1)] public string DeviceName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备类型
+    /// Device type
     /// </summary>
     [Id(2)] public string DeviceType { get; set; } = string.Empty;
     
     /// <summary>
-    /// 连接字符串或配置信息
+    /// Connection string or configuration information
     /// </summary>
     [Id(3)] public string ConnectionString { get; set; } = string.Empty;
     
     /// <summary>
-    /// 连接超时时间（秒）
+    /// Connection timeout (seconds)
     /// </summary>
     [Id(4)] public int ConnectionTimeoutSeconds { get; set; } = 30;
     
     /// <summary>
-    /// 重连尝试次数
+    /// Retry attempts
     /// </summary>
     [Id(5)] public int RetryAttempts { get; set; } = 3;
     
     /// <summary>
-    /// 重连间隔（秒）
+    /// Retry interval (seconds)
     /// </summary>
     [Id(6)] public int RetryIntervalSeconds { get; set; } = 5;
     
     /// <summary>
-    /// 扩展配置属性
+    /// Extended configuration properties
     /// </summary>
     [Id(7)] public Dictionary<string, string> ExtendedProperties { get; set; } = new();
 }
 
 /// <summary>
-/// 设备属性变化记录
+/// Device property change record
 /// </summary>
 [GenerateSerializer]
 public class DevicePropertyChangeRecord
@@ -145,111 +145,111 @@ public class DevicePropertyChangeRecord
     [Id(0)] public string PropertyName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 旧值
+    /// Old value
     /// </summary>
     [Id(1)] public object? OldValue { get; set; }
     
     /// <summary>
-    /// 新值
+    /// New value
     /// </summary>
     [Id(2)] public object? NewValue { get; set; }
     
     /// <summary>
-    /// 变化时间
+    /// Change time
     /// </summary>
     [Id(3)] public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>
-/// 设备统计信息
+/// Device statistics
 /// </summary>
 [GenerateSerializer]
 public class DeviceStatistics
 {
     /// <summary>
-    /// 总连接次数
+    /// Total connections
     /// </summary>
     [Id(0)] public long TotalConnections { get; set; }
     
     /// <summary>
-    /// 连接失败次数
+    /// Connection failures
     /// </summary>
     [Id(1)] public long ConnectionFailures { get; set; }
     
     /// <summary>
-    /// 属性读取次数
+    /// Property reads
     /// </summary>
     [Id(2)] public long PropertyReads { get; set; }
     
     /// <summary>
-    /// 属性写入次数
+    /// Property writes
     /// </summary>
     [Id(3)] public long PropertyWrites { get; set; }
     
     /// <summary>
-    /// 操作执行次数
+    /// Action executions
     /// </summary>
     [Id(4)] public long ActionExecutions { get; set; }
     
     /// <summary>
-    /// 错误发生次数
+    /// Error count
     /// </summary>
     [Id(5)] public long ErrorCount { get; set; }
     
     /// <summary>
-    /// 最后重置时间
+    /// Last reset time
     /// </summary>
     [Id(6)] public DateTime LastResetAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>
-/// 设备状态摘要
+/// Device status summary
 /// </summary>
 [GenerateSerializer]
 public class DeviceStatusSummary
 {
     /// <summary>
-    /// 设备ID
+    /// Device ID
     /// </summary>
     [Id(0)] public string DeviceId { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备名称
+    /// Device name
     /// </summary>
     [Id(1)] public string DeviceName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备类型
+    /// Device type
     /// </summary>
     [Id(2)] public string DeviceType { get; set; } = string.Empty;
     
     /// <summary>
-    /// 是否已连接
+    /// Whether connected
     /// </summary>
     [Id(3)] public bool IsConnected { get; set; }
     
     /// <summary>
-    /// 连接状态
+    /// Connection status
     /// </summary>
     [Id(4)] public DeviceConnectionStatus Status { get; set; }
     
     /// <summary>
-    /// 是否健康
+    /// Whether healthy
     /// </summary>
     [Id(5)] public bool IsHealthy { get; set; } = true;
     
     /// <summary>
-    /// 最后更新时间
+    /// Last updated time
     /// </summary>
     [Id(6)] public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
     
     /// <summary>
-    /// 当前属性值
+    /// Current property values
     /// </summary>
     [Id(7)] public Dictionary<string, object?> Properties { get; set; } = new();
     
     /// <summary>
-    /// 健康状态详情
+    /// Health status details
     /// </summary>
     [Id(8)] public Dictionary<string, object> HealthDetails { get; set; } = new();
     
@@ -260,7 +260,7 @@ public class DeviceStatusSummary
 }
 
 /// <summary>
-/// 设备GAgent状态日志事件基类
+/// Device GAgent state log event base class
 /// </summary>
 [GenerateSerializer]
 public abstract class DeviceGAgentStateLogEvent : StateLogEventBase<DeviceGAgentStateLogEvent>
@@ -268,83 +268,83 @@ public abstract class DeviceGAgentStateLogEvent : StateLogEventBase<DeviceGAgent
 }
 
 /// <summary>
-/// 设备连接初始化日志事件
+/// Device connection initialization log event
 /// </summary>
 [GenerateSerializer]
 public class DeviceConnectionInitializedLogEvent : DeviceGAgentStateLogEvent
 {
     /// <summary>
-    /// 连接配置
+    /// Connection configuration
     /// </summary>
     [Id(0)] public DeviceConnectionConfig Config { get; set; } = new();
     
     /// <summary>
-    /// 设备ID
+    /// Device ID
     /// </summary>
     [Id(1)] public string DeviceId { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备名称
+    /// Device name
     /// </summary>
     [Id(2)] public string DeviceName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备类型
+    /// Device type
     /// </summary>
     [Id(3)] public string DeviceType { get; set; } = string.Empty;
     
     /// <summary>
-    /// 连接时间
+    /// Connection time
     /// </summary>
     [Id(4)] public DateTime ConnectedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>
-/// 设备监控状态变化日志事件
+/// Device monitoring state change log event
 /// </summary>
 [GenerateSerializer]
 public class DeviceMonitoringStateChangedLogEvent : DeviceGAgentStateLogEvent
 {
     /// <summary>
-    /// 是否启用监控
+    /// Whether monitoring is enabled
     /// </summary>
     [Id(0)] public bool Enabled { get; set; }
     
     /// <summary>
-    /// 变化时间
+    /// Change time
     /// </summary>
     [Id(1)] public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
 }
 
 /// <summary>
-/// 设备连接状态变化日志事件
+/// 设备Connection status变化日志事件
 /// </summary>
 [GenerateSerializer]
 public class DeviceConnectionStatusChangedLogEvent : DeviceGAgentStateLogEvent
 {
     /// <summary>
-    /// 旧状态
+    /// Old status
     /// </summary>
     [Id(0)] public DeviceConnectionStatus OldStatus { get; set; }
     
     /// <summary>
-    /// 新状态
+    /// New status
     /// </summary>
     [Id(1)] public DeviceConnectionStatus NewStatus { get; set; }
     
     /// <summary>
-    /// 变化时间
+    /// Change time
     /// </summary>
     [Id(2)] public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
     
     /// <summary>
-    /// 变化原因
+    /// Change reason
     /// </summary>
     [Id(3)] public string Reason { get; set; } = string.Empty;
 }
 
 /// <summary>
-/// 设备属性变化日志事件
+/// Device property change log event
 /// </summary>
 [GenerateSerializer]
 public class DevicePropertyChangedLogEvent : DeviceGAgentStateLogEvent
@@ -355,17 +355,17 @@ public class DevicePropertyChangedLogEvent : DeviceGAgentStateLogEvent
     [Id(0)] public string PropertyName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 旧值
+    /// Old value
     /// </summary>
     [Id(1)] public object? OldValue { get; set; }
     
     /// <summary>
-    /// 新值
+    /// New value
     /// </summary>
     [Id(2)] public object? NewValue { get; set; }
     
     /// <summary>
-    /// 变化时间
+    /// Change time
     /// </summary>
     [Id(3)] public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
 }

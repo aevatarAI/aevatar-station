@@ -11,70 +11,70 @@ using Microsoft.Extensions.Logging;
 namespace Aevatar.GAgents.Device.Examples;
 
 /// <summary>
-/// 温度传感器GAgent接口
+/// Temperature sensor GAgent interface
 /// </summary>
 public interface ITemperatureSensorGAgent : IDeviceGAgent<VirtualDeviceConnection>
 {
     /// <summary>
-    /// 获取当前温度
+    /// Get current temperature
     /// </summary>
-    /// <returns>温度值（摄氏度）</returns>
+    /// <returns>Temperature value (Celsius)</returns>
     Task<double> GetTemperatureAsync();
     
     /// <summary>
-    /// 获取当前湿度
+    /// Get current humidity
     /// </summary>
-    /// <returns>湿度百分比</returns>
+    /// <returns>Humidity percentage</returns>
     Task<double> GetHumidityAsync();
     
     /// <summary>
-    /// 获取温湿度读数
+    /// Get temperature and humidity reading
     /// </summary>
-    /// <returns>温湿度数据</returns>
+    /// <returns>Temperature and humidity data</returns>
     Task<TemperatureHumidityReading> GetReadingAsync();
     
     /// <summary>
-    /// 校准传感器
+    /// Calibrate sensor
     /// </summary>
-    /// <returns>校准是否成功</returns>
+    /// <returns>Whether calibration was successful</returns>
     Task<bool> CalibrateAsync();
     
     /// <summary>
-    /// 获取历史读数
+    /// Get historical readings
     /// </summary>
-    /// <param name="hours">过去多少小时的数据</param>
-    /// <returns>历史读数列表</returns>
+    /// <param name="hours">Data from past how many hours</param>
+    /// <returns>List of historical readings</returns>
     Task<List<TemperatureHumidityReading>> GetHistoryAsync(int hours = 24);
 }
 
 /// <summary>
-/// 温湿度读数
+/// Temperature and humidity reading
 /// </summary>
 [GenerateSerializer]
 public class TemperatureHumidityReading
 {
     /// <summary>
-    /// 温度（摄氏度）
+    /// Temperature (Celsius)
     /// </summary>
     [Id(0)] public double Temperature { get; set; }
     
     /// <summary>
-    /// 湿度百分比
+    /// Humidity percentage
     /// </summary>
     [Id(1)] public double Humidity { get; set; }
     
     /// <summary>
-    /// 读取时间
+    /// Reading time
     /// </summary>
     [Id(2)] public DateTime Timestamp { get; set; } = DateTime.UtcNow;
     
     /// <summary>
-    /// 传感器状态
+    /// Sensor status
     /// </summary>
     [Id(3)] public string Status { get; set; } = "Normal";
     
     /// <summary>
-    /// 温度等级描述
+    /// Temperature level description
     /// </summary>
     public string TemperatureLevel
     {
@@ -82,19 +82,19 @@ public class TemperatureHumidityReading
         {
             return Temperature switch
             {
-                < 0 => "严寒",
-                < 10 => "寒冷",
-                < 20 => "凉爽",
-                < 25 => "舒适",
-                < 30 => "温暖",
-                < 35 => "炎热",
-                _ => "酷热"
+                < 0 => "Freezing",
+                < 10 => "Cold",
+                < 20 => "Cool",
+                < 25 => "Comfortable",
+                < 30 => "Warm",
+                < 35 => "Hot",
+                _ => "Very Hot"
             };
         }
     }
     
     /// <summary>
-    /// 湿度等级描述
+    /// Humidity level description
     /// </summary>
     public string HumidityLevel
     {
@@ -102,36 +102,36 @@ public class TemperatureHumidityReading
         {
             return Humidity switch
             {
-                < 30 => "干燥",
-                < 40 => "较干",
-                < 60 => "适中",
-                < 70 => "较湿",
-                _ => "潮湿"
+                < 30 => "Dry",
+                < 40 => "Slightly Dry",
+                < 60 => "Moderate",
+                < 70 => "Slightly Humid",
+                _ => "Humid"
             };
         }
     }
     
     /// <summary>
-    /// 舒适度评级
+    /// Comfort level rating
     /// </summary>
     public string ComfortLevel
     {
         get
         {
             if (Temperature >= 20 && Temperature <= 26 && Humidity >= 40 && Humidity <= 60)
-                return "舒适";
+                return "Comfortable";
             else if (Temperature >= 18 && Temperature <= 28 && Humidity >= 30 && Humidity <= 70)
-                return "较舒适";
+                return "Fairly Comfortable";
             else
-                return "不舒适";
+                return "Uncomfortable";
         }
     }
 }
 
 /// <summary>
-/// 温度传感器GAgent实现
+/// Temperature sensor GAgent implementation
 /// </summary>
-[Description("温度传感器设备代理，提供温度和湿度监测功能，支持历史数据查询和传感器校准，可通过AI助手进行环境监控")]
+[Description("Temperature sensor device agent providing temperature and humidity monitoring, supports historical data query and sensor calibration, can perform environmental monitoring through AI assistant")]
 [GAgent("temperature-sensor", "device")]
 public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>, ITemperatureSensorGAgent
 {
@@ -140,23 +140,23 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
 
     public override async Task<string> GetDescriptionAsync()
     {
-        var deviceName = DeviceConnection?.DeviceName ?? "温度传感器";
+        var deviceName = DeviceConnection?.DeviceName ?? "Temperature Sensor";
         var status = DeviceConnection?.Status ?? DeviceConnectionStatus.Disconnected;
         
-        var description = $"温度传感器设备代理 ({deviceName}) - 当前状态: {GetStatusDescription(status)}。";
+        var description = $"Temperature sensor device agent ({deviceName}) - Current status: {GetStatusDescription(status)}.";
         
         if (DeviceConnection?.Status == DeviceConnectionStatus.Connected)
         {
             try
             {
                 var reading = await GetReadingAsync();
-                description += $" 当前环境: 温度 {reading.Temperature:F1}°C ({reading.TemperatureLevel})，" +
-                              $"湿度 {reading.Humidity:F1}% ({reading.HumidityLevel})，" +
-                              $"舒适度: {reading.ComfortLevel}";
+                description += $" Current environment: Temperature {reading.Temperature:F1}°C ({reading.TemperatureLevel}), " +
+                              $"Humidity {reading.Humidity:F1}% ({reading.HumidityLevel}), " +
+                              $"Comfort: {reading.ComfortLevel}";
             }
             catch
             {
-                description += " 无法获取当前读数";
+                description += " Unable to get current readings";
             }
         }
         
@@ -170,11 +170,11 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
         var connection = new VirtualDeviceConnection(
             config.DeviceId,
             config.DeviceName,
-            "TemperatureSensor", // 固定为温度传感器类型
+            "TemperatureSensor", // Fixed as temperature sensor type
             logger
         );
         
-        // 订阅属性变化事件来记录历史数据
+        // Subscribe to property change events to record historical data
         connection.PropertyChanged += OnSensorPropertyChanged;
         
         return connection;
@@ -186,7 +186,7 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
         {
             if (DeviceConnection == null)
             {
-                Logger.LogWarning("设备未连接，无法读取温度");
+                Logger.LogWarning("Device not connected, cannot read temperature");
                 return double.NaN;
             }
 
@@ -194,16 +194,16 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
             
             if (temperature is double temp)
             {
-                Logger.LogDebug("读取温度: {Temperature:F1}°C", temp);
+                Logger.LogDebug("Read temperature: {Temperature:F1}°C", temp);
                 return temp;
             }
             
-            Logger.LogWarning("温度数据类型错误: {Type}", temperature?.GetType().Name ?? "null");
+            Logger.LogWarning("Temperature data type error: {Type}", temperature?.GetType().Name ?? "null");
             return double.NaN;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "读取温度失败");
+            Logger.LogError(ex, "Failed to read temperature");
             return double.NaN;
         }
     }
@@ -214,7 +214,7 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
         {
             if (DeviceConnection == null)
             {
-                Logger.LogWarning("设备未连接，无法读取湿度");
+                Logger.LogWarning("Device not connected, cannot read humidity");
                 return double.NaN;
             }
 
@@ -222,16 +222,16 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
             
             if (humidity is double hum)
             {
-                Logger.LogDebug("读取湿度: {Humidity:F1}%", hum);
+                Logger.LogDebug("Read humidity: {Humidity:F1}%", hum);
                 return hum;
             }
             
-            Logger.LogWarning("湿度数据类型错误: {Type}", humidity?.GetType().Name ?? "null");
+            Logger.LogWarning("Humidity data type error: {Type}", humidity?.GetType().Name ?? "null");
             return double.NaN;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "读取湿度失败");
+            Logger.LogError(ex, "Failed to read humidity");
             return double.NaN;
         }
     }
@@ -251,14 +251,14 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
                 Status = (double.IsNaN(temperature) || double.IsNaN(humidity)) ? "Error" : "Normal"
             };
             
-            Logger.LogInformation("获取传感器读数: 温度={Temperature:F1}°C ({TempLevel}), 湿度={Humidity:F1}% ({HumLevel}), 舒适度={Comfort}",
+            Logger.LogInformation("Get sensor reading: Temperature={Temperature:F1}°C ({TempLevel}), Humidity={Humidity:F1}% ({HumLevel}), Comfort={Comfort}",
                 reading.Temperature, reading.TemperatureLevel, reading.Humidity, reading.HumidityLevel, reading.ComfortLevel);
             
             return reading;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "获取传感器读数失败");
+            Logger.LogError(ex, "Failed to get sensor reading");
             
             return new TemperatureHumidityReading
             {
@@ -276,22 +276,22 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
         {
             if (DeviceConnection == null)
             {
-                Logger.LogWarning("设备未连接，无法校准");
+                Logger.LogWarning("Device not connected, cannot calibrate");
                 return false;
             }
 
-            Logger.LogInformation("开始校准温度传感器...");
+            Logger.LogInformation("Starting temperature sensor calibration...");
             
             var result = await DeviceConnection.ExecuteActionAsync("Calibrate");
             
-            Logger.LogInformation("传感器校准操作: {Success}, 结果: {Result}", 
+            Logger.LogInformation("Sensor calibration operation: {Success}, result: {Result}", 
                 result.IsSuccess, result.Result);
             
             return result.IsSuccess;
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "校准传感器失败");
+            Logger.LogError(ex, "Failed to calibrate sensor");
             return false;
         }
     }
@@ -304,10 +304,10 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
             var history = _readings
                 .Where(r => r.Timestamp >= cutoffTime)
                 .OrderByDescending(r => r.Timestamp)
-                .Take(1000) // 最多返回1000条记录
+                .Take(1000) // Return at most 1000 records
                 .ToList();
             
-            Logger.LogDebug("获取历史读数: {Count}条记录，时间范围: {Hours}小时", history.Count, hours);
+            Logger.LogDebug("Get historical readings: {Count} records, time range: {Hours} hours", history.Count, hours);
             
             return Task.FromResult(history);
         }
@@ -315,7 +315,7 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
 
     private void OnSensorPropertyChanged(object? sender, DevicePropertyChangedEventArgs e)
     {
-        // 当温度或湿度变化时，记录到历史数据
+        // When temperature or humidity changes, record to historical data
         if (e.PropertyName == "Temperature" || e.PropertyName == "Humidity")
         {
             _ = Task.Run(async () =>
@@ -328,19 +328,19 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
                     {
                         _readings.Add(reading);
                         
-                        // 保持历史记录不超过10000条
+                        // Keep historical records under 10000
                         if (_readings.Count > 10000)
                         {
                             _readings.RemoveRange(0, _readings.Count - 10000);
                         }
                     }
                     
-                    // 检查是否需要发出警告
+                    // Check if environment alerts are needed
                     await CheckEnvironmentAlertsAsync(reading);
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "记录传感器读数时发生错误");
+                    Logger.LogError(ex, "Error occurred while recording sensor reading");
                 }
             });
         }
@@ -352,23 +352,23 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
         {
             var alerts = new List<string>();
             
-            // 温度警告
+            // Temperature warnings
             if (reading.Temperature < 5)
-                alerts.Add($"温度过低: {reading.Temperature:F1}°C，可能结冰");
+                alerts.Add($"Temperature too low: {reading.Temperature:F1}°C, may freeze");
             else if (reading.Temperature > 35)
-                alerts.Add($"温度过高: {reading.Temperature:F1}°C，注意防暑");
+                alerts.Add($"Temperature too high: {reading.Temperature:F1}°C, pay attention to heat protection");
             
-            // 湿度警告
+            // Humidity warnings
             if (reading.Humidity < 20)
-                alerts.Add($"湿度过低: {reading.Humidity:F1}%，空气干燥");
+                alerts.Add($"Humidity too low: {reading.Humidity:F1}%, air is dry");
             else if (reading.Humidity > 80)
-                alerts.Add($"湿度过高: {reading.Humidity:F1}%，可能霉变");
+                alerts.Add($"Humidity too high: {reading.Humidity:F1}%, may cause mold");
             
-            // 舒适度警告
-            if (reading.ComfortLevel == "不舒适")
-                alerts.Add("环境舒适度不佳，建议调节温湿度");
+            // Comfort warnings
+            if (reading.ComfortLevel == "Uncomfortable")
+                alerts.Add("Environmental comfort is poor, recommend adjusting temperature and humidity");
             
-            // 发布警告事件
+            // Publish warning events
             foreach (var alert in alerts)
             {
                 await PublishAsync(new EnvironmentAlertEvent
@@ -382,12 +382,12 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
                     Timestamp = DateTime.UtcNow
                 });
                 
-                Logger.LogWarning("环境警告: {Alert}", alert);
+                Logger.LogWarning("Environment warning: {Alert}", alert);
             }
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "检查环境警告时发生错误");
+            Logger.LogError(ex, "Error occurred while checking environment alerts");
         }
     }
 
@@ -395,12 +395,12 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
     {
         return status switch
         {
-            DeviceConnectionStatus.Connected => "已连接",
-            DeviceConnectionStatus.Connecting => "连接中",
-            DeviceConnectionStatus.Disconnected => "未连接",
-            DeviceConnectionStatus.Error => "连接错误",
-            DeviceConnectionStatus.Reconnecting => "重连中",
-            _ => "未知状态"
+            DeviceConnectionStatus.Connected => "Connected",
+            DeviceConnectionStatus.Connecting => "Connecting",
+            DeviceConnectionStatus.Disconnected => "Disconnected",
+            DeviceConnectionStatus.Error => "Connection Error",
+            DeviceConnectionStatus.Reconnecting => "Reconnecting",
+            _ => "Unknown Status"
         };
     }
 
@@ -408,22 +408,22 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
     {
         await base.OnAIGAgentActivateAsync(cancellationToken);
         
-        Logger.LogInformation("温度传感器GAgent已激活: {GrainId}", this.GetGrainId());
+        Logger.LogInformation("Temperature sensor GAgent activated: {GrainId}", this.GetGrainId());
         
-        // 如果有连接配置且设备未连接，尝试自动连接
+        // If there's connection config and device is not connected, try auto-connect
         if (State.ConnectionConfig != null && !State.IsConnected)
         {
             _ = Task.Run(async () =>
             {
-                await Task.Delay(1000, cancellationToken); // 延迟1秒后连接
+                await Task.Delay(1000, cancellationToken); // Delay 1 second before connecting
                 try
                 {
                     await InitializeDeviceConnectionAsync(State.ConnectionConfig);
                     
-                    // 启用设备监控
+                    // Enable device monitoring
                     await SetDeviceMonitoringAsync(true);
                     
-                    // 记录初始读数
+                    // Record initial reading
                     var initialReading = await GetReadingAsync();
                     lock (_readingsLock)
                     {
@@ -432,7 +432,7 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogWarning(ex, "自动连接温度传感器失败");
+                    Logger.LogWarning(ex, "Failed to auto-connect temperature sensor");
                 }
             }, cancellationToken);
         }
@@ -440,9 +440,9 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
 
     public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
-        Logger.LogInformation("温度传感器GAgent正在停用: {GrainId}, 原因: {Reason}", this.GetGrainId(), reason);
+        Logger.LogInformation("Temperature sensor GAgent is deactivating: {GrainId}, reason: {Reason}", this.GetGrainId(), reason);
         
-        // 取消属性变化事件订阅
+        // Unsubscribe from property change events
         if (DeviceConnection != null)
         {
             DeviceConnection.PropertyChanged -= OnSensorPropertyChanged;
@@ -453,44 +453,44 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
 }
 
 /// <summary>
-/// 环境警告事件
+/// Environment alert event
 /// </summary>
 [GenerateSerializer]
-[Description("环境监测警告事件")]
+[Description("Environmental monitoring alert event")]
 public class EnvironmentAlertEvent : EventBase
 {
     /// <summary>
-    /// 设备ID
+    /// Device ID
     /// </summary>
     [Id(0)] public string DeviceId { get; set; } = string.Empty;
     
     /// <summary>
-    /// 设备名称
+    /// Device name
     /// </summary>
     [Id(1)] public string DeviceName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 警告级别
+    /// Alert level
     /// </summary>
     [Id(2)] public string AlertLevel { get; set; } = "Info";
     
     /// <summary>
-    /// 警告消息
+    /// Alert message
     /// </summary>
     [Id(3)] public string Message { get; set; } = string.Empty;
     
     /// <summary>
-    /// 当前温度
+    /// Current temperature
     /// </summary>
     [Id(4)] public double Temperature { get; set; }
     
     /// <summary>
-    /// 当前湿度
+    /// Current humidity
     /// </summary>
     [Id(5)] public double Humidity { get; set; }
     
     /// <summary>
-    /// 事件时间
+    /// Event time
     /// </summary>
     [Id(6)] public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }
