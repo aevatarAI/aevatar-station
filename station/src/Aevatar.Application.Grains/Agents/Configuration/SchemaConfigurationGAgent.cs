@@ -53,9 +53,16 @@ public abstract class SchemaConfigurationGEvent : StateLogEventBase<SchemaConfig
 /// This grain runs in the silo and can access silo configuration directly
 /// </summary>
 [Description("Schema Configuration Agent for SystemLLM Options")]
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
 public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentState, SchemaConfigurationGEvent>, ISchemaConfigurationGAgent
 {
-    // Don't use constructor injection for GAgents - use property access pattern
+    private readonly ILogger<SchemaConfigurationGAgent> _logger;
+
+    public SchemaConfigurationGAgent(ILogger<SchemaConfigurationGAgent> logger)
+    {
+        _logger = logger;
+    }
 
     public override Task<string> GetDescriptionAsync()
     {
@@ -74,14 +81,14 @@ public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentSta
             // Get SystemLLMConfigOptions from silo's service provider (similar to AIGAgentBase pattern)
             var systemLLMConfigOptions = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
             
-            Logger.LogInformation("Retrieved SystemLLMConfigOptions with {ConfigCount} configurations from silo", 
+            _logger.LogInformation("Retrieved SystemLLMConfigOptions with {ConfigCount} configurations from silo", 
                 systemLLMConfigOptions.Value.SystemLLMConfigs?.Count ?? 0);
 
             return Task.FromResult(systemLLMConfigOptions.Value);
         }
         catch (System.Exception ex)
         {
-            Logger.LogError(ex, "Failed to retrieve SystemLLMConfigOptions from silo configuration");
+            _logger.LogError(ex, "Failed to retrieve SystemLLMConfigOptions from silo configuration");
             
             // Return empty configuration as fallback
             return Task.FromResult(new SystemLLMConfigOptions());

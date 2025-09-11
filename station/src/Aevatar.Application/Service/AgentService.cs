@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Application.Grains.Agents.AI;
 using Aevatar.Application.Grains.Agents.Configuration;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
