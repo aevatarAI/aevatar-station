@@ -140,7 +140,7 @@ public class DeviceConnectionConfig
 public class DevicePropertyChangeRecord
 {
     /// <summary>
-    /// 属性名称
+    /// Property name
     /// </summary>
     [Id(0)] public string PropertyName { get; set; } = string.Empty;
     
@@ -254,7 +254,7 @@ public class DeviceStatusSummary
     [Id(8)] public Dictionary<string, object> HealthDetails { get; set; } = new();
     
     /// <summary>
-    /// 错误消息
+    /// Error message
     /// </summary>
     [Id(9)] public string? ErrorMessage { get; set; }
 }
@@ -317,7 +317,7 @@ public class DeviceMonitoringStateChangedLogEvent : DeviceGAgentStateLogEvent
 }
 
 /// <summary>
-/// 设备Connection status变化日志事件
+/// Event of device Connection status changes logs
 /// </summary>
 [GenerateSerializer]
 public class DeviceConnectionStatusChangedLogEvent : DeviceGAgentStateLogEvent
@@ -350,7 +350,7 @@ public class DeviceConnectionStatusChangedLogEvent : DeviceGAgentStateLogEvent
 public class DevicePropertyChangedLogEvent : DeviceGAgentStateLogEvent
 {
     /// <summary>
-    /// 属性名称
+    /// Property name
     /// </summary>
     [Id(0)] public string PropertyName { get; set; } = string.Empty;
     

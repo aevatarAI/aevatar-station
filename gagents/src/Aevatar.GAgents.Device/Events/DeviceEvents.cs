@@ -34,7 +34,7 @@ public abstract class DeviceEventBase : EventBase
 public class ReadDevicePropertyEvent : DeviceEventBase
 {
     /// <summary>
-    /// 属性名称
+    /// Property name
     /// </summary>
     [Id(3)] public string PropertyName { get; set; } = string.Empty;
 }
@@ -65,7 +65,7 @@ public class WriteDevicePropertyEvent : DeviceEventBase
 public class ExecuteDeviceActionEvent : DeviceEventBase
 {
     /// <summary>
-    /// 操作名称
+    /// Action name
     /// </summary>
     [Id(3)] public string ActionName { get; set; } = string.Empty;
     
@@ -112,7 +112,7 @@ public class DisconnectDeviceEvent : DeviceEventBase
 }
 
 /// <summary>
-/// 重新Connect device event
+/// Reconnect device event
 /// </summary>
 [GenerateSerializer]
 [Description("Reconnect device")]
@@ -128,7 +128,7 @@ public class ReconnectDeviceEvent : DeviceEventBase
 public class DevicePropertyChangedNotificationEvent : DeviceEventBase
 {
     /// <summary>
-    /// 属性名称
+    /// Property name
     /// </summary>
     [Id(3)] public string PropertyName { get; set; } = string.Empty;
     

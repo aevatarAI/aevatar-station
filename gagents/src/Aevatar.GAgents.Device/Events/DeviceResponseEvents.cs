@@ -12,7 +12,7 @@ namespace Aevatar.GAgents.Device.Events;
 public class DevicePropertyReadResultEvent : DeviceEventBase
 {
     /// <summary>
-    /// 属性名称
+    /// Property name
     /// </summary>
     [Id(3)] public string PropertyName { get; set; } = string.Empty;
     
@@ -33,329 +33,329 @@ public class DevicePropertyReadResultEvent : DeviceEventBase
 }
 
 /// <summary>
-/// 设备属性写入结果事件
+/// Device property write result event
 /// </summary>
 [GenerateSerializer]
-[Description("设备属性写入操作的结果")]
+[Description("Result of device property write operation")]
 public class DevicePropertyWriteResultEvent : DeviceEventBase
 {
     /// <summary>
-    /// 属性名称
+    /// Property name
     /// </summary>
     [Id(3)] public string PropertyName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 写入的值
+    /// Written value
     /// </summary>
     [Id(4)] public object? Value { get; set; }
     
     /// <summary>
-    /// 写入是否成功
+    /// Whether write was successful
     /// </summary>
     [Id(5)] public bool Success { get; set; }
     
     /// <summary>
-    /// 错误消息（如果写入失败）
+    /// Error message (if write failed)
     /// </summary>
     [Id(6)] public string? ErrorMessage { get; set; }
 }
 
 /// <summary>
-/// 设备操作执行结果事件
+/// Device action execution result event
 /// </summary>
 [GenerateSerializer]
-[Description("设备操作执行的结果")]
+[Description("Result of device action execution")]
 public class DeviceActionExecutionResultEvent : DeviceEventBase
 {
     /// <summary>
-    /// 操作名称
+    /// Action name
     /// </summary>
     [Id(3)] public string ActionName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 执行是否成功
+    /// Whether execution was successful
     /// </summary>
     [Id(4)] public bool Success { get; set; }
     
     /// <summary>
-    /// 执行结果
+    /// Execution result
     /// </summary>
     [Id(5)] public object? Result { get; set; }
     
     /// <summary>
-    /// 错误消息（如果执行失败）
+    /// Error message (if execution failed)
     /// </summary>
     [Id(6)] public string? ErrorMessage { get; set; }
     
     /// <summary>
-    /// 执行耗时（毫秒）
+    /// Execution duration (milliseconds)
     /// </summary>
     [Id(7)] public long ExecutionTimeMs { get; set; }
 }
 
 /// <summary>
-/// 设备状态响应事件
+/// Device status response event
 /// </summary>
 [GenerateSerializer]
-[Description("设备状态查询的响应")]
+[Description("Response to device status query")]
 public class DeviceStatusResponseEvent : DeviceEventBase
 {
     /// <summary>
-    /// 状态摘要
+    /// Status summary
     /// </summary>
     [Id(3)] public DeviceStatusSummary StatusSummary { get; set; } = new();
 }
 
 /// <summary>
-/// 设备连接操作结果事件
+/// Device connection operation result event
 /// </summary>
 [GenerateSerializer]
-[Description("设备连接或断开操作的结果")]
+[Description("Result of device connect or disconnect operation")]
 public class DeviceConnectionResultEvent : DeviceEventBase
 {
     /// <summary>
-    /// 操作是否成功
+    /// Whether action is succeeded
     /// </summary>
     [Id(3)] public bool Success { get; set; }
     
     /// <summary>
-    /// 操作类型（Connect/Disconnect/Reconnect）
+    /// Operation type (Connect/Disconnect/Reconnect)
     /// </summary>
     [Id(4)] public string Action { get; set; } = string.Empty;
     
     /// <summary>
-    /// 错误消息（如果操作失败）
+    /// Error message (if operation failed)
     /// </summary>
     [Id(5)] public string? ErrorMessage { get; set; }
 }
 
 /// <summary>
-/// 设备健康状态响应事件
+/// Device health status response event
 /// </summary>
 [GenerateSerializer]
-[Description("设备健康检查的响应")]
+[Description("Response to device health check")]
 public class DeviceHealthStatusResponseEvent : DeviceEventBase
 {
     /// <summary>
-    /// 是否健康
+    /// Is healthy
     /// </summary>
     [Id(3)] public bool IsHealthy { get; set; }
     
     /// <summary>
-    /// 健康状态描述
+    /// Status description
     /// </summary>
     [Id(4)] public string StatusDescription { get; set; } = string.Empty;
     
     /// <summary>
-    /// 检查时间
+    /// Check time
     /// </summary>
     [Id(5)] public DateTime CheckTime { get; set; } = DateTime.UtcNow;
     
     /// <summary>
-    /// 详细信息
+    /// Detailed information
     /// </summary>
     [Id(6)] public Dictionary<string, object> Details { get; set; } = new();
 }
 
 /// <summary>
-/// 设备支持的操作列表响应事件
+/// Device supported actions list response event
 /// </summary>
 [GenerateSerializer]
-[Description("设备支持的操作列表查询响应")]
+[Description("Response to device supported actions list query")]
 public class DeviceSupportedActionsResponseEvent : DeviceEventBase
 {
     /// <summary>
-    /// 支持的操作列表
+    /// Supported actions list
     /// </summary>
     [Id(3)] public List<DeviceActionInfo> SupportedActions { get; set; } = new();
 }
 
 /// <summary>
-/// 设备属性定义列表响应事件
+/// Device properties definition list response event
 /// </summary>
 [GenerateSerializer]
-[Description("设备属性定义列表查询响应")]
+[Description("Response to device properties definition list query")]
 public class DevicePropertiesResponseEvent : DeviceEventBase
 {
     /// <summary>
-    /// 属性定义列表
+    /// Properties definition list
     /// </summary>
     [Id(3)] public List<DevicePropertyInfo> Properties { get; set; } = new();
 }
 
 /// <summary>
-/// 批量属性读取结果事件
+/// Batch property read result event
 /// </summary>
 [GenerateSerializer]
-[Description("批量Result of device property read operation")]
+[Description("Multiple result of device property read operation")]
 public class MultipleDevicePropertiesReadResultEvent : DeviceEventBase
 {
     /// <summary>
-    /// 属性值字典
+    /// Property values dictionary
     /// </summary>
     [Id(3)] public Dictionary<string, object?> PropertyValues { get; set; } = new();
     
     /// <summary>
-    /// 读取失败的属性列表
+    /// Failed properties list
     /// </summary>
     [Id(4)] public List<string> FailedProperties { get; set; } = new();
     
     /// <summary>
-    /// 错误消息字典（属性名 -> 错误消息）
+    /// Error messages dictionary (property name -> error message)
     /// </summary>
     [Id(5)] public Dictionary<string, string> ErrorMessages { get; set; } = new();
 }
 
 /// <summary>
-/// 批量属性写入结果事件
+/// Batch property write result event
 /// </summary>
 [GenerateSerializer]
-[Description("批量设备属性写入操作的结果")]
+[Description("Multiple result of device property write operation")]
 public class MultipleDevicePropertiesWriteResultEvent : DeviceEventBase
 {
     /// <summary>
-    /// 写入成功的属性列表
+    /// Successfully written properties list
     /// </summary>
     [Id(3)] public List<string> SuccessfulProperties { get; set; } = new();
     
     /// <summary>
-    /// 写入失败的属性列表
+    /// Failed to write properties list
     /// </summary>
     [Id(4)] public List<string> FailedProperties { get; set; } = new();
     
     /// <summary>
-    /// 错误消息字典（属性名 -> 错误消息）
+    /// Error messages dictionary (property name -> error message)
     /// </summary>
     [Id(5)] public Dictionary<string, string> ErrorMessages { get; set; } = new();
 }
 
 /// <summary>
-/// 设备操作信息
+/// Device action information
 /// </summary>
 [GenerateSerializer]
 public class DeviceActionInfo
 {
     /// <summary>
-    /// 操作名称
+    /// Action name
     /// </summary>
     [Id(0)] public string Name { get; set; } = string.Empty;
     
     /// <summary>
-    /// 显示名称
+    /// Display name
     /// </summary>
     [Id(1)] public string DisplayName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 操作描述
+    /// Action description
     /// </summary>
     [Id(2)] public string Description { get; set; } = string.Empty;
     
     /// <summary>
-    /// 参数信息列表
+    /// Parameter information list
     /// </summary>
     [Id(3)] public List<DeviceActionParameterInfo> Parameters { get; set; } = new();
     
     /// <summary>
-    /// 返回值类型名称
+    /// Return type name
     /// </summary>
     [Id(4)] public string? ReturnTypeName { get; set; }
 }
 
 /// <summary>
-/// 设备操作参数信息
+/// Device action parameter information
 /// </summary>
 [GenerateSerializer]
 public class DeviceActionParameterInfo
 {
     /// <summary>
-    /// 参数名称
+    /// Parameter name
     /// </summary>
     [Id(0)] public string Name { get; set; } = string.Empty;
     
     /// <summary>
-    /// 显示名称
+    /// Display name
     /// </summary>
     [Id(1)] public string DisplayName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 参数描述
+    /// Parameter description
     /// </summary>
     [Id(2)] public string Description { get; set; } = string.Empty;
     
     /// <summary>
-    /// 参数类型名称
+    /// Parameter type name
     /// </summary>
     [Id(3)] public string ParameterTypeName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 是否必需
+    /// Whether required
     /// </summary>
     [Id(4)] public bool IsRequired { get; set; } = true;
     
     /// <summary>
-    /// 默认值
+    /// Default value
     /// </summary>
     [Id(5)] public object? DefaultValue { get; set; }
 }
 
 /// <summary>
-/// 设备属性信息
+/// Device property information
 /// </summary>
 [GenerateSerializer]
 public class DevicePropertyInfo
 {
     /// <summary>
-    /// 属性名称
+    /// Property name
     /// </summary>
     [Id(0)] public string Name { get; set; } = string.Empty;
     
     /// <summary>
-    /// 显示名称
+    /// Display name
     /// </summary>
     [Id(1)] public string DisplayName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 属性描述
+    /// Property description
     /// </summary>
     [Id(2)] public string Description { get; set; } = string.Empty;
     
     /// <summary>
-    /// 属性类型名称
+    /// Property type name
     /// </summary>
     [Id(3)] public string PropertyTypeName { get; set; } = string.Empty;
     
     /// <summary>
-    /// 当前值
+    /// Current value
     /// </summary>
     [Id(4)] public object? Value { get; set; }
     
     /// <summary>
-    /// 是否可读
+    /// Is readable
     /// </summary>
     [Id(5)] public bool IsReadable { get; set; } = true;
     
     /// <summary>
-    /// 是否可写
+    /// Is writable
     /// </summary>
     [Id(6)] public bool IsWritable { get; set; } = false;
     
     /// <summary>
-    /// 单位
+    /// Unit
     /// </summary>
     [Id(7)] public string? Unit { get; set; }
     
     /// <summary>
-    /// 最小值
+    /// Minimum value
     /// </summary>
     [Id(8)] public object? MinValue { get; set; }
     
     /// <summary>
-    /// 最大值
+    /// Maximum value
     /// </summary>
     [Id(9)] public object? MaxValue { get; set; }
     
     /// <summary>
-    /// 最后更新时间
+    /// Last updated time
     /// </summary>
     [Id(10)] public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
 }
