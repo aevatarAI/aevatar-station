@@ -10,18 +10,18 @@ namespace Aevatar.GAgents.Basic;
 public class DynamicDropDownAttribute : Attribute
 {
     /// <summary>
-    /// Gets the option source name that specifies which configuration field to retrieve metadata from.
-    /// If null, the system will use default behavior to determine the appropriate option source.
+    /// Gets the option name that specifies which configuration provider to use for this dropdown.
+    /// If null, the system will use default behavior ("systemLLMConfig").
     /// </summary>
-    public string? OptionSource { get; }
+    public string OptionName { get; }
     
     /// <summary>
     /// Initializes a new instance of the DynamicDropDownAttribute class.
     /// </summary>
-    /// <param name="optionSource">Optional. The name of the option source field to retrieve metadata from. 
-    /// Examples: "SystemLLMConfigs", "DatabaseConfigs", etc. If not specified, default behavior is used.</param>
-    public DynamicDropDownAttribute(string? optionSource = null)
+    /// <param name="optionName">Optional. The name of the configuration provider to use for this dropdown. 
+    /// Examples: "systemLLMConfig", "databaseConfig", etc. If not specified, defaults to "systemLLMConfig".</param>
+    public DynamicDropDownAttribute(string? optionName = "systemLLMConfig")
     {
-        OptionSource = optionSource;
+        OptionName = optionName ?? "systemLLMConfig";
     }
 }

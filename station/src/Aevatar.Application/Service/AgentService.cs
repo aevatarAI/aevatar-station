@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -18,7 +19,9 @@ using Aevatar.GAgents.AI.Options;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
+using Aevatar.Provider;
 using Aevatar.Station.Feature.CreatorGAgent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -47,6 +50,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
+    private readonly IServiceProvider _serviceProvider;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -57,7 +61,8 @@ public class AgentService : ApplicationService, IAgentService
         IOptionsMonitor<AgentOptions> agentOptions,
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
-        IIndexingService indexingService)
+        IIndexingService indexingService,
+        IServiceProvider serviceProvider)
     {
         _clusterClient = clusterClient;
         _logger = logger;
@@ -68,6 +73,7 @@ public class AgentService : ApplicationService, IAgentService
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<List<AgentTypeDto>> GetAllAgents()
@@ -766,63 +772,50 @@ public class AgentService : ApplicationService, IAgentService
     {
         try
         {
-            // Get SystemLLMConfigOptions from silo's SchemaConfigurationGAgent using cluster client
-            var grainId = Guid.NewGuid().ToString();
-            var schemaConfigGrain = _clusterClient.GetGrain<ISchemaConfigurationGAgent>(grainId);
-            var systemLLMConfigOptions = await schemaConfigGrain.GetConfigOptionsAsync<SystemLLMConfigOptions>();
+            _logger.LogDebug("[AgentService] Starting schema context creation using plugin architecture");
             
-            // Convert SystemLLMConfigOptions to DynamicDropDownContext
-            var aiModelConfigs = new List<SystemLLMConfigDto>();
+            // 创建线程安全的并发字典用于多个processor并发写入
+            var concurrentData = new ConcurrentDictionary<string, object>();
+            var configurationProviders = _serviceProvider.GetServices<IDynamicConfigurationProvider>().ToList();
             
-            if (systemLLMConfigOptions.SystemLLMConfigs != null)
+            if (!configurationProviders.Any())
             {
-                // Convert from Dictionary<string, LLMConfig> to List<SystemLLMConfigDto>
-                foreach (var kvp in systemLLMConfigOptions.SystemLLMConfigs)
-                {
-                    var config = kvp.Value;
-                    var configDto = new SystemLLMConfigDto
-                    {
-                        Name = kvp.Key,
-                        Provider = config.ProviderEnum.ToString(),
-                        Type = config.ModelName,
-                        // Map additional properties as needed
-                        Strengths = new List<string> { $"Provider: {config.ProviderEnum}", $"Model: {config.ModelIdEnum}" },
-                        BestFor = new List<string> { "AI chat functionality", "Model inference" },
-                        Speed = "Variable" // Default value
-                    };
-                    aiModelConfigs.Add(configDto);
-                }
+                _logger.LogError("[AgentService] No configuration providers found, plugin architecture not properly configured");
+                throw new InvalidOperationException("Configuration provider plugin architecture not properly configured - no IDynamicConfigurationProvider implementations found");
             }
 
-            // If no configurations found, log warning but return empty list
-            if (!aiModelConfigs.Any())
+            _logger.LogInformation("[AgentService] Found {ProviderCount} configuration providers", configurationProviders.Count);
+
+            // 为每个配置提供者执行处理逻辑
+            var processingTasks = configurationProviders.Select(async provider =>
             {
-                _logger.LogWarning("[AgentService] No SystemLLMConfigs found in silo configuration");
-            }
-            
-            _logger.LogInformation("[AgentService] Retrieved schema context from silo with {ConfigCount} AI model configurations", 
-                aiModelConfigs.Count);
-            
-            return new DynamicDropDownContext
-            {
-                AIModelConfigs = new Dictionary<string, object>
+                try
                 {
-                    ["systemLLMConfig"] = aiModelConfigs
+                    _logger.LogDebug("[AgentService] Processing with provider: {ProviderType}", 
+                        provider.GetType().Name);
+
+                    // 直接调用provider的处理方法，传递concurrentData和clusterClient
+                    await provider.ProcessSchemaAsync(concurrentData, _clusterClient);
+                    
+                    _logger.LogInformation("[AgentService] Successfully processed configuration with {ProviderType}", 
+                        provider.GetType().Name);
                 }
-            };
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[AgentService] Failed to process with provider: {ProviderType}", 
+                        provider.GetType().Name);
+                }
+            });
+
+            // 等待所有配置提供者完成
+            await Task.WhenAll(processingTasks);
+
+            return new DynamicDropDownContext { AdditionalData = new Dictionary<string, object>(concurrentData) };;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[AgentService] Failed to retrieve schema context from silo, returning empty context");
-            
-            // Return empty context as fallback
-            return new DynamicDropDownContext
-            {
-                AIModelConfigs = new Dictionary<string, object>
-                {
-                    ["systemLLMConfig"] = new List<SystemLLMConfigDto>()
-                }
-            };
+            _logger.LogError(ex, "[AgentService] Failed to create schema context using plugin architecture");
+            throw;
         }
     }
 }

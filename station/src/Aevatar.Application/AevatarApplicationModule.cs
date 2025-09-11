@@ -16,6 +16,7 @@ using Aevatar.Notification;
 using Aevatar.Options;
 using Aevatar.Plugins;
 using Aevatar.Schema;
+using Aevatar.Provider;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -68,6 +69,9 @@ public class AevatarApplicationModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
+        
+        // 配置Schema处理器
+        ConfigureSchemaProcessors(context);
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         Configure<AgentDefaultValuesOptions>(configuration.GetSection("AgentDefaults"));
@@ -127,5 +131,22 @@ public class AevatarApplicationModule : AbpModule
         
         // Register ITraceManager dependency
         context.Services.AddSingleton<Aevatar.Core.Interception.Services.ITraceManager, Aevatar.Core.Interception.Services.TraceManager>();
+    }
+    
+    /// <summary>
+    /// Configure dynamic configuration providers and schema processors for dropdown functionality
+    /// </summary>
+    private void ConfigureSchemaProcessors(ServiceConfigurationContext context)
+    {
+        // 注册动态配置提供者
+        context.Services.AddTransient<IDynamicConfigurationProvider, SystemLLMConfigurationProvider>();
+        // context.Services.AddTransient<IDynamicConfigurationProvider, OtherConfigurationProvider>();
+        
+        // 注册下拉框Schema处理器
+        context.Services.AddTransient<IDropDownSchemaProcess, SystemLLMDropDownSchemaProcess>();
+        // context.Services.AddTransient<IDropDownSchemaProcess, OtherDropDownSchemaProcess>();
+        
+        // 注册DynamicDropDownProcessor（协调器）
+        context.Services.AddTransient<DynamicDropDownProcessor>();
     }
 }

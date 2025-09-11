@@ -12,6 +12,12 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
 {
     private readonly object _lockObj = new object();
     private readonly Dictionary<Type, JsonSchema> _schemaDic = new Dictionary<Type, JsonSchema>();
+    private readonly DynamicDropDownProcessor _dynamicDropDownProcessor;
+
+    public SchemaProvider(DynamicDropDownProcessor dynamicDropDownProcessor)
+    {
+        _dynamicDropDownProcessor = dynamicDropDownProcessor;
+    }
 
     public JsonSchema GetTypeSchema(Type type, DynamicDropDownContext? context = null)
     {
@@ -23,13 +29,17 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
                 return queryData;
             }
 
+            // 设置context到processor中
+            _dynamicDropDownProcessor.SetContext(context);
+
             var settings = new SystemTextJsonSchemaGeneratorSettings
             {
                 FlattenInheritanceHierarchy = true,
                 GenerateEnumMappingDescription = true,
                 SchemaProcessors = { 
                     new IgnoreSpecificBaseProcessor(),
-                    new DynamicDropDownProcessor(context) 
+                    // new DynamicDropDownProcessor(context) 
+                    _dynamicDropDownProcessor  // 使用注入的实例
                 }
             };
             settings.SerializerOptions = new JsonSerializerOptions
