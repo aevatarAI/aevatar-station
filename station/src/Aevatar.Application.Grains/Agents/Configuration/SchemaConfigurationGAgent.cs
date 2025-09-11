@@ -55,12 +55,7 @@ public abstract class SchemaConfigurationGEvent : StateLogEventBase<SchemaConfig
 [Description("Schema Configuration Agent for SystemLLM Options")]
 public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentState, SchemaConfigurationGEvent>, ISchemaConfigurationGAgent
 {
-    private readonly ILogger<SchemaConfigurationGAgent> _logger;
-
-    public SchemaConfigurationGAgent(ILogger<SchemaConfigurationGAgent> logger)
-    {
-        _logger = logger;
-    }
+    // Don't use constructor injection for GAgents - use property access pattern
 
     public override Task<string> GetDescriptionAsync()
     {
@@ -72,24 +67,24 @@ public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentSta
     /// Get SystemLLM configuration options from silo configuration
     /// </summary>
     /// <returns>SystemLLMConfigOptions containing AI model configurations</returns>
-    public async Task<SystemLLMConfigOptions> GetSystemLLMConfigOptionsAsync()
+    public Task<SystemLLMConfigOptions> GetSystemLLMConfigOptionsAsync()
     {
         try
         {
             // Get SystemLLMConfigOptions from silo's service provider (similar to AIGAgentBase pattern)
             var systemLLMConfigOptions = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
             
-            _logger.LogInformation("Retrieved SystemLLMConfigOptions with {ConfigCount} configurations from silo", 
+            Logger.LogInformation("Retrieved SystemLLMConfigOptions with {ConfigCount} configurations from silo", 
                 systemLLMConfigOptions.Value.SystemLLMConfigs?.Count ?? 0);
 
-            return systemLLMConfigOptions.Value;
+            return Task.FromResult(systemLLMConfigOptions.Value);
         }
         catch (System.Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve SystemLLMConfigOptions from silo configuration");
+            Logger.LogError(ex, "Failed to retrieve SystemLLMConfigOptions from silo configuration");
             
             // Return empty configuration as fallback
-            return new SystemLLMConfigOptions();
+            return Task.FromResult(new SystemLLMConfigOptions());
         }
     }
 
