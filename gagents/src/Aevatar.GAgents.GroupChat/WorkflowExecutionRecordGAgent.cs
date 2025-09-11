@@ -93,13 +93,8 @@ public class WorkflowExecutionRecordGAgent :
     [EventHandler]
     public async Task HandleEventAsync(StartExecuteWorkUnitEvent @event)
     {
-        // Extract upstream agent from the last message in CoordinatorMessages
-        string? sourceAgentId = null;
-        if (@event.CoordinatorMessages?.Count > 0)
-        {
-            var lastMessage = @event.CoordinatorMessages.Last();
-            sourceAgentId = lastMessage.MemberId.ToString();
-        }
+        // The source agent is the publisher of this event (the upstream agent that sent the request)
+        var sourceAgentId = @event.PublisherGrainId.ToString();
         
         // Extract target agent info from GrainId
         var targetAgentId = @event.TargetAgentId;
@@ -127,50 +122,38 @@ public class WorkflowExecutionRecordGAgent :
             return; // Not our workflow, ignore
         }
         
-        // The publisher of ChatResponseEvent is the target agent that processed the request
-        var targetAgentId = @event.PublisherGrainId.ToString();
+        var sourceAgentId = @event.PublisherGrainId.ToString();  // 发布者
         
-        // Capture current state snapshot of target agent after completion
-        var stateSnapshot = await CaptureAgentStateAsync(targetAgentId);
-        
-        // Find records that are Running or Pending (for incorrect sequence scenarios)
+        // Find records that match both the MemberId (target agent) and SourceAgentId
         var eligibleRecords = State.WorkUnitRecords
-            .Where(r => r.TargetAgentId == targetAgentId)
+            .Where(r => GrainId.Parse(r.TargetAgentId).GetGuidKey() == @event.MemberId)
+            .Where(r => r.SourceAgentId == sourceAgentId)
             .Where(r => r.Status == WorkflowExecutionStatus.Running || r.Status == WorkflowExecutionStatus.Pending)
             .ToList();
             
-        if (eligibleRecords.Any())
+        // Process all matching records (should be very precise with MemberId + SourceAgentId filtering)
+        foreach (var record in eligibleRecords)
         {
-            foreach (var record in eligibleRecords)
-            {
-                RaiseEvent(new FinishExecuteWorkUnitLogEvent
-                {
-                    TargetAgentId = targetAgentId,
-                    SourceAgentId = record.SourceAgentId, // Use the original SourceAgentId from the record
-                    OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content),
-                    CurrentStateSnapshot = stateSnapshot
-                });
-            }
-        }
-        else
-        {
-            // Handle incorrect sequence: ChatResponseEvent arrives before StartExecuteWorkUnitEvent
-            // Create a completed record to handle this out-of-order scenario
-            RaiseEvent(new StartExecuteWorkUnitLogEvent
-            {
-                TargetAgentId = targetAgentId,
-                SourceAgentId = null, // Will be updated when StartExecuteWorkUnitEvent arrives
-                InputData = null,
-                CurrentStateSnapshot = stateSnapshot
-            });
+            var targetAgentId = record.TargetAgentId; // Use record's WorkUnitGrainId as targetAgentId
+            
+            // Capture current state snapshot of target agent after completion
+            var stateSnapshot = await CaptureAgentStateAsync(targetAgentId);
             
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
                 TargetAgentId = targetAgentId,
-                SourceAgentId = null,
+                SourceAgentId = sourceAgentId,
                 OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content),
                 CurrentStateSnapshot = stateSnapshot
             });
+        }
+        
+        // Log warning if no matching records found (this should be rare with precise matching)
+        if (!eligibleRecords.Any())
+        {
+            Logger.LogWarning("ChatResponseEvent received but no matching Running/Pending records found. " +
+                            "MemberId: {MemberId}, SourceAgentId: {SourceAgentId}, WorkflowId: {WorkflowId}", 
+                            @event.MemberId, sourceAgentId, @event.BlackboardId);
         }
         
         await ConfirmEvents();
