@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Agent;
@@ -358,6 +359,339 @@ public class WorkflowRunServiceTests
         _mockAgentService.Verify(x => x.GetAgentAsync(viewAgentId), Times.Once);
     }
 
+    [Fact]
+    public async Task ValidateWorkflowConfigurationAsync_WithInvalidJson_ShouldThrowUserFriendlyException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        // Setup agent with properties that will cause JSON deserialization to fail
+        var invalidProperties = new Dictionary<string, object>
+        {
+            {"WorkflowNodeList", "invalid json string instead of array"}
+        };
+
+        _mockAgentService.Setup(x => x.GetAgentAsync(viewAgentId))
+            .ReturnsAsync(new AgentDto
+            {
+                Id = viewAgentId,
+                Properties = invalidProperties
+            });
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldBe("Invalid workflow configuration format");
+    }
+
+
+    [Fact]
+    public async Task ValidateWorkflowNodePropertiesAsync_WithEmptyAgentType_ShouldThrowUserFriendlyException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        var workflowConfig = new WorkflowViewConfigDto
+        {
+            WorkflowNodeList = new List<WorkflowNodeDto>
+            {
+                new WorkflowNodeDto
+                {
+                    NodeId = Guid.NewGuid(),
+                    Name = "Test Node",
+                    AgentType = "", // Empty agent type
+                    JsonProperties = "{}",
+                    ExtendedData = new Dictionary<string, string>()
+                }
+            },
+            WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>(),
+            WorkflowCoordinatorGAgentId = Guid.NewGuid()
+        };
+
+        SetupWorkflowConfiguration(viewAgentId, workflowConfig);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldContain("AgentType is missing");
+    }
+
+    [Fact]
+    public async Task ValidateWorkflowNodePropertiesAsync_WithEmptyJsonProperties_ShouldThrowUserFriendlyException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        var workflowConfig = new WorkflowViewConfigDto
+        {
+            WorkflowNodeList = new List<WorkflowNodeDto>
+            {
+                new WorkflowNodeDto
+                {
+                    NodeId = Guid.NewGuid(),
+                    Name = "Test Node",
+                    AgentType = "TestAgent",
+                    JsonProperties = "", // Empty JSON properties
+                    ExtendedData = new Dictionary<string, string>()
+                }
+            },
+            WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>(),
+            WorkflowCoordinatorGAgentId = Guid.NewGuid()
+        };
+
+        SetupWorkflowConfiguration(viewAgentId, workflowConfig);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldContain("JsonProperties is missing");
+    }
+
+    [Fact]
+    public async Task PublishWorkflowAsync_WithNullProperties_ShouldThrowUserFriendlyException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        SetupGAgentFactoryMock();
+        SetupSchemaProviderMock();
+        SetupValidWorkflowConfiguration(viewAgentId);
+
+        // Setup workflow service to return agent with null properties
+        var publishedAgent = new AgentDto
+        {
+            Id = viewAgentId,
+            Name = "Test Workflow",
+            Properties = null // Null properties
+        };
+
+        _mockWorkflowViewService.Setup(x => x.PublishWorkflowAsync(viewAgentId))
+            .ReturnsAsync(publishedAgent);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldBe("Published workflow agent has no properties");
+    }
+
+    [Fact]
+    public async Task PublishWorkflowAsync_WithInvalidJsonInProperties_ShouldThrowUserFriendlyException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        SetupGAgentFactoryMock();
+        SetupSchemaProviderMock();
+        SetupValidWorkflowConfiguration(viewAgentId);
+
+        // Setup workflow service to return agent with properties that can't be deserialized to WorkflowViewConfigDto
+        var publishedAgent = new AgentDto
+        {
+            Id = viewAgentId,
+            Name = "Test Workflow",
+            Properties = new Dictionary<string, object>
+            {
+                {"WorkflowNodeList", "invalid_string_instead_of_array"}, // This will cause deserialization to fail
+                {"WorkflowNodeUnitList", new object()}, // Invalid structure
+                {"WorkflowCoordinatorGAgentId", "not_a_guid"} // Invalid GUID
+            }
+        };
+
+        _mockWorkflowViewService.Setup(x => x.PublishWorkflowAsync(viewAgentId))
+            .ReturnsAsync(publishedAgent);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldBe("Invalid workflow configuration in published agent");
+    }
+
+    [Fact]
+    public async Task ValidateAgentConfigAsync_WithNullConfigurationType_ShouldThrowUserFriendlyException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        // Setup agent that returns null configuration type
+        var mockGAgent = new Mock<IGAgent>();
+        mockGAgent.Setup(x => x.GetConfigurationTypeAsync())
+            .Returns(Task.FromResult<Type?>(null)); // Null configuration type
+
+        _mockGAgentFactory.Setup(factory => factory.GetGAgentAsync(It.IsAny<GrainId>(), It.IsAny<ConfigurationBase>()))
+            .ReturnsAsync(mockGAgent.Object);
+
+        var workflowConfig = new WorkflowViewConfigDto
+        {
+            WorkflowNodeList = new List<WorkflowNodeDto>
+            {
+                new WorkflowNodeDto
+                {
+                    NodeId = Guid.NewGuid(),
+                    Name = "Test Node",
+                    AgentType = "TestAgent",
+                    JsonProperties = "{}",
+                    ExtendedData = new Dictionary<string, string>()
+                }
+            },
+            WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>(),
+            WorkflowCoordinatorGAgentId = Guid.NewGuid()
+        };
+
+        SetupWorkflowConfiguration(viewAgentId, workflowConfig);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldContain("has no configuration");
+    }
+
+    [Fact]
+    public async Task ValidateAgentConfigAsync_WithNonUserFriendlyException_ShouldWrapException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        // Setup agent factory to throw a non-UserFriendlyException
+        _mockGAgentFactory.Setup(factory => factory.GetGAgentAsync(It.IsAny<GrainId>(), It.IsAny<ConfigurationBase>()))
+            .ThrowsAsync(new InvalidOperationException("Some internal error"));
+
+        var workflowConfig = new WorkflowViewConfigDto
+        {
+            WorkflowNodeList = new List<WorkflowNodeDto>
+            {
+                new WorkflowNodeDto
+                {
+                    NodeId = Guid.NewGuid(),
+                    Name = "Test Node",
+                    AgentType = "TestAgent",
+                    JsonProperties = "{}",
+                    ExtendedData = new Dictionary<string, string>()
+                }
+            },
+            WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>(),
+            WorkflowCoordinatorGAgentId = Guid.NewGuid()
+        };
+
+        SetupWorkflowConfiguration(viewAgentId, workflowConfig);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldStartWith("Invalid agent type 'TestAgent'");
+        exception.Message.ShouldContain("Some internal error");
+    }
+
+    // Note: Schema validation test removed because JsonSchema.Validate cannot be mocked (non-virtual method)
+
+
+    [Fact]
+    public async Task ExecuteWorkflowAsync_WithMaxRetriesReached_ShouldReturnFalse()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var coordinatorId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        SetupGAgentFactoryMock();
+        SetupSchemaProviderMock();
+        SetupValidWorkflowConfiguration(viewAgentId);
+        SetupPublishWorkflowSuccess(viewAgentId, coordinatorId);
+
+        // Setup coordinator agent that never has the required event
+        var mockAgent = new Mock<Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent>();
+        var mockAgentState = new CreatorGAgentState
+        {
+            EventInfoList = new List<EventDescription>() // Empty event list
+        };
+
+        mockAgent.Setup(x => x.GetAgentAsync())
+            .ReturnsAsync(mockAgentState);
+
+        _mockClusterClient.Setup(x => x.GetGrain<Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent>(coordinatorId, null))
+            .Returns(mockAgent.Object);
+
+        // Act
+        var result = await _workflowRunService.RunWorkflowAsync(request);
+
+        // Assert
+        result.ShouldNotBeNull();
+        result.IsSuccess.ShouldBeFalse();
+        result.WorkflowId.ShouldBe(coordinatorId);
+        result.Message.ShouldContain("coordinator agent is not ready");
+    }
+
+    [Fact]
+    public async Task RunWorkflowAsync_WithNullJsonProperties_ShouldThrowValidationException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        var workflowConfig = new WorkflowViewConfigDto
+        {
+            WorkflowNodeList = new List<WorkflowNodeDto>
+            {
+                new WorkflowNodeDto
+                {
+                    NodeId = Guid.NewGuid(),
+                    Name = "Test Node",
+                    AgentType = "TestAgent",
+                    JsonProperties = null, // Test null properties
+                    ExtendedData = new Dictionary<string, string>()
+                }
+            },
+            WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>(),
+            WorkflowCoordinatorGAgentId = Guid.NewGuid()
+        };
+
+        SetupWorkflowConfiguration(viewAgentId, workflowConfig);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldContain("JsonProperties is missing");
+    }
+
+    [Fact]
+    public async Task RunWorkflowAsync_WithEmptyJsonProperties_ShouldThrowValidationException()
+    {
+        // Arrange
+        var viewAgentId = Guid.NewGuid();
+        var request = CreateValidWorkflowRunRequest(viewAgentId);
+
+        var workflowConfig = new WorkflowViewConfigDto
+        {
+            WorkflowNodeList = new List<WorkflowNodeDto>
+            {
+                new WorkflowNodeDto
+                {
+                    NodeId = Guid.NewGuid(),
+                    Name = "Test Node",
+                    AgentType = "TestAgent",
+                    JsonProperties = "", // Test empty string
+                    ExtendedData = new Dictionary<string, string>()
+                }
+            },
+            WorkflowNodeUnitList = new List<WorkflowNodeUnitDto>(),
+            WorkflowCoordinatorGAgentId = Guid.NewGuid()
+        };
+
+        SetupWorkflowConfiguration(viewAgentId, workflowConfig);
+
+        // Act & Assert
+        var exception = await Should.ThrowAsync<UserFriendlyException>(
+            () => _workflowRunService.RunWorkflowAsync(request));
+        exception.Message.ShouldContain("JsonProperties is missing");
+    }
+
+
     // Test helper methods
     private WorkflowRunRequestDto CreateValidWorkflowRunRequest(Guid viewAgentId)
     {
@@ -504,3 +838,4 @@ public class WorkflowRunServiceTests
         
         public string TestProperty { get; set; } = "TestValue";
     }
+
