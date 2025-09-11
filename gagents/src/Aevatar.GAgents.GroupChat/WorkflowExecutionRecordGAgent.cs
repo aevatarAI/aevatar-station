@@ -4,7 +4,8 @@ using Aevatar.GAgents.GroupChat.Core;
 using Aevatar.GAgents.GroupChat.Core.States;
 using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
-using Newtonsoft.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 
@@ -15,6 +16,65 @@ public class WorkflowExecutionRecordGAgent :
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult("Workflow Execution Record GAgent");
+    }
+    
+    /// <summary>
+    /// Capture the current state snapshot of a target GAgent
+    /// </summary>
+    private async Task<string?> CaptureAgentStateAsync(string targetAgentId)
+    {
+        try
+        {
+            var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
+            
+            // Parse the GrainId to get the Guid
+            if (GrainId.TryParse(targetAgentId, out var grainId))
+            {
+                // Get the target GAgent
+                var targetGAgent = await gAgentFactory.GetGAgentAsync(grainId);
+                
+                // Try to get state if the grain supports IStateGAgent interface
+                if (targetGAgent is IStateGAgent<StateBase> stateGAgent)
+                {
+                    var state = await stateGAgent.GetStateAsync();
+                    var snapshot = new
+                    {
+                        targetAgentId = targetAgentId,
+                        timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        stateType = state.GetType().Name,
+                        state = state
+                    };
+                    return System.Text.Json.JsonSerializer.Serialize(snapshot);
+                }
+                else
+                {
+                    // Fallback to basic info if state is not accessible
+                    var basicSnapshot = new
+                    {
+                        targetAgentId = targetAgentId,
+                        timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        note = "State not accessible - GAgent does not implement IStateGAgent<StateBase>"
+                    };
+                    return System.Text.Json.JsonSerializer.Serialize(basicSnapshot);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("Failed to capture agent state for {TargetAgentId}: {Error}", targetAgentId, ex.Message);
+            
+            // Create fallback snapshot with error info
+            var errorSnapshot = new
+            {
+                targetAgentId = targetAgentId,
+                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                error = ex.Message,
+                note = "State capture failed - see error for details"
+            };
+            return System.Text.Json.JsonSerializer.Serialize(errorSnapshot);
+        }
+        
+        return null;
     }
 
     [EventHandler]
@@ -33,30 +93,42 @@ public class WorkflowExecutionRecordGAgent :
     [EventHandler]
     public async Task HandleEventAsync(StartExecuteWorkUnitEvent @event)
     {
+        // Capture current state snapshot of target agent
+        var stateSnapshot = await CaptureAgentStateAsync(@event.WorkUnitGrainId);
+        
         RaiseEvent(new StartExecuteWorkUnitLogEvent
         {
             WorkUnitGrainId = @event.WorkUnitGrainId,
-            InputData = JsonConvert.SerializeObject(@event.CoordinatorMessages)
+            InputData = System.Text.Json.JsonSerializer.Serialize(@event.CoordinatorMessages),
+            CurrentStateSnapshot = stateSnapshot
         });
+        
+        Logger.LogInformation("✅ StartExecuteWorkUnitEvent处理完成");
         await ConfirmEvents();
     }
 
     [EventHandler]
     public async Task HandleEventAsync(ChatResponseEvent @event)
     {
+        var targetAgentId = @event.PublisherGrainId.ToString();
+        
+        // Capture current state snapshot
+        var stateSnapshot = await CaptureAgentStateAsync(targetAgentId);
+        
         if (@event.FailureSummary.IsNullOrEmpty())
         {
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
-                WorkUnitGrainId = @event.PublisherGrainId.ToString(),
-                OutputData = JsonConvert.SerializeObject(@event.ChatResponse?.Content)
+                WorkUnitGrainId = targetAgentId,
+                OutputData = System.Text.Json.JsonSerializer.Serialize(@event.ChatResponse?.Content),
+                CurrentStateSnapshot = stateSnapshot
             });
         }
         else
         {
             RaiseEvent(new FailExecuteWorkflowLogEvent()
             {
-                WorkUnitGrainId = @event.PublisherGrainId.ToString(),
+                WorkUnitGrainId = targetAgentId,
                 FailureSummary = @event.FailureSummary
             });
         }
@@ -139,6 +211,7 @@ public class WorkflowExecutionRecordGAgent :
                         startUnit.Status = WorkflowExecutionStatus.Running;
                     }
                     startUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
+                    startUnit.CurrentStateSnapshot = startExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                 }
                 break;
             case FinishExecuteWorkUnitLogEvent finishExecuteWorkUnitLogEvent:
@@ -149,6 +222,7 @@ public class WorkflowExecutionRecordGAgent :
                     finishUnit.EndTime = DateTime.UtcNow;
                     finishUnit.Status = WorkflowExecutionStatus.Completed;
                     finishUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                    finishUnit.CurrentStateSnapshot = finishExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                 }
                 break;
             case FailExecuteWorkflowLogEvent failExecuteWorkflowLogEvent:
@@ -195,6 +269,8 @@ public class StartExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
     public string WorkUnitGrainId { get; set; }
     [Id(1)]
     public string InputData { get; set; }
+    [Id(2)]
+    public string? CurrentStateSnapshot { get; set; }
 }
 
 [GenerateSerializer]
@@ -204,6 +280,8 @@ public class FinishExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
     public string WorkUnitGrainId { get; set; }
     [Id(1)]
     public string OutputData { get; set; }
+    [Id(2)]
+    public string? CurrentStateSnapshot { get; set; }
 }
 
 [GenerateSerializer]
