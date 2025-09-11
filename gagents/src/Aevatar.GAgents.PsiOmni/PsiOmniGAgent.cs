@@ -528,11 +528,11 @@ public partial class
             return false;
         }
 
-        if (State.Configuration == null)
-        {
-            LogEventInfo("Configuration is empty.");
-            return false;
-        }
+        // if (State.Configuration == null)
+        // {
+        //     LogEventInfo("Configuration is empty.");
+        //     return false;
+        // }
 
         return true;
     }

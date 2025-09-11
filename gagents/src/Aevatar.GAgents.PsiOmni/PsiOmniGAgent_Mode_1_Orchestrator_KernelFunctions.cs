@@ -149,12 +149,12 @@ public partial class PsiOmniGAgent
         try
         {
             // Create agent configuration with custom prompt
-            var agentConfig = State.Configuration;
-            if (agentConfig == null)
-            {
-                return
-                    $"❌ Error: AgentConfiguration not set.";
-            }
+            // var agentConfig = State.Configuration;
+            // if (agentConfig == null)
+            // {
+            //     return
+            //         $"❌ Error: AgentConfiguration not set.";
+            // }
 
             if (State.Depth >= 5)
             {
@@ -226,7 +226,7 @@ public partial class PsiOmniGAgent
 
             var configEvent = new AgentConfigEvent
             {
-                Configuration = agentConfig,
+                // Configuration = agentConfig,
                 ParentAgentId = parentAgentId
             };
             await PublishAsyncWithTracing(agentId, configEvent);
