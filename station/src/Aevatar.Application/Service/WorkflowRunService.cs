@@ -34,7 +34,6 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     private readonly IWorkflowViewService _workflowViewService;
     private readonly ISubscriptionAppService _subscriptionAppService;
     private readonly IAgentService _agentService;
-    // private readonly IGAgentManager _gAgentManager;
     private readonly IGAgentFactory _gAgentFactory;
     private readonly ISchemaProvider _schemaProvider;
     private readonly ILogger<WorkflowRunService> _logger;
@@ -43,7 +42,6 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         IWorkflowViewService workflowViewService,
         ISubscriptionAppService subscriptionAppService,
         IAgentService agentService,
-        // IGAgentManager gAgentManager,
         IGAgentFactory gAgentFactory,
         ISchemaProvider schemaProvider,
         ILogger<WorkflowRunService> logger,
@@ -52,7 +50,6 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _workflowViewService = workflowViewService;
         _subscriptionAppService = subscriptionAppService;
         _agentService = agentService;
-        // _gAgentManager = gAgentManager;
         _gAgentFactory = gAgentFactory;
         _schemaProvider = schemaProvider;
         _logger = logger;
@@ -144,15 +141,9 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         {
             throw new UserFriendlyException($"Node '{workflowNode.Name}': JsonProperties is missing");
         }
-
-        // 1. 先反序列化为Dictionary（与WorkflowViewService.PublishWorkflowAsync保持一致）
-     
+        
         var nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
-
-        // 2. 重新序列化为JSON字符串（模拟AgentService.CreateAgentAsync的Properties处理）
         var initializationParam = JsonConvert.SerializeObject(nodeAgentProperties);
-
-        // 3. 验证Agent配置
         await ValidateAgentConfigAsync(workflowNode.AgentType, initializationParam);
 
         _logger.LogDebug("Validation passed for node '{NodeName}' (AgentType: {AgentType})",
@@ -289,11 +280,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
         try
         {
-            // 1. 创建临时Agent实例获取配置类型（模拟AgentService.InitializeBusinessAgent）
             var tempGrainId = GrainId.Create(agentType, Guid.NewGuid().ToString());
             var agent = await _gAgentFactory.GetGAgentAsync(tempGrainId);
-            
-            // 2. 获取配置类型（模拟AgentService.GetAgentConfigurationAsync）
             var configurationType = ExtractConfigurationProperties(await agent.GetConfigurationTypeAsync());
             if (configurationType == null)
             {
@@ -301,7 +289,6 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
                 throw new UserFriendlyException($"Agent type '{agentType}' has no configuration");
             }
 
-            // 3. 使用与AgentService.SetupConfigurationData相同的验证流程
             await ValidateConfigurationDataAsync(configurationType, configJson);
             _logger.LogInformation("[AgentValidation] Validation completed successfully for {AgentType}", agentType);
         }
@@ -329,16 +316,12 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         {
             _logger.LogDebug("[AgentValidation] Starting validation for {ConfigType} with JSON: {ConfigJson}", configType.DtoType, configJson);
 
-            // 1. 创建配置实例（模拟AgentService.SetupConfigurationData）
             var actualDto = Activator.CreateInstance(configType.DtoType);
             var config = (ConfigurationBase)actualDto!;
-
-            // 2. Schema验证（使用与AgentService相同的设置）
             var schema = _schemaProvider.GetTypeSchema(config.GetType());
             var validateResponse = schema.Validate(configJson, new JsonSchemaValidatorSettings { PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase });
             if (validateResponse.Count > 0) throw new UserFriendlyException($"Schema validation failed for {configType.DtoType}");
 
-            // 3. 自定义验证（IValidatableObject）
             if (config is IValidatableObject validatableConfig)
             {
                 var validationContext = new ValidationContext(config);
@@ -351,11 +334,9 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
                 }
             }
 
-            // _logger.LogDebug("[AgentValidation] All validations passed for {ConfigType}", configType.Name);
         }
         catch (Exception ex)
         {
-            // _logger.LogError(ex, "[AgentValidation] Unexpected error during config validation for {ConfigType}", configType.Name);
             throw new UserFriendlyException($"Validation error: {ex.Message}");
         }
     }
