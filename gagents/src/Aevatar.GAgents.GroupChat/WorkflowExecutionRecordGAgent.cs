@@ -44,11 +44,23 @@ public class WorkflowExecutionRecordGAgent :
     [EventHandler]
     public async Task HandleEventAsync(ChatResponseEvent @event)
     {
-        RaiseEvent(new FinishExecuteWorkUnitLogEvent
+        if (@event.FailureSummary.IsNullOrEmpty())
         {
-            WorkUnitGrainId = @event.PublisherGrainId.ToString(),
-            OutputData = JsonConvert.SerializeObject(@event.ChatResponse?.Content)
-        });
+            RaiseEvent(new FinishExecuteWorkUnitLogEvent
+            {
+                WorkUnitGrainId = @event.PublisherGrainId.ToString(),
+                OutputData = JsonConvert.SerializeObject(@event.ChatResponse?.Content)
+            });
+        }
+        else
+        {
+            RaiseEvent(new FailExecuteWorkflowLogEvent()
+            {
+                WorkUnitGrainId = @event.PublisherGrainId.ToString(),
+                FailureSummary = @event.FailureSummary
+            });
+        }
+
         await ConfirmEvents();
     }
 
@@ -102,6 +114,15 @@ public class WorkflowExecutionRecordGAgent :
                 workUnit.Status = WorkflowExecutionStatus.Completed;
                 workUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
                 break;
+            case FailExecuteWorkflowLogEvent failExecuteWorkflowLogEvent:
+                var failWorkUnit = state.WorkUnitRecords.First(o =>
+                    o.WorkUnitGrainId == failExecuteWorkflowLogEvent.WorkUnitGrainId);
+                failWorkUnit.EndTime = DateTime.UtcNow;
+                failWorkUnit.Status = WorkflowExecutionStatus.Failed;
+                failWorkUnit.FailureSummary = failExecuteWorkflowLogEvent.FailureSummary;
+
+                state.Status = WorkflowExecutionStatus.Failed;
+                break;
         }
     }
 }
@@ -143,4 +164,13 @@ public class FinishExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
     public string WorkUnitGrainId { get; set; }
     [Id(1)]
     public string OutputData { get; set; }
+}
+
+[GenerateSerializer]
+public class FailExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
+{
+    [Id(0)]
+    public string WorkUnitGrainId { get; set; }
+    [Id(1)]
+    public string FailureSummary { get; set; }
 }
