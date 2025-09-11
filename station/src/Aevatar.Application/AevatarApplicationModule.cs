@@ -11,12 +11,14 @@ using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
+using Aevatar.LocalDevelopment;
 using Aevatar.Notification;
 using Aevatar.Options;
 using Aevatar.Plugins;
 using Aevatar.Schema;
 using Aevatar.WebHook.Deploy;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Orleans;
 using Volo.Abp.Account;
 using Volo.Abp.AspNetCore.Mvc.Dapr;
@@ -73,7 +75,7 @@ public class AevatarApplicationModule : AbpModule
         context.Services.AddTransient<IHostCopyManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();
         Configure<HostDeployOptions>(configuration.GetSection("HostDeploy"));
-        context.Services.Configure<HostOptions>(configuration.GetSection("Host"));
+        context.Services.Configure<Aevatar.Options.HostOptions>(configuration.GetSection("Host"));
         
         Configure<AccountOptions>(configuration.GetSection("Account"));
         Configure<ApiRequestOptions>(configuration.GetSection("ApiRequest"));
@@ -85,9 +87,28 @@ public class AevatarApplicationModule : AbpModule
         
         // 配置 SystemLLM 元信息选项
         Configure<SystemLLMMetaInfoOptions>(configuration.GetSection("SystemLLMConfig"));
+
+        // Configure local development services
+        ConfigureLocalDevelopmentServices(context);
         
         // 配置工作流编排服务
         ConfigureWorkflowOrchestrationServices(context);
+    }
+    
+    /// <summary>
+    /// Configure local development specific services
+    /// </summary>
+    private void ConfigureLocalDevelopmentServices(ServiceConfigurationContext context)
+    {
+        var hostingEnvironment = context.Services.GetHostingEnvironment();
+        
+        if (hostingEnvironment.IsDevelopment())
+        {
+            // Override services with local development implementations
+            context.Services.AddTransient<IAevatarAccountEmailer, DevLocalAevatarAccountEmailer>();
+            context.Services.AddTransient<IHostDeployManager, DefaultHostDeployManager>();
+            context.Services.AddTransient<IDeveloperService, LocalDevelopmentDeveloperService>();
+        }
     }
     
     /// <summary>

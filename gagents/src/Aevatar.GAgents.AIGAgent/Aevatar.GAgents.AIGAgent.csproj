@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>$(DefaultTargetFramework)</TargetFramework>
+        <Nullable>enable</Nullable>
+        <RootNamespace>Aevatar.AI</RootNamespace>
+        <PackageId>Aevatar.GAgents.AIGAgent</PackageId>
+        <PackageType>Dependency</PackageType>
+        <Title>aevatar Framework</Title>
+        <Authors>AElf</Authors>
+        <Description>The core package to inherit from AIGAgent for AI Agents.</Description>
+        <PackageTags>agent</PackageTags>
+        <RepositoryUrl>https://github.com/aevatarAI/aevatar-gagents</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-gagents</PackageProjectUrl>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="System.ClientModel" />
+        <PackageReference Include="Volo.Abp.BlobStoring.Aws" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Aevatar.GAgents.AI.Abstractions\Aevatar.GAgents.AI.Abstractions.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.AIGAgent.Core\Aevatar.GAgents.AIGAgent.Core.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.Executor\Aevatar.GAgents.Executor.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.SemanticKernel\Aevatar.GAgents.SemanticKernel.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.MCP.Core\Aevatar.GAgents.MCP.Core.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Aevatar.Core" />
+        <PackageReference Include="Aevatar.Core.Abstractions" />
+        <PackageReference Include="Aevatar.EventSourcing.Core" />
+    </ItemGroup>
+</Project>
