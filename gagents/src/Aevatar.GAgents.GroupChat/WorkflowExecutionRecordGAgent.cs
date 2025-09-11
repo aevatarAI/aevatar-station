@@ -128,29 +128,38 @@ public class WorkflowExecutionRecordGAgent :
                 state.Status = WorkflowExecutionStatus.Completed;
                 break;
             case StartExecuteWorkUnitLogEvent startExecuteWorkUnitLogEvent:
-                var startUnit = state.WorkUnitRecords.First(o =>
-                    o.WorkUnitGrainId == startExecuteWorkUnitLogEvent.WorkUnitGrainId);
-                startUnit.WorkUnitGrainId = startExecuteWorkUnitLogEvent.WorkUnitGrainId;
-                startUnit.StartTime = DateTime.UtcNow;
-                if (startUnit.Status == WorkflowExecutionStatus.Pending)
+                var startUnits = state.WorkUnitRecords.Where(o =>
+                    o.WorkUnitGrainId == startExecuteWorkUnitLogEvent.WorkUnitGrainId).ToList();
+                foreach (var startUnit in startUnits)
                 {
-                    startUnit.Status = WorkflowExecutionStatus.Running;
+                    startUnit.WorkUnitGrainId = startExecuteWorkUnitLogEvent.WorkUnitGrainId;
+                    startUnit.StartTime = DateTime.UtcNow;
+                    if (startUnit.Status == WorkflowExecutionStatus.Pending)
+                    {
+                        startUnit.Status = WorkflowExecutionStatus.Running;
+                    }
+                    startUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
                 }
-                startUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
                 break;
             case FinishExecuteWorkUnitLogEvent finishExecuteWorkUnitLogEvent:
-                var finishUnit = state.WorkUnitRecords.First(o =>
-                    o.WorkUnitGrainId == finishExecuteWorkUnitLogEvent.WorkUnitGrainId);
-                finishUnit.EndTime = DateTime.UtcNow;
-                finishUnit.Status = WorkflowExecutionStatus.Completed;
-                finishUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                var finishUnits = state.WorkUnitRecords.Where(o =>
+                    o.WorkUnitGrainId == finishExecuteWorkUnitLogEvent.WorkUnitGrainId).ToList();
+                foreach (var finishUnit in finishUnits)
+                {
+                    finishUnit.EndTime = DateTime.UtcNow;
+                    finishUnit.Status = WorkflowExecutionStatus.Completed;
+                    finishUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                }
                 break;
             case FailExecuteWorkflowLogEvent failExecuteWorkflowLogEvent:
-                var failWorkUnit = state.WorkUnitRecords.First(o =>
-                    o.WorkUnitGrainId == failExecuteWorkflowLogEvent.WorkUnitGrainId);
-                failWorkUnit.EndTime = DateTime.UtcNow;
-                failWorkUnit.Status = WorkflowExecutionStatus.Failed;
-                failWorkUnit.FailureSummary = failExecuteWorkflowLogEvent.FailureSummary;
+                var failWorkUnits = state.WorkUnitRecords.Where(o =>
+                    o.WorkUnitGrainId == failExecuteWorkflowLogEvent.WorkUnitGrainId).ToList();
+                foreach (var failWorkUnit in failWorkUnits)
+                {
+                    failWorkUnit.EndTime = DateTime.UtcNow;
+                    failWorkUnit.Status = WorkflowExecutionStatus.Failed;
+                    failWorkUnit.FailureSummary = failExecuteWorkflowLogEvent.FailureSummary;
+                }
 
                 state.Status = WorkflowExecutionStatus.Failed;
                 break;
