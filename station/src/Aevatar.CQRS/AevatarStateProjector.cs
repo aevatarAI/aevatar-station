@@ -144,7 +144,13 @@ public class AevatarStateProjector : IStateProjector, ISingletonDependency, IDis
                 // 处理完成后移除已处理的命令
                 foreach (var cmd in currentBatch)
                 {
-                    _latestCommands.TryRemove(cmd.Id, out _);
+                    if (_latestCommands.TryGetValue(cmd.Id, out var curCmd))
+                    {
+                        if (curCmd.Version == cmd.Version)
+                        {
+                            _latestCommands.TryRemove(cmd.Id, out _);
+                        }
+                    }
                 }
             }
         }
