@@ -22,6 +22,13 @@ namespace Aevatar.Application.Grains.Agents.Configuration;
 public interface ISchemaConfigurationGAgent : IStateGAgent<SchemaConfigurationGAgentState>, IGrainWithStringKey
 {
     /// <summary>
+    /// Get configuration options from silo configuration using generic type
+    /// </summary>
+    /// <typeparam name="T">The configuration type to retrieve</typeparam>
+    /// <returns>Configuration options of type T</returns>
+    Task<T> GetConfigOptionsAsync<T>() where T : class;
+
+    /// <summary>
     /// Get SystemLLM configuration options from silo configuration
     /// </summary>
     /// <returns>SystemLLMConfigOptions containing AI model configurations</returns>
@@ -52,7 +59,7 @@ public abstract class SchemaConfigurationGEvent : StateLogEventBase<SchemaConfig
 /// Schema configuration grain that provides SystemLLMConfigOptions from silo configuration
 /// This grain runs in the silo and can access silo configuration directly
 /// </summary>
-[Description("Schema Configuration Agent for SystemLLM Options")]
+[Description("Schema Configuration Agent for Options")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentState, SchemaConfigurationGEvent>, ISchemaConfigurationGAgent
@@ -71,28 +78,40 @@ public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentSta
     }
 
     /// <summary>
+    /// Get configuration options from silo configuration using generic type
+    /// </summary>
+    /// <typeparam name="T">The configuration type to retrieve</typeparam>
+    /// <returns>Configuration options of type T</returns>
+    public Task<T> GetConfigOptionsAsync<T>() where T : class
+    {
+        try
+        {
+            // Get configuration options from silo's service provider using generic type
+            var configOptions = ServiceProvider.GetRequiredService<IOptions<T>>();
+            
+            _logger.LogInformation("Retrieved configuration options of type {ConfigType} from silo", typeof(T).Name);
+
+            return Task.FromResult(configOptions.Value);
+        }
+        catch (System.Exception ex)
+        {
+            _logger.LogError(ex, "Failed to retrieve configuration options of type {ConfigType} from silo configuration", typeof(T).Name);
+            
+            // Return default instance as fallback
+            var defaultInstance = Activator.CreateInstance<T>();
+            _logger.LogWarning("Returning default instance of {ConfigType} as fallback", typeof(T).Name);
+            return Task.FromResult(defaultInstance);
+        }
+    }
+
+    /// <summary>
     /// Get SystemLLM configuration options from silo configuration
     /// </summary>
     /// <returns>SystemLLMConfigOptions containing AI model configurations</returns>
     public Task<SystemLLMConfigOptions> GetSystemLLMConfigOptionsAsync()
     {
-        try
-        {
-            // Get SystemLLMConfigOptions from silo's service provider (similar to AIGAgentBase pattern)
-            var systemLLMConfigOptions = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
-            
-            _logger.LogInformation("Retrieved SystemLLMConfigOptions with {ConfigCount} configurations from silo", 
-                systemLLMConfigOptions.Value.SystemLLMConfigs?.Count ?? 0);
-
-            return Task.FromResult(systemLLMConfigOptions.Value);
-        }
-        catch (System.Exception ex)
-        {
-            _logger.LogError(ex, "Failed to retrieve SystemLLMConfigOptions from silo configuration");
-            
-            // Return empty configuration as fallback
-            return Task.FromResult(new SystemLLMConfigOptions());
-        }
+        // Use the generic method for backward compatibility
+        return GetConfigOptionsAsync<SystemLLMConfigOptions>();
     }
 
 }
