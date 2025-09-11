@@ -330,6 +330,8 @@ public abstract class ProjectServiceTests<TStartupModule> : AevatarApplicationTe
         var roles = await _projectService.GetRoleListAsync(project.Id);
 
         await _projectService.DeleteAsync(project.Id);
+        await Should.ThrowAsync<UserFriendlyException>(async () =>
+            await _projectService.DeleteAsync(project.Id));
 
         await Should.ThrowAsync<EntityNotFoundException>(async () =>
             await _projectService.GetAsync(project.Id));
