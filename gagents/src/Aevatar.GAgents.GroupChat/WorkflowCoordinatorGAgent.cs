@@ -53,6 +53,15 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
             return;
         }
 
+        if (!@event.FailureSummary.IsNullOrEmpty())
+        {
+            Logger.LogError(
+                $"[WorkflowCoordinatorGAgent] ChatResponseEvent workUnit execute fail:{@event.FailureSummary}");
+            RaiseEvent(new WorkflowStartFailedLogEvent());
+            await ConfirmEvents();
+            return;
+        }
+
         var blackboard = GrainFactory.GetGrain<IBlackboardGAgent>(State.BlackboardId);
         await blackboard.SetMessageAsync(new CoordinatorConfirmChatResponse()
         {
@@ -84,7 +93,7 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
     public async Task HandleEventAsync(StartWorkflowCoordinatorEvent @event)
     {
         Logger.LogDebug("[WorkflowCoordinatorGAgent] handler StartWorkflowCoordinatorEvent start");
-        if (State.WorkflowStatus != WorkflowCoordinatorStatus.Pending)
+        if (State.WorkflowStatus != WorkflowCoordinatorStatus.Pending && State.WorkflowStatus != WorkflowCoordinatorStatus.Failed)
         {
             Logger.LogError("[WorkflowCoordinatorGAgent] The workflow is not ready to run.");
             return;
