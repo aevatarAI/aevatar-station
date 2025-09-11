@@ -1,0 +1,25 @@
+{
+  "version": "1.0.0",
+  "description": "Demo MCP Gateway Server Configuration - Cursor-style",
+  "registry": {
+    "url": "localhost:5003",
+    "namespace": "demo-mcp"
+  },
+  "gateway": {
+    "url": "http://localhost:8000"
+  },
+  "servers": {
+    "filesystem": {
+      "enabled": true,
+      "type": "npm",
+      "package": "@modelcontextprotocol/server-filesystem",
+      "version": "latest",
+      "description": "File system operations - read, write, list files",
+      "environment": {
+        "WORKSPACE_PATH": "/workspace",
+        "NODE_ENV": "production"
+      },
+      "tags": ["files", "official"]
+    }
+  }
+}

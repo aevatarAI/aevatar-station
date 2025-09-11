@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcpgateway
+  namespace: adapter
+  labels:
+    app: mcpgateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcpgateway
+  template:
+    metadata:
+      labels:
+        app: mcpgateway
+    spec:
+      containers:
+      - name: mcpgateway
+        image: ghcr.io/microsoft/mcp-gateway:latest
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: ENV
+          value: "development"
+        - name: TZ
+          value: "UTC"
+        - name: APISERVER_JWT_SECRET_KEY
+          value: "aevatar-dev-jwt-secret-key-12345"
+        - name: SUPER_ADMIN_USERNAME
+          value: "admin"
+        - name: SUPER_ADMIN_PASSWORD
+          value: "admin123"
+        - name: ASPNETCORE_URLS
+          value: "http://+:8000"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /adapters
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /adapters
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcpgateway-service
+  namespace: adapter
+spec:
+  selector:
+    app: mcpgateway
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+  type: ClusterIP
