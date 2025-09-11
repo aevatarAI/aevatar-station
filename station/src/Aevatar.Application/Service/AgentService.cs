@@ -765,9 +765,9 @@ public class AgentService : ApplicationService, IAgentService
     {
         try
         {
-            // Get SystemLLMConfigOptions from silo's SchemaConfigurationGAgent using factory
-            var grainId = GrainId.Create(typeof(SchemaConfigurationGAgent).FullName!, Guid.NewGuid().ToString());
-            var schemaConfigGrain = await _gAgentFactory.GetGAgentAsync<ISchemaConfigurationGAgent>(grainId);
+            // Get SystemLLMConfigOptions from silo's SchemaConfigurationGAgent using cluster client
+            var grainId = Guid.NewGuid().ToString();
+            var schemaConfigGrain = _clusterClient.GetGrain<ISchemaConfigurationGAgent>(grainId);
             var systemLLMConfigOptions = await schemaConfigGrain.GetSystemLLMConfigOptionsAsync();
             
             // Convert SystemLLMConfigOptions to DynamicDropDownContext
