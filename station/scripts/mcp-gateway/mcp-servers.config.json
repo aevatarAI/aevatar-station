@@ -1,0 +1,124 @@
+{
+  "version": "1.0.0",
+  "description": "MCP Gateway Server Configuration",
+  "registry": {
+    "url": "localhost:5003",
+    "namespace": "mcp-servers"
+  },
+  "gateway": {
+    "url": "http://localhost:8000",
+    "auth": {
+      "type": "none"
+    }
+  },
+  "servers": {
+    "filesystem": {
+      "enabled": true,
+      "type": "npm",
+      "package": "@modelcontextprotocol/server-filesystem",
+      "version": "latest",
+      "description": "Official filesystem operations MCP server",
+      "environment": {
+        "MCP_SERVER_TYPE": "filesystem",
+        "WORKSPACE_PATH": "/workspace",
+        "NODE_ENV": "production"
+      },
+      "resources": {
+        "memory": "256Mi",
+        "cpu": "200m"
+      },
+      "volumes": [
+        {
+          "name": "workspace",
+          "path": "/workspace",
+          "type": "emptyDir"
+        }
+      ],
+      "tags": ["official", "filesystem", "files"]
+    },
+    "sqlite-custom": {
+      "enabled": true,
+      "type": "custom",
+      "image": "universal-mcp-server:1.0.0",
+      "description": "Custom SQLite MCP server implementation",
+      "environment": {
+        "MCP_SERVER_TYPE": "sqlite",
+        "DATABASE_PATH": "/data/app.db",
+        "NODE_ENV": "production"
+      },
+      "resources": {
+        "memory": "512Mi",
+        "cpu": "300m"
+      },
+      "volumes": [
+        {
+          "name": "sqlite-data",
+          "path": "/data",
+          "type": "persistentVolume",
+          "size": "1Gi"
+        }
+      ],
+      "tags": ["custom", "database", "sqlite"]
+    },
+    "thinking": {
+      "enabled": false,
+      "type": "custom",
+      "image": "thinking-mcp-server:1.0.0",
+      "description": "Sequential thinking and reasoning MCP server",
+      "environment": {
+        "MCP_SERVER_TYPE": "thinking",
+        "MAX_SESSIONS": "100",
+        "SESSION_TIMEOUT": "3600",
+        "NODE_ENV": "production"
+      },
+      "resources": {
+        "memory": "512Mi",
+        "cpu": "400m"
+      },
+      "tags": ["ai", "reasoning", "thinking"]
+    },
+    "web-search": {
+      "enabled": false,
+      "type": "custom",
+      "image": "web-search-mcp:1.0.0",
+      "description": "Web search MCP server",
+      "environment": {
+        "SEARCH_ENGINE": "duckduckgo",
+        "MAX_RESULTS": "10",
+        "CACHE_TTL": "3600"
+      },
+      "secrets": [
+        {
+          "name": "SEARCH_API_KEY",
+          "required": false
+        }
+      ],
+      "tags": ["search", "web", "external"]
+    }
+  },
+  "deployment": {
+    "strategy": "rolling",
+    "timeout": "300s",
+    "healthCheck": {
+      "enabled": true,
+      "path": "/health",
+      "initialDelay": "10s",
+      "interval": "30s"
+    },
+    "scaling": {
+      "minReplicas": 1,
+      "maxReplicas": 3,
+      "targetCPU": 70
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "enabled": true,
+      "port": 9090
+    },
+    "logging": {
+      "level": "info",
+      "format": "json"
+    }
+  }
+}

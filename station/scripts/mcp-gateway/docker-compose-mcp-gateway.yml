@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # Local Docker Registry
+  registry:
+    image: registry:2.7
+    ports:
+      - "5001:5000"
+    volumes:
+      - registry_data:/var/lib/registry
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+
+  # MCP Gateway (using official image if available, or local build)
+  mcp-gateway:
+    image: ghcr.io/microsoft/mcp-gateway:latest
+    ports:
+      - "8000:80"
+      - "5234:5234"
+      - "5235:5235" 
+      - "5335:5335"
+      - "5236:5236"
+    environment:
+      - ENV=development
+      - TZ=UTC
+      - APISERVER_JWT_SECRET_KEY=aevatar-dev-jwt-secret-key-12345
+      - SUPER_ADMIN_USERNAME=admin
+      - SUPER_ADMIN_PASSWORD=admin123
+    depends_on:
+      - registry
+    restart: unless-stopped
+
+  # Official Filesystem MCP Server
+  mcp-filesystem:
+    build:
+      context: ./official-mcp-servers/filesystem
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    volumes:
+      - filesystem_workspace:/workspace
+    environment:
+      - NODE_ENV=production
+      - WORKSPACE_PATH=/workspace
+    restart: unless-stopped
+
+  # Official SQLite MCP Server
+  mcp-sqlite:
+    build:
+      context: ./official-mcp-servers/sqlite
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3000"
+    volumes:
+      - sqlite_data:/data
+    environment:
+      - NODE_ENV=production
+      - DATABASE_PATH=/data/mcp.db
+    restart: unless-stopped
+
+volumes:
+  registry_data:
+  filesystem_workspace:
+  sqlite_data:

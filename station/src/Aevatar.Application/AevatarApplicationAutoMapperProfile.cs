@@ -1,11 +1,7 @@
-﻿using Aevatar.Application.Grains.Subscription;
+﻿using Aevatar.Application.Contracts.MCPGateway;
+using Aevatar.Application.Grains.Subscription;
 using Aevatar.Subscription;
-using Aevatar.Agents.Creator;
-using Aevatar.ApiKey;
-using Aevatar.ApiKeys;
 using Aevatar.ApiRequests;
-using Aevatar.CQRS;
-using Aevatar.CQRS.Dto;
 using Aevatar.Domain.Grains.Subscription;
 using Aevatar.Notification;
 using Aevatar.Organizations;
@@ -47,5 +43,44 @@ public class AevatarApplicationAutoMapperProfile : Profile
         
         CreateMap<ProjectCorsOrigin, ProjectCorsOriginDto>()
             .ForMember(d => d.CreationTime, m => m.MapFrom(s => DateTimeHelper.ToUnixTimeMilliseconds(s.CreationTime)));
+        
+        // MCP Gateway mappings
+        ConfigureMCPGatewayMappings();
+    }
+    
+    /// <summary>
+    /// Configure MCP Gateway AutoMapper mappings
+    /// </summary>
+    private void ConfigureMCPGatewayMappings()
+    {
+        // Note: Since we're using DTOs that directly match the gateway API responses,
+        // most mappings are straightforward or not needed.
+        // Add specific mappings here if needed for data transformation.
+        
+        CreateMap<CreateMCPAdapterDto, MCPAdapterDto>()
+            .ForMember(d => d.Id, opt => opt.MapFrom(s => s.Name))
+            .ForMember(d => d.Status, opt => opt.Ignore())
+            .ForMember(d => d.ActiveConnections, opt => opt.Ignore())
+            .ForMember(d => d.LastHealthCheck, opt => opt.Ignore())
+            .ForMember(d => d.IsHealthy, opt => opt.Ignore())
+            .ForMember(d => d.ResourceUsage, opt => opt.Ignore())
+            .ForMember(d => d.CreationTime, opt => opt.Ignore())
+            .ForMember(d => d.CreatorId, opt => opt.Ignore())
+            .ForMember(d => d.LastModificationTime, opt => opt.Ignore())
+            .ForMember(d => d.LastModifierId, opt => opt.Ignore());
+
+        CreateMap<UpdateMCPAdapterDto, MCPAdapterDto>()
+            .ForMember(d => d.Id, opt => opt.Ignore())
+            .ForMember(d => d.Name, opt => opt.Ignore())
+            .ForMember(d => d.Status, opt => opt.Ignore())
+            .ForMember(d => d.ActiveConnections, opt => opt.Ignore())
+            .ForMember(d => d.LastHealthCheck, opt => opt.Ignore())
+            .ForMember(d => d.IsHealthy, opt => opt.Ignore())
+            .ForMember(d => d.ResourceUsage, opt => opt.Ignore())
+            .ForMember(d => d.CreationTime, opt => opt.Ignore())
+            .ForMember(d => d.CreatorId, opt => opt.Ignore())
+            .ForMember(d => d.LastModificationTime, opt => opt.Ignore())
+            .ForMember(d => d.LastModifierId, opt => opt.Ignore())
+            .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
     }
 }

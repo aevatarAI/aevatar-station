@@ -1,0 +1,100 @@
+{
+  "DockerMongoConfig": {
+    "port": 27018,
+    "name": "admin",
+    "password": "123456"
+  },
+  "DockerRedisConfig": {
+    "port": 6380,
+    "name": "",
+    "password": ""
+  },
+  "DockerEsConfig": {
+    "port": 9201,
+    "name": "elastic",
+    "password": "123456"
+  },
+  "DockerQrConfig": {
+    "port": 6335,
+    "name": "",
+    "password": ""
+  },
+  "DockerKafkaConfig": {
+    "port": 9094,
+    "name": "",
+    "password": ""
+  },
+  "MCPGatewayConfig": {
+    "port": 7004,
+    "enableAutoDiscovery": true,
+    "enableSessionAffinity": true,
+    "requestTimeout": "00:01:00",
+    "maxRetryAttempts": 3,
+    "enableDetailedLogging": true,
+    "authToken": "Bearer aspire-dev-token",
+    "healthCheckInterval": "00:00:30"
+  },
+  "MCPServersConfig": {
+    "filesystem": {
+      "port": 3001,
+      "image": "localhost:5000/mcp-filesystem:1.0.0",
+      "enabled": true,
+      "autoRegister": true,
+      "description": "Filesystem operations MCP server",
+      "environment": {
+        "WORKSPACE_PATH": "/workspace",
+        "LOG_LEVEL": "INFO"
+      },
+      "resourceLimits": {
+        "cpuLimit": 0.5,
+        "memoryLimitMB": 256
+      }
+    },
+    "sqlite": {
+      "port": 3002,
+      "image": "localhost:5000/mcp-sqlite:1.0.0",
+      "enabled": true,
+      "autoRegister": true,
+      "description": "SQLite database operations MCP server",
+      "environment": {
+        "DATABASE_PATH": "/data/sqlite.db",
+        "LOG_LEVEL": "INFO"
+      },
+      "resourceLimits": {
+        "cpuLimit": 0.5,
+        "memoryLimitMB": 512
+      }
+    },
+    "python-tools": {
+      "port": 3003,
+      "image": "localhost:5000/mcp-python-tools:1.0.0",
+      "enabled": false,
+      "autoRegister": false,
+      "description": "Python tools and utilities MCP server",
+      "environment": {
+        "PYTHON_ENV": "development",
+        "LOG_LEVEL": "DEBUG"
+      }
+    }
+  },
+  "AspireIntegration": {
+    "enableServiceDiscovery": true,
+    "enableHealthChecks": true,
+    "enableTelemetry": true,
+    "dashboardPort": 15000,
+    "services": {
+      "authServer": { "port": 7001, "healthCheck": "/health" },
+      "httpApiHost": { "port": 7002, "healthCheck": "/health" },
+      "developerHost": { "port": 7003, "healthCheck": "/health" },
+      "mcpGateway": { "port": 7004, "healthCheck": "/health" }
+    }
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Aevatar.MCPGateway": "Debug",
+      "Microsoft.MCP.Gateway": "Information"
+    }
+  }
+}

@@ -3,12 +3,15 @@ using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
 using Aevatar.Application.Grains;
+using Aevatar.Application.Contracts.MCPGateway;
+using Aevatar.Application.MCPGateway;
 using Aevatar.Application.Service;
 using Aevatar.Service;
 using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
+using Aevatar.GAgents.MCP.Core.Options;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.LocalDevelopment;
@@ -93,6 +96,9 @@ public class AevatarApplicationModule : AbpModule
         
         // 配置工作流编排服务
         ConfigureWorkflowOrchestrationServices(context);
+        
+        // 配置MCP Gateway服务
+        ConfigureMCPGatewayServices(context);
     }
     
     /// <summary>
@@ -127,5 +133,31 @@ public class AevatarApplicationModule : AbpModule
         
         // Register ITraceManager dependency
         context.Services.AddSingleton<Aevatar.Core.Interception.Services.ITraceManager, Aevatar.Core.Interception.Services.TraceManager>();
+    }
+    
+    /// <summary>
+    /// Configure MCP Gateway related services
+    /// </summary>
+    private void ConfigureMCPGatewayServices(ServiceConfigurationContext context)
+    {
+        var configuration = context.Services.GetConfiguration();
+        
+        // Configure MCP Gateway settings
+        context.Services.Configure<MCPGatewayConfig>(
+            configuration.GetSection("MCPGateway"));
+
+        // Register MCP Gateway manager with HttpClient
+        context.Services.AddHttpClient<IMCPGatewayManager, MCPGatewayManager>(client =>
+        {
+            // HttpClient will be configured in MCPGatewayManager constructor
+            client.Timeout = TimeSpan.FromSeconds(30);
+            client.DefaultRequestHeaders.Add("User-Agent", "Aevatar-MCP-Gateway-Manager/1.0");
+        });
+
+        // Register application service
+        context.Services.AddTransient<IMCPGatewayAppService, MCPGatewayAppService>();
+        
+        // Add logging for MCP Gateway operations
+        context.Services.AddLogging();
     }
 }

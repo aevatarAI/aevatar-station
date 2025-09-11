@@ -1,0 +1,66 @@
+{
+  "services": {
+    "authServer": {
+      "url": "http://localhost:7001",
+      "clientId": "Aevatar_HttpApi",
+      "clientSecret": "1q2w3e*",
+      "scope": "Aevatar"
+    },
+    "httpApi": {
+      "url": "http://localhost:7002",
+      "healthEndpoint": "/health",
+      "mcpGatewayPrefix": "/api/mcp-gateway"
+    },
+    "developerHost": {
+      "url": "http://localhost:7003",
+      "healthEndpoint": "/health",
+      "mcpGatewayPrefix": "/api/mcp-gateway"
+    },
+    "mcpGateway": {
+      "url": "http://localhost:8000",
+      "healthEndpoint": "/adapters"
+    }
+  },
+  "testData": {
+    "testAdapter": {
+      "name": "aevatar-test-adapter",
+      "imageName": "mcp-example",
+      "imageVersion": "1.0.0",
+      "description": "Test adapter created by Aevatar integration test",
+      "tags": ["test", "integration", "aevatar"],
+      "metadata": {
+        "test_suite": "aevatar-mcp-integration",
+        "created_by": "test-script"
+      }
+    },
+    "updateData": {
+      "description": "Updated test adapter description",
+      "metadata": {
+        "updated_by": "test-script",
+        "last_modified": "auto-generated"
+      }
+    }
+  },
+  "testConfig": {
+    "timeout": 30,
+    "retryAttempts": 3,
+    "waitBetweenTests": 2,
+    "cleanupAfterTests": true,
+    "verboseOutput": false
+  },
+  "expectedResponses": {
+    "healthCheck": {
+      "httpCodes": [200, 404],
+      "timeout": 10
+    },
+    "authentication": {
+      "requiredFields": ["access_token", "token_type", "expires_in"],
+      "tokenType": "Bearer"
+    },
+    "adapters": {
+      "listResponse": "array",
+      "createResponse": "object",
+      "statusResponse": "object"
+    }
+  }
+}

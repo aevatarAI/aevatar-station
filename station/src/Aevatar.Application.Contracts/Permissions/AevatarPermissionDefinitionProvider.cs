@@ -118,6 +118,44 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         pluginsPermission.AddChild(AevatarPermissions.Plugins.Create, L("Permission:Plugins.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         pluginsPermission.AddChild(AevatarPermissions.Plugins.Edit, L("Permission:Plugins.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         pluginsPermission.AddChild(AevatarPermissions.Plugins.Delete, L("Permission:Plugins.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        
+        // MCP Gateway Management
+        DefineMCPGatewayPermissions(context);
+    }
+
+    /// <summary>
+    /// Define MCP Gateway permissions
+    /// </summary>
+    private void DefineMCPGatewayPermissions(IPermissionDefinitionContext context)
+    {
+        var mcpGatewayGroup = context.AddGroup(MCPGatewayPermissions.GroupName, L("Permission:MCPGateway"));
+
+        // Adapter permissions
+        var adaptersPermission = mcpGatewayGroup.AddPermission(MCPGatewayPermissions.Adapters.Default, L("Permission:MCPGateway.Adapters"));
+        adaptersPermission.AddChild(MCPGatewayPermissions.Adapters.Create, L("Permission:MCPGateway.Adapters.Create"));
+        adaptersPermission.AddChild(MCPGatewayPermissions.Adapters.Read, L("Permission:MCPGateway.Adapters.Read"));
+        adaptersPermission.AddChild(MCPGatewayPermissions.Adapters.Update, L("Permission:MCPGateway.Adapters.Update"));
+        adaptersPermission.AddChild(MCPGatewayPermissions.Adapters.Delete, L("Permission:MCPGateway.Adapters.Delete"));
+        adaptersPermission.AddChild(MCPGatewayPermissions.Adapters.ManageAll, L("Permission:MCPGateway.Adapters.ManageAll"));
+        adaptersPermission.AddChild(MCPGatewayPermissions.Adapters.ViewMetrics, L("Permission:MCPGateway.Adapters.ViewMetrics"));
+        adaptersPermission.AddChild(MCPGatewayPermissions.Adapters.TestConnection, L("Permission:MCPGateway.Adapters.TestConnection"));
+        adaptersPermission.AddChild(MCPGatewayPermissions.Adapters.ViewLogs, L("Permission:MCPGateway.Adapters.ViewLogs"));
+
+        // Gateway permissions
+        var gatewayPermission = mcpGatewayGroup.AddPermission(MCPGatewayPermissions.Gateway.Default, L("Permission:MCPGateway.Gateway"));
+        gatewayPermission.AddChild(MCPGatewayPermissions.Gateway.ViewHealth, L("Permission:MCPGateway.Gateway.ViewHealth"));
+        gatewayPermission.AddChild(MCPGatewayPermissions.Gateway.ViewConfiguration, L("Permission:MCPGateway.Gateway.ViewConfiguration"));
+        gatewayPermission.AddChild(MCPGatewayPermissions.Gateway.UpdateConfiguration, L("Permission:MCPGateway.Gateway.UpdateConfiguration"));
+        gatewayPermission.AddChild(MCPGatewayPermissions.Gateway.ViewSystemMetrics, L("Permission:MCPGateway.Gateway.ViewSystemMetrics"));
+        gatewayPermission.AddChild(MCPGatewayPermissions.Gateway.Manage, L("Permission:MCPGateway.Gateway.Manage"));
+        gatewayPermission.AddChild(MCPGatewayPermissions.Gateway.ViewAuditLogs, L("Permission:MCPGateway.Gateway.ViewAuditLogs"));
+
+        // Session permissions
+        var sessionsPermission = mcpGatewayGroup.AddPermission(MCPGatewayPermissions.Sessions.Default, L("Permission:MCPGateway.Sessions"));
+        sessionsPermission.AddChild(MCPGatewayPermissions.Sessions.View, L("Permission:MCPGateway.Sessions.View"));
+        sessionsPermission.AddChild(MCPGatewayPermissions.Sessions.Terminate, L("Permission:MCPGateway.Sessions.Terminate"));
+        sessionsPermission.AddChild(MCPGatewayPermissions.Sessions.ViewDetails, L("Permission:MCPGateway.Sessions.ViewDetails"));
+        sessionsPermission.AddChild(MCPGatewayPermissions.Sessions.ManageRouting, L("Permission:MCPGateway.Sessions.ManageRouting"));
     }
 
     private static LocalizableString L(string name)
