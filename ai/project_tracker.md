@@ -11,3 +11,4 @@
 | Auto-Generated Domain Names for New Projects | ✅ | feature/auto-generated-domain-names | c6:c4:e5:e8:c6:4b | ✅已完成并推送：实现项目创建的自动域名生成功能，完成最终API简化重构。统一使用`CreateProjectAsync`方法和`POST /api/app/project`接口，移除原有`CreateAsync`方法和多余的私有方法。基于项目名称自动生成域名，冲突时抛出UserFriendlyException保持一致性。代码架构最终优化：简化异常处理，移除不必要的try-catch嵌套，显式依赖注入ILogger，利用框架[Required]验证，重命名DTO为标准命名。单元测试完全整合，代码已推送到远程仓库。功能完整交付。 |
 | Node Input Option Display & Selection | 🚧 | feature/node-input-option-display-selection | c6:c4:e5:e8:c6:4b | 开发中：实现节点输入选项的显示和选择功能，用于工作流节点的输入参数配置和用户交互。 |
 | Instruction Tooltips | 🚧 | feature/instruction-tooltips | c6:c4:e5:e8:c6:4b | 开发中：为配置表单字段添加instruction tooltips功能，改善用户体验，提供字段说明和使用指导。 |
+| Workflow Publish & Validate | 🚧 | feature/workflow-publish-validate | c6:c4:e5:e8:c6:4b | 开发中：实现工作流的发布(publish)和验证(validate)功能，提供工作流完整性检查、发布流程管理和状态验证。 |
