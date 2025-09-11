@@ -1,17 +1,13 @@
 // ABOUTME: This file implements the Schema Configuration Agent
-// ABOUTME: Provides dynamic dropdown context from silo's SystemLLMConfigOptions
+// ABOUTME: Provides SystemLLMConfigOptions from silo configuration (decoupled from presentation layer)
 // ABOUTME: Contains all related types: interface, state, events, and implementation
 
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Options;
-using Aevatar.Options;
-using Aevatar.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -21,15 +17,15 @@ using Orleans.Providers;
 namespace Aevatar.Application.Grains.Agents.Configuration;
 
 /// <summary>
-/// Schema configuration grain interface for providing dynamic dropdown context from silo configuration
+/// Schema configuration grain interface for providing configuration options from silo
 /// </summary>
 public interface ISchemaConfigurationGAgent : IStateGAgent<SchemaConfigurationGAgentState>, IGrainWithStringKey
 {
     /// <summary>
-    /// Get dynamic dropdown context containing AI model configurations from silo's SystemLLMConfigOptions
+    /// Get SystemLLM configuration options from silo configuration
     /// </summary>
-    /// <returns>DynamicDropDownContext with AI model configurations</returns>
-    Task<DynamicDropDownContext> GetSchemaContextAsync();
+    /// <returns>SystemLLMConfigOptions containing AI model configurations</returns>
+    Task<SystemLLMConfigOptions> GetSystemLLMConfigOptionsAsync();
 }
 
 /// <summary>
@@ -53,10 +49,10 @@ public abstract class SchemaConfigurationGEvent : StateLogEventBase<SchemaConfig
 
 
 /// <summary>
-/// Schema configuration grain that provides dynamic dropdown context from silo's SystemLLMConfigOptions
+/// Schema configuration grain that provides SystemLLMConfigOptions from silo configuration
 /// This grain runs in the silo and can access silo configuration directly
 /// </summary>
-[Description("Schema Configuration Agent for Dynamic Dropdown Context")]
+[Description("Schema Configuration Agent for SystemLLM Options")]
 public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentState, SchemaConfigurationGEvent>, ISchemaConfigurationGAgent
 {
     private readonly ILogger<SchemaConfigurationGAgent> _logger;
@@ -69,97 +65,32 @@ public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentSta
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult(
-            "Schema Configuration Agent for providing dynamic dropdown context from silo's SystemLLMConfigOptions.");
+            "Schema Configuration Agent for providing SystemLLMConfigOptions from silo configuration.");
     }
 
     /// <summary>
-    /// Get dynamic dropdown context containing AI model configurations from silo's SystemLLMConfigOptions
+    /// Get SystemLLM configuration options from silo configuration
     /// </summary>
-    /// <returns>DynamicDropDownContext with AI model configurations</returns>
-    public async Task<DynamicDropDownContext> GetSchemaContextAsync()
+    /// <returns>SystemLLMConfigOptions containing AI model configurations</returns>
+    public async Task<SystemLLMConfigOptions> GetSystemLLMConfigOptionsAsync()
     {
-        var configurationSource = "Silo";
-        var aiModelConfigs = new List<SystemLLMConfigDto>();
-
         try
         {
             // Get SystemLLMConfigOptions from silo's service provider (similar to AIGAgentBase pattern)
             var systemLLMConfigOptions = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
             
-            if (systemLLMConfigOptions.Value.SystemLLMConfigs != null)
-            {
-                // Convert from Dictionary<string, LLMConfig> to List<SystemLLMConfigDto>
-                foreach (var kvp in systemLLMConfigOptions.Value.SystemLLMConfigs)
-                {
-                    var config = kvp.Value;
-                    var configDto = new SystemLLMConfigDto
-                    {
-                        Name = kvp.Key,
-                        Provider = config.ProviderEnum.ToString(),
-                        Type = config.ModelName,
-                        // Map additional properties as needed
-                        Strengths = new List<string> { $"Provider: {config.ProviderEnum}", $"Model: {config.ModelIdEnum}" },
-                        BestFor = new List<string> { "AI chat functionality", "Model inference" },
-                        Speed = "Variable" // Default value
-                    };
-                    aiModelConfigs.Add(configDto);
-                }
-            }
+            _logger.LogInformation("Retrieved SystemLLMConfigOptions with {ConfigCount} configurations from silo", 
+                systemLLMConfigOptions.Value.SystemLLMConfigs?.Count ?? 0);
 
-            // If no configurations found, provide default ones similar to SystemLLMMetaInfoOptions
-            if (!aiModelConfigs.Any())
-            {
-                _logger.LogWarning("No SystemLLMConfigs found in silo configuration, using default configurations");
-                aiModelConfigs = GetDefaultSystemLLMConfigs();
-                configurationSource = "Default";
-            }
-
-            _logger.LogInformation("Retrieved schema context with {ConfigCount} AI model configurations from {Source}", 
-                aiModelConfigs.Count, configurationSource);
+            return systemLLMConfigOptions.Value;
         }
         catch (System.Exception ex)
         {
-            _logger.LogError(ex, "Failed to retrieve schema context from silo configuration");
+            _logger.LogError(ex, "Failed to retrieve SystemLLMConfigOptions from silo configuration");
             
-            // Use default context as fallback
-            aiModelConfigs = GetDefaultSystemLLMConfigs();
-            configurationSource = "Fallback";
+            // Return empty configuration as fallback
+            return new SystemLLMConfigOptions();
         }
-
-
-        var context = new DynamicDropDownContext
-        {
-            AIModelConfigs = aiModelConfigs
-        };
-
-        return context;
     }
 
-    /// <summary>
-    /// Provides default AI model configurations as fallback
-    /// </summary>
-    private static List<SystemLLMConfigDto> GetDefaultSystemLLMConfigs()
-    {
-        return new List<SystemLLMConfigDto>
-        {
-            new()
-            {
-                Name = "OpenAI",
-                Provider = "OpenAI",
-                Type = "GPT-4",
-                Strengths = new List<string> { "Multi-modal capabilities", "Advanced reasoning", "Code generation" },
-                BestFor = new List<string> { "Complex conversations", "Programming tasks", "Creative writing" },
-                Speed = "Fast"
-            },
-            new()
-            {
-                Name = "Azure",
-                Provider = "Azure",
-                Type = "Azure OpenAI",
-                Strengths = new List<string> { "Enterprise security", "Compliance", "Integration with Azure services" },
-                BestFor = new List<string> { "Enterprise applications", "Secure environments", "Azure ecosystem" },
-                Speed = "Fast"
-            }
-        };
-    }
 }

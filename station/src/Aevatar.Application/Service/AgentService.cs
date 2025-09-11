@@ -762,24 +762,85 @@ public class AgentService : ApplicationService, IAgentService
     {
         try
         {
-            // Get schema configuration from silo's SchemaConfigurationGAgent
+            // Get SystemLLMConfigOptions from silo's SchemaConfigurationGAgent
             var schemaConfigGrain = _clusterClient.GetGrain<ISchemaConfigurationGAgent>("default");
-            var context = await schemaConfigGrain.GetSchemaContextAsync();
+            var systemLLMConfigOptions = await schemaConfigGrain.GetSystemLLMConfigOptionsAsync();
+            
+            // Convert SystemLLMConfigOptions to DynamicDropDownContext
+            var aiModelConfigs = new List<SystemLLMConfigDto>();
+            
+            if (systemLLMConfigOptions.SystemLLMConfigs != null)
+            {
+                // Convert from Dictionary<string, LLMConfig> to List<SystemLLMConfigDto>
+                foreach (var kvp in systemLLMConfigOptions.SystemLLMConfigs)
+                {
+                    var config = kvp.Value;
+                    var configDto = new SystemLLMConfigDto
+                    {
+                        Name = kvp.Key,
+                        Provider = config.ProviderEnum.ToString(),
+                        Type = config.ModelName,
+                        // Map additional properties as needed
+                        Strengths = new List<string> { $"Provider: {config.ProviderEnum}", $"Model: {config.ModelIdEnum}" },
+                        BestFor = new List<string> { "AI chat functionality", "Model inference" },
+                        Speed = "Variable" // Default value
+                    };
+                    aiModelConfigs.Add(configDto);
+                }
+            }
+
+            // If no configurations found, provide default ones
+            if (!aiModelConfigs.Any())
+            {
+                _logger.LogWarning("[AgentService] No SystemLLMConfigs found in silo configuration, using default configurations");
+                aiModelConfigs = GetDefaultSystemLLMConfigs();
+            }
             
             _logger.LogInformation("[AgentService] Retrieved schema context from silo with {ConfigCount} AI model configurations", 
-                context.AIModelConfigs?.Count ?? 0);
+                aiModelConfigs.Count);
             
-            return context;
+            return new DynamicDropDownContext
+            {
+                AIModelConfigs = aiModelConfigs
+            };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[AgentService] Failed to retrieve schema context from silo, using empty context");
+            _logger.LogError(ex, "[AgentService] Failed to retrieve schema context from silo, using default context");
             
-            // Return empty context as fallback
+            // Return default context as fallback
             return new DynamicDropDownContext
             {
-                AIModelConfigs = new List<SystemLLMConfigDto>()
+                AIModelConfigs = GetDefaultSystemLLMConfigs()
             };
         }
+    }
+
+    /// <summary>
+    /// Provides default AI model configurations as fallback
+    /// </summary>
+    private static List<SystemLLMConfigDto> GetDefaultSystemLLMConfigs()
+    {
+        return new List<SystemLLMConfigDto>
+        {
+            new()
+            {
+                Name = "OpenAI",
+                Provider = "OpenAI",
+                Type = "GPT-4",
+                Strengths = new List<string> { "Multi-modal capabilities", "Advanced reasoning", "Code generation" },
+                BestFor = new List<string> { "Complex conversations", "Programming tasks", "Creative writing" },
+                Speed = "Fast"
+            },
+            new()
+            {
+                Name = "Azure",
+                Provider = "Azure",
+                Type = "Azure OpenAI",
+                Strengths = new List<string> { "Enterprise security", "Compliance", "Integration with Azure services" },
+                BestFor = new List<string> { "Enterprise applications", "Secure environments", "Azure ecosystem" },
+                Speed = "Fast"
+            }
+        };
     }
 }
