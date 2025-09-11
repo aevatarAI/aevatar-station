@@ -11,10 +11,10 @@ namespace Aevatar.Schema;
 public class DynamicDropDownContext
 {
     /// <summary>
-    /// AI model configurations available for dynamic dropdown processing
+    /// Configuration data dictionary for dynamic dropdown processing
     /// </summary>
     [Id(0)]
-    public List<SystemLLMConfigDto>? AIModelConfigs { get; set; }
+    public Dictionary<string, object>? AIModelConfigs { get; set; }
     
     /// <summary>
     /// Additional context data for processors
@@ -24,6 +24,7 @@ public class DynamicDropDownContext
 
     public DynamicDropDownContext()
     {
+        AIModelConfigs = new Dictionary<string, object>();
         AdditionalData = new Dictionary<string, object>();
     }
 }

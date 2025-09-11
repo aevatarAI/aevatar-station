@@ -805,7 +805,10 @@ public class AgentService : ApplicationService, IAgentService
             
             return new DynamicDropDownContext
             {
-                AIModelConfigs = aiModelConfigs
+                AIModelConfigs = new Dictionary<string, object>
+                {
+                    ["systemLLMConfig"] = aiModelConfigs
+                }
             };
         }
         catch (Exception ex)
@@ -815,7 +818,10 @@ public class AgentService : ApplicationService, IAgentService
             // Return empty context as fallback
             return new DynamicDropDownContext
             {
-                AIModelConfigs = new List<SystemLLMConfigDto>()
+                AIModelConfigs = new Dictionary<string, object>
+                {
+                    ["systemLLMConfig"] = new List<SystemLLMConfigDto>()
+                }
             };
         }
     }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Aevatar.GAgents.Basic;
+using Aevatar.Options;
 using NJsonSchema.Generation;
 
 namespace Aevatar.Schema;
@@ -13,6 +14,7 @@ namespace Aevatar.Schema;
 /// </summary>
 public class DynamicDropDownProcessor : ISchemaProcessor
 {
+    private const string AI_MODEL_CONFIGS_KEY = "systemLLMConfig";
     private readonly DynamicDropDownContext? _context;
 
     public DynamicDropDownProcessor(DynamicDropDownContext? context = null)
@@ -73,10 +75,18 @@ public class DynamicDropDownProcessor : ISchemaProcessor
     /// </summary>
     private void InjectSystemLLMConfigurations(IDictionary<string, object?> extensionData)
     {  
+        // Get AI model configurations from the dictionary
+        if (_context?.AIModelConfigs == null || 
+            !_context.AIModelConfigs.TryGetValue(AI_MODEL_CONFIGS_KEY, out var aiModelConfigsObj) ||
+            aiModelConfigsObj is not List<SystemLLMConfigDto> aiModelConfigs)
+        {
+            return; // No configurations available
+        }
+        
         // Create a list of AI model configurations as objects
         var configObjectList = new List<object>();
         
-        foreach (var config in _context.AIModelConfigs)
+        foreach (var config in aiModelConfigs)
         {
             var configObject = new
             {
@@ -91,8 +101,8 @@ public class DynamicDropDownProcessor : ISchemaProcessor
         }
         
         // Create enum structure like MCPServerType with integer type
-        var enumNames = _context.AIModelConfigs.Select(c => c.Name).ToArray();
-        var enumValues = _context.AIModelConfigs.Select((c, i) => i).ToArray(); // Use integer indices
+        var enumNames = aiModelConfigs.Select(c => c.Name).ToArray();
+        var enumValues = aiModelConfigs.Select((c, i) => i).ToArray(); // Use integer indices
         
         // Inject the real configurations with enum structure
         extensionData["x-descriptions"] = configObjectList;
