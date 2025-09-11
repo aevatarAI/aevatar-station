@@ -543,8 +543,10 @@ public class AgentService : ApplicationService, IAgentService
     {
         try
         {
-            // Generate base schema
-            var baseSchema = _schemaProvider.GetTypeSchema(configurationType).ToJson();
+            var context = await CreateSchemaContextAsync();
+            
+            // Generate base schema with context
+            var baseSchema = _schemaProvider.GetTypeSchema(configurationType, context).ToJson();
             var schemaDoc = JsonDocument.Parse(baseSchema);
             
             // Create instance to get default values
@@ -762,8 +764,9 @@ public class AgentService : ApplicationService, IAgentService
     {
         try
         {
-            // Get SystemLLMConfigOptions from silo's SchemaConfigurationGAgent
-            var schemaConfigGrain = _clusterClient.GetGrain<ISchemaConfigurationGAgent>("default");
+            // Get SystemLLMConfigOptions from silo's SchemaConfigurationGAgent using factory
+            var grainId = GrainId.Create(typeof(SchemaConfigurationGAgent).FullName!, Guid.NewGuid().ToString());
+            var schemaConfigGrain = await _gAgentFactory.GetGAgentAsync<ISchemaConfigurationGAgent>(grainId);
             var systemLLMConfigOptions = await schemaConfigGrain.GetSystemLLMConfigOptionsAsync();
             
             // Convert SystemLLMConfigOptions to DynamicDropDownContext
@@ -789,11 +792,10 @@ public class AgentService : ApplicationService, IAgentService
                 }
             }
 
-            // If no configurations found, provide default ones
+            // If no configurations found, log warning but return empty list
             if (!aiModelConfigs.Any())
             {
-                _logger.LogWarning("[AgentService] No SystemLLMConfigs found in silo configuration, using default configurations");
-                aiModelConfigs = GetDefaultSystemLLMConfigs();
+                _logger.LogWarning("[AgentService] No SystemLLMConfigs found in silo configuration");
             }
             
             _logger.LogInformation("[AgentService] Retrieved schema context from silo with {ConfigCount} AI model configurations", 
@@ -806,41 +808,13 @@ public class AgentService : ApplicationService, IAgentService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[AgentService] Failed to retrieve schema context from silo, using default context");
+            _logger.LogError(ex, "[AgentService] Failed to retrieve schema context from silo, returning empty context");
             
-            // Return default context as fallback
+            // Return empty context as fallback
             return new DynamicDropDownContext
             {
-                AIModelConfigs = GetDefaultSystemLLMConfigs()
+                AIModelConfigs = new List<SystemLLMConfigDto>()
             };
         }
-    }
-
-    /// <summary>
-    /// Provides default AI model configurations as fallback
-    /// </summary>
-    private static List<SystemLLMConfigDto> GetDefaultSystemLLMConfigs()
-    {
-        return new List<SystemLLMConfigDto>
-        {
-            new()
-            {
-                Name = "OpenAI",
-                Provider = "OpenAI",
-                Type = "GPT-4",
-                Strengths = new List<string> { "Multi-modal capabilities", "Advanced reasoning", "Code generation" },
-                BestFor = new List<string> { "Complex conversations", "Programming tasks", "Creative writing" },
-                Speed = "Fast"
-            },
-            new()
-            {
-                Name = "Azure",
-                Provider = "Azure",
-                Type = "Azure OpenAI",
-                Strengths = new List<string> { "Enterprise security", "Compliance", "Integration with Azure services" },
-                BestFor = new List<string> { "Enterprise applications", "Secure environments", "Azure ecosystem" },
-                Speed = "Fast"
-            }
-        };
     }
 }
