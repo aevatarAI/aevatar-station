@@ -27,12 +27,6 @@ public interface ISchemaConfigurationGAgent : IStateGAgent<SchemaConfigurationGA
     /// <typeparam name="T">The configuration type to retrieve</typeparam>
     /// <returns>Configuration options of type T</returns>
     Task<T> GetConfigOptionsAsync<T>() where T : class;
-
-    /// <summary>
-    /// Get SystemLLM configuration options from silo configuration
-    /// </summary>
-    /// <returns>SystemLLMConfigOptions containing AI model configurations</returns>
-    Task<SystemLLMConfigOptions> GetSystemLLMConfigOptionsAsync();
 }
 
 /// <summary>
@@ -104,14 +98,5 @@ public class SchemaConfigurationGAgent : GAgentBase<SchemaConfigurationGAgentSta
         }
     }
 
-    /// <summary>
-    /// Get SystemLLM configuration options from silo configuration
-    /// </summary>
-    /// <returns>SystemLLMConfigOptions containing AI model configurations</returns>
-    public Task<SystemLLMConfigOptions> GetSystemLLMConfigOptionsAsync()
-    {
-        // Use the generic method for backward compatibility
-        return GetConfigOptionsAsync<SystemLLMConfigOptions>();
-    }
 
 }

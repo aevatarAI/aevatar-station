@@ -14,6 +14,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.Exceptions;
 using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.AI.Options;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
@@ -768,7 +769,7 @@ public class AgentService : ApplicationService, IAgentService
             // Get SystemLLMConfigOptions from silo's SchemaConfigurationGAgent using cluster client
             var grainId = Guid.NewGuid().ToString();
             var schemaConfigGrain = _clusterClient.GetGrain<ISchemaConfigurationGAgent>(grainId);
-            var systemLLMConfigOptions = await schemaConfigGrain.GetSystemLLMConfigOptionsAsync();
+            var systemLLMConfigOptions = await schemaConfigGrain.GetConfigOptionsAsync<SystemLLMConfigOptions>();
             
             // Convert SystemLLMConfigOptions to DynamicDropDownContext
             var aiModelConfigs = new List<SystemLLMConfigDto>();
