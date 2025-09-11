@@ -40,5 +40,8 @@ public class WorkUnitExecutionRecord
     [Id(5)]
     public string OutputData { get; set; }
 
-    [Id(6)] public string FailureSummary { get; set; }
+    [Id(6)] 
+    public string FailureSummary { get; set; }
+    [Id(7)] 
+    public string? ParentWorkUnitGrainId { get; set; }
 }

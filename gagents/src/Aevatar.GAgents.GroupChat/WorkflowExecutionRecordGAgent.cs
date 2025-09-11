@@ -85,12 +85,43 @@ public class WorkflowExecutionRecordGAgent :
                 state.InitContent = startExecuteWorkflowLogEvent.Content;
                 state.StartTime = DateTime.UtcNow;
                 state.Status = WorkflowExecutionStatus.Running;
-                state.WorkUnitRecords = startExecuteWorkflowLogEvent.WorkUnitInfos.Select(o =>
-                    new WorkUnitExecutionRecord
+                
+                // Build WorkUnitRecords with parent-child relationships
+                var workUnitRecords = new List<WorkUnitExecutionRecord>();
+                var allGrainIds = startExecuteWorkflowLogEvent.WorkUnitInfos.Select(w => w.GrainId).ToHashSet();
+                var allNextGrainIds = startExecuteWorkflowLogEvent.WorkUnitInfos
+                    .Where(w => !string.IsNullOrEmpty(w.NextGrainId))
+                    .Select(w => w.NextGrainId).ToHashSet();
+                
+                // Find head nodes (nodes that are not pointed to by any other node)
+                var headNodes = allGrainIds.Except(allNextGrainIds).ToList();
+                
+                // Add head nodes with no parent
+                foreach (var headGrainId in headNodes)
+                {
+                    workUnitRecords.Add(new WorkUnitExecutionRecord
                     {
-                        WorkUnitGrainId = o.GrainId,
+                        WorkUnitGrainId = headGrainId,
+                        ParentWorkUnitGrainId = null,
                         Status = WorkflowExecutionStatus.Pending
-                    }).ToList();
+                    });
+                }
+                
+                // Add child nodes based on parent-child relationships
+                foreach (var workUnit in startExecuteWorkflowLogEvent.WorkUnitInfos)
+                {
+                    if (!string.IsNullOrEmpty(workUnit.NextGrainId))
+                    {
+                        workUnitRecords.Add(new WorkUnitExecutionRecord
+                        {
+                            WorkUnitGrainId = workUnit.NextGrainId,
+                            ParentWorkUnitGrainId = workUnit.GrainId,
+                            Status = WorkflowExecutionStatus.Pending
+                        });
+                    }
+                }
+                
+                state.WorkUnitRecords = workUnitRecords;
                 break;
             case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
                 state.EndTime = DateTime.UtcNow;
@@ -108,11 +139,11 @@ public class WorkflowExecutionRecordGAgent :
                 startUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
                 break;
             case FinishExecuteWorkUnitLogEvent finishExecuteWorkUnitLogEvent:
-                var workUnit = state.WorkUnitRecords.First(o =>
+                var finishUnit = state.WorkUnitRecords.First(o =>
                     o.WorkUnitGrainId == finishExecuteWorkUnitLogEvent.WorkUnitGrainId);
-                workUnit.EndTime = DateTime.UtcNow;
-                workUnit.Status = WorkflowExecutionStatus.Completed;
-                workUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                finishUnit.EndTime = DateTime.UtcNow;
+                finishUnit.Status = WorkflowExecutionStatus.Completed;
+                finishUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
                 break;
             case FailExecuteWorkflowLogEvent failExecuteWorkflowLogEvent:
                 var failWorkUnit = state.WorkUnitRecords.First(o =>
