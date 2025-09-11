@@ -5,9 +5,11 @@ using Aevatar.Core;
 using GroupChat.GAgent.Feature.Common;
 using GroupChat.GAgent.GEvent;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 using GroupChat.GAgent.Dto;
 using GroupChat.GAgent.Feature.Blackboard;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
+using Microsoft.Extensions.Logging;
 
 namespace GroupChat.GAgent;
 
@@ -40,12 +42,24 @@ public abstract partial class
         }
 
         // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
-        var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
-        await PublishAsync(new ChatResponseEvent()
+        try
         {
-            BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
-            ChatResponse = talkResponse, Term = @event.Term
-        });
+            var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
+            await PublishAsync(new ChatResponseEvent()
+            {
+                BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
+                ChatResponse = talkResponse, Term = @event.Term
+            });
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"[MemberGAgentBase] Handler ChatEvent fail: {e.Message}");
+            await PublishAsync(new ChatResponseEvent()
+            {
+                BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
+                FailureSummary = e.ToString(), Term = @event.Term
+            });
+        }
     }
 
     [EventHandler]

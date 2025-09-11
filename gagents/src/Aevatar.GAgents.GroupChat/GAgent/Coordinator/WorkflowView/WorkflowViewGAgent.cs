@@ -105,6 +105,8 @@ public class WorkflowViewGAgent : GAgentBase<WorkflowViewState, WorkflowViewLogE
                 AgentId = configuration.WorkflowCoordinatorGAgentId
             });
         }
+
+        await ConfirmEvents();
     }
 
     private static bool HasCycle(IReadOnlyCollection<Guid> nodeIds, IEnumerable<WorkflowNodeUnitDto> units)
