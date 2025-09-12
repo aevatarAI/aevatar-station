@@ -384,6 +384,31 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Wait for APP URL health check
+        run: |
+          echo "🔍 Checking APP URL health: $API_HOST/health"
+          
+          # Health check with 20 second timeout
+          success=false
+          for i in {1..20}; do
+            if curl -fsS "$API_HOST/health" >/dev/null 2>&1; then
+              echo "✅ API service is healthy at $API_HOST/health (attempt $i)"
+              success=true
+              break
+            else
+              echo "⏳ API service not ready yet (attempt $i/20), retrying in 1 second..."
+              sleep 1
+            fi
+          done
+          
+          if [ "$success" = false ]; then
+            echo "❌ API service failed to start within 20 seconds at $API_HOST/health"
+            echo "🚫 Stopping workflow execution - service not ready"
+            exit 1
+          fi
+          
+          echo "🎉 API service is ready, proceeding with regression tests"
+
       - name: Run Python Script
         run: |
           source venv/bin/activate
