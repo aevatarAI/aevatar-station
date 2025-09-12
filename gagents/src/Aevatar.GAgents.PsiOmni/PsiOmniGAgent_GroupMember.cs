@@ -27,8 +27,9 @@ public partial class PsiOmniGAgent
         await ConfirmEventsWithTracing();
         return new ChatResponse
         {
-            Skip = true,
-            Continue = false
+            Continue = true,
+            Skip = false,
+            Content = "Started"
         };
     }
 }
