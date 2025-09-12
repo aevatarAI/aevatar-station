@@ -56,6 +56,7 @@ public class ChatResponseEvent : EventBase
     [Id(2)] public string MemberName { get; set; }
     [Id(3)] public ChatResponse ChatResponse { get; set; }
     [Id(4)] public long Term { get; set; }
+    [Id(5)] public string FailureSummary { get; set; }
 }
 
 [GenerateSerializer]

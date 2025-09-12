@@ -2,6 +2,7 @@
 // ABOUTME: Defines the configuration structure for initializing member agents
 
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel;
 using Aevatar.Core.Abstractions;
 
 namespace GroupChat.GAgent.Dto;
@@ -12,5 +13,6 @@ public class MemberConfigDto:ConfigurationBase
     [Id(0)] 
     [Required(ErrorMessage = "Member Name is required")]
     [StringLength(100, MinimumLength = 1, ErrorMessage = "Member Name must be between 1 and 100 characters")]
+    [Description("The name of the group member agent, used for identification and display purposes")]
     public string MemberName { get; set; }
 }
