@@ -3,6 +3,7 @@ using Aevatar.GAgents.GroupChat.Core.Dto;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
 using GroupChat.GAgent.GEvent;
+using Volo.Abp;
 
 namespace Aevatar.GAgents.GroupChat.Test.GAgents;
 
@@ -17,6 +18,15 @@ public class WorkerGAgentGAgent : GroupMemberGAgentBase<WorkerState, WorkerEvent
     public async Task SetDelayWorkAsync(int delaySeconds)
     {
         RaiseEvent(new WorkerDelayLogEvent(){DelaySeconds = delaySeconds});
+        await ConfirmEvents();
+    }
+
+    public async Task SetFailureSummary(string failureSummary)
+    {
+        RaiseEvent(new WorkerFailureLogEvent()
+        {
+            FailureSummary = failureSummary
+        });
         await ConfirmEvents();
     }
 
@@ -39,6 +49,11 @@ public class WorkerGAgentGAgent : GroupMemberGAgentBase<WorkerState, WorkerEvent
             await Task.Delay(TimeSpan.FromSeconds(State.DelaySeconds));
         }
 
+        if (!State.FailureSummary.IsNullOrEmpty())
+        {
+            throw new UserFriendlyException(State.FailureSummary);
+        }
+
         var response = new ChatResponse();
         response.Content = $"{State.MemberName} Send the message";
         RaiseEvent(new WorkHandleMessageLogEvent(){ PreWorkUnits = coordinatorMessages!.Select(s=>s.AgentName).ToList()});
@@ -55,6 +70,9 @@ public class WorkerGAgentGAgent : GroupMemberGAgentBase<WorkerState, WorkerEvent
                 return;
             case WorkerDelayLogEvent workerDelayLogEvent:
                 state.DelaySeconds = workerDelayLogEvent.DelaySeconds;
+                return;
+            case WorkerFailureLogEvent workerFailureLogEvent:
+                state.FailureSummary = workerFailureLogEvent.FailureSummary;
                 return;
         }
     }
@@ -78,10 +96,17 @@ public class WorkerDelayLogEvent : WorkerEventLog
     [Id(0)] public int DelaySeconds;
 }
 
+[GenerateSerializer]
+public class WorkerFailureLogEvent : WorkerEventLog
+{
+    [Id(0)] public string FailureSummary;
+}
+
 
 public interface IWorkerGAgent : IStateGAgent<WorkerState>
 {
     Task SetDelayWorkAsync(int delaySeconds);
+    Task SetFailureSummary(string failureSummary);
 }
 
 [GenerateSerializer]
@@ -89,4 +114,5 @@ public class WorkerState : GroupMemberState
 {
     [Id(0)] public List<string> PreWorkUnits = new List<string>();
     [Id(1)] public int DelaySeconds { get; set; } = 0;
+    [Id(2)] public string FailureSummary { get; set; }
 }

@@ -25,6 +25,7 @@ using Volo.Abp.BlobStoring;
 using Volo.Abp.BlobStoring.Aws;
 using Volo.Abp.Modularity;
 using Volo.Abp.PermissionManagement;
+using Aevatar.GAgents.AIGAgent.Util;
 
 namespace Aevatar.Silo;
 
@@ -101,5 +102,8 @@ public class SiloModule : AIApplicationGrainsModule, IDomainGrainsModule
 
         // Register main web search service
         context.Services.AddSingleton<IWebSearchService, WebSearchService>();
+        
+        // Register BytePlus video generation client for AIGAgent
+        context.Services.AddTransient<IBytePlusModelArkClient, BytePlusModelArkClient>();
     }
 }

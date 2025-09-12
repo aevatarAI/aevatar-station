@@ -64,6 +64,13 @@ public class WorkflowViewGAgent : GAgentBase<WorkflowViewState, WorkflowViewLogE
             throw new ArgumentException("The workflow view invalid nodeId.");
         }
 
+        // Detect cycle in edges before proceeding
+        if (HasCycle(nodeIdList, configuration.WorkflowNodeUnitList))
+        {
+            Logger.LogError("[WorkflowViewGAgent] The workflow view contains a cycle.");
+            throw new ArgumentException("The workflow view contains a cycle.");
+        }
+
         var addNodeList = new List<WorkflowNodeDto>();
         var updateNodeList = new List<WorkflowNodeDto>();
         foreach (var node in configuration.WorkflowNodeList)
@@ -98,6 +105,55 @@ public class WorkflowViewGAgent : GAgentBase<WorkflowViewState, WorkflowViewLogE
                 AgentId = configuration.WorkflowCoordinatorGAgentId
             });
         }
+
+        await ConfirmEvents();
+    }
+
+    private static bool HasCycle(IReadOnlyCollection<Guid> nodeIds, IEnumerable<WorkflowNodeUnitDto> units)
+    {
+        // Build adjacency and in-degree maps
+        var adjacency = new Dictionary<Guid, List<Guid>>();
+        var inDegree = new Dictionary<Guid, int>();
+        foreach (var id in nodeIds)
+        {
+            adjacency[id] = new List<Guid>();
+            inDegree[id] = 0;
+        }
+
+        foreach (var unit in units)
+        {
+            // Self-loop is a cycle
+            if (unit.NodeId == unit.NextNodeId)
+            {
+                return true;
+            }
+            if (!adjacency.ContainsKey(unit.NodeId) || !inDegree.ContainsKey(unit.NextNodeId))
+            {
+                // Should not happen due to prior validation, but guard anyway
+                continue;
+            }
+            adjacency[unit.NodeId].Add(unit.NextNodeId);
+            inDegree[unit.NextNodeId] = inDegree[unit.NextNodeId] + 1;
+        }
+
+        // Kahn's algorithm for cycle detection
+        var queue = new Queue<Guid>(inDegree.Where(kv => kv.Value == 0).Select(kv => kv.Key));
+        var visitedCount = 0;
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            visitedCount++;
+            foreach (var next in adjacency[current])
+            {
+                inDegree[next] = inDegree[next] - 1;
+                if (inDegree[next] == 0)
+                {
+                    queue.Enqueue(next);
+                }
+            }
+        }
+
+        return visitedCount < nodeIds.Count;
     }
 
     protected override void GAgentTransitionState(WorkflowViewState state,
