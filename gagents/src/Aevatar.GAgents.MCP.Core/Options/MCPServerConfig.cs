@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel;
 namespace Aevatar.GAgents.MCP.Options;
 
 // ReSharper disable InconsistentNaming
@@ -33,7 +34,16 @@ public class MCPServerConfig
 [GenerateSerializer]
 public enum MCPServerType
 {
+    /// <summary>
+    /// Standard I/O communication
+    /// </summary>
+    [Description("Standard I/O communication for local MCP servers")]
     Stdio,
+    
+    /// <summary>
+    /// HTTP streaming communication
+    /// </summary>
+    [Description("HTTP streaming communication for remote MCP servers")]
     StreamableHttp
 }
 
