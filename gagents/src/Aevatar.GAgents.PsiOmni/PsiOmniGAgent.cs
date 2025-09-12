@@ -314,6 +314,7 @@ public partial class
             Description = configuration.Description,
             Examples = configuration.Examples
         });
+        RaiseEvent(new SetMemberNameLogEvent { MemberName = configuration.MemberName });
         await ConfirmEventsWithTracing();
 
         // Note: We don't initialize Brain here to maintain backward compatibility.
@@ -751,6 +752,9 @@ public partial class
 
         switch (@event)
         {
+            case SetMemberNameLogEvent payload:
+                State.MemberName = payload.MemberName;
+                break;
             case InitializeEvent payload:
                 LogEventDebug("Setting depth: {Depth}", payload.Depth);
                 state.Name = payload.Name;
