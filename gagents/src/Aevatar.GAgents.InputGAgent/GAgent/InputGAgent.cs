@@ -2,6 +2,7 @@
 // ABOUTME: Extends GroupMemberGAgentBase to integrate with group chat functionality
 
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
 using Aevatar.GAgents.InputGAgent.Dto;
 using Aevatar.GAgents.InputGAgent.GAgent.SEvent;
 using GroupChat.GAgent;
@@ -20,11 +21,13 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.FromResult("Input agent that returns configured input text");
     }
 
+    [Interceptor(IsWorkflowStep = true)]
     protected override Task<int> GetInterestValueAsync(Guid blackboardId)
     {
         return Task.FromResult(100);
     }
 
+    [Interceptor(IsWorkflowStep = true)]
     protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
     {
         var response = new ChatResponse
@@ -42,6 +45,7 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.CompletedTask;
     }
 
+    [Interceptor(IsWorkflowStep = true)]
     protected override async Task PerformConfigAsync(InputConfigDto configuration)
     {
         await base.PerformConfigAsync(configuration);

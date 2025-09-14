@@ -2,6 +2,7 @@
 // ABOUTME: Provides common functionality for handling group chat events and member interactions
 
 using Aevatar.Core;
+using Aevatar.Core.Interception;
 using GroupChat.GAgent.Feature.Common;
 using GroupChat.GAgent.GEvent;
 using Aevatar.Core.Abstractions;
@@ -41,25 +42,32 @@ public abstract partial class
             return;
         }
 
-        // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
-        try
+        // Set workflow context based on the BlackboardId from the event
+        var workflowId = $"workflow-{@event.BlackboardId}";
+        var workflowType = "WorkflowExecution";
+
+        await WorkflowContext.ExecuteInWorkflowAsync(workflowId, workflowType, async () =>
         {
-            var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
-            await PublishAsync(new ChatResponseEvent()
+            // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
+            try
             {
-                BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
-                ChatResponse = talkResponse, Term = @event.Term
-            });
-        }
-        catch (Exception e)
-        {
-            Logger.LogError($"[MemberGAgentBase] Handler ChatEvent fail: {e.Message}");
-            await PublishAsync(new ChatResponseEvent()
+                var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
+                await PublishAsync(new ChatResponseEvent()
+                {
+                    BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
+                    ChatResponse = talkResponse, Term = @event.Term
+                });
+            }
+            catch (Exception e)
             {
-                BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
-                FailureSummary = e.ToString(), Term = @event.Term
-            });
-        }
+                Logger.LogError($"[MemberGAgentBase] Handler ChatEvent fail: {e.Message}");
+                await PublishAsync(new ChatResponseEvent()
+                {
+                    BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
+                    FailureSummary = e.ToString(), Term = @event.Term
+                });
+            }
+        });
     }
 
     [EventHandler]
