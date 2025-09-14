@@ -25,8 +25,8 @@
         <ProjectReference Include="..\Aevatar.GAgents.MCP.Core\Aevatar.GAgents.MCP.Core.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Aevatar.Core" />
-        <PackageReference Include="Aevatar.Core.Abstractions" />
+        <ProjectReference Include="../../../framework/src/Aevatar.Core/Aevatar.Core.csproj" />
+        <ProjectReference Include="../../../framework/src/Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj" />
         <PackageReference Include="Aevatar.EventSourcing.Core" />
     </ItemGroup>
 </Project>

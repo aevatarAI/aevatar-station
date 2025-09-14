@@ -1,3 +1,5 @@
+using System.Reflection;
+using Microsoft.CSharp.RuntimeBinder;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.GroupChat.Core;
@@ -20,61 +22,58 @@ public class WorkflowExecutionRecordGAgent :
     
     /// <summary>
     /// Capture the current state snapshot of a target GAgent
+    /// Uses the new GetStateSnapshotAsync method from IGAgent interface
     /// </summary>
     private async Task<string?> CaptureAgentStateAsync(string targetAgentId)
     {
         try
         {
-            var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
-            
-            // Parse the GrainId to get the Guid
-            if (GrainId.TryParse(targetAgentId, out var grainId))
+            // Parse the GrainId
+            if (!GrainId.TryParse(targetAgentId, out var grainId))
             {
-                // Get the target GAgent
-                var targetGAgent = await gAgentFactory.GetGAgentAsync(grainId);
-                
-                // Try to get state if the grain supports IStateGAgent interface
-                if (targetGAgent is IStateGAgent<StateBase> stateGAgent)
-                {
-                    var state = await stateGAgent.GetStateAsync();
-                    var snapshot = new
-                    {
-                        targetAgentId = targetAgentId,
-                        timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                        stateType = state.GetType().Name,
-                        state = state
-                    };
-                    return System.Text.Json.JsonSerializer.Serialize(snapshot);
-                }
-                else
-                {
-                    // Fallback to basic info if state is not accessible
-                    var basicSnapshot = new
-                    {
-                        targetAgentId = targetAgentId,
-                        timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                        note = "State not accessible - GAgent does not implement IStateGAgent<StateBase>"
-                    };
-                    return System.Text.Json.JsonSerializer.Serialize(basicSnapshot);
-                }
+                Logger.LogWarning("❌ Failed to parse GrainId: {TargetAgentId}", targetAgentId);
+                return CreateFallbackSnapshot(targetAgentId, "Invalid GrainId format");
+            }
+
+            // Get the target GAgent using GAgentFactory
+            var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
+            var targetGAgent = await gAgentFactory.GetGAgentAsync(grainId);
+            
+            Logger.LogInformation("🔍 Attempting to get state snapshot for: {TargetAgentId}", targetAgentId);
+
+            // Call the new GetStateSnapshotAsync method
+            var stateSnapshot = await targetGAgent.GetStateSnapshotAsync();
+            
+            if (!string.IsNullOrEmpty(stateSnapshot))
+            {
+                Logger.LogInformation("✅ Successfully retrieved state snapshot");
+                return stateSnapshot;
+            }
+            else
+            {
+                Logger.LogInformation("ℹ️ GAgent returned null state snapshot (likely not stateful)");
+                return CreateFallbackSnapshot(targetAgentId, "GAgent does not have state or GetStateSnapshotAsync returned null");
             }
         }
         catch (Exception ex)
         {
-            Logger.LogWarning("Failed to capture agent state for {TargetAgentId}: {Error}", targetAgentId, ex.Message);
-            
-            // Create fallback snapshot with error info
-            var errorSnapshot = new
-            {
-                targetAgentId = targetAgentId,
-                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                error = ex.Message,
-                note = "State capture failed - see error for details"
-            };
-            return System.Text.Json.JsonSerializer.Serialize(errorSnapshot);
+            Logger.LogError(ex, "❌ Error during agent state capture for {TargetAgentId}", targetAgentId);
+            return CreateFallbackSnapshot(targetAgentId, $"Error: {ex.Message}");
         }
-        
-        return null;
+    }
+
+    /// <summary>
+    /// Create a fallback snapshot when state retrieval fails
+    /// </summary>
+    private static string CreateFallbackSnapshot(string targetAgentId, string reason)
+    {
+        var basicSnapshot = new
+        {
+            targetAgentId = targetAgentId,
+            timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+            note = reason
+        };
+        return System.Text.Json.JsonSerializer.Serialize(basicSnapshot);
     }
 
     [EventHandler]

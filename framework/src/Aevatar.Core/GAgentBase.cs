@@ -273,6 +273,27 @@ public abstract partial class
         return Task.FromResult(State);
     }
 
+    public virtual Task<string?> GetStateSnapshotAsync()
+    {
+        try
+        {
+            var snapshot = new
+            {
+                targetAgentId = this.GetGrainId().ToString(),
+                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                agentType = this.GetType().Name,
+                stateType = typeof(TState).Name,
+                state = State
+            };
+            return Task.FromResult<string?>(System.Text.Json.JsonSerializer.Serialize(snapshot));
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogWarning(ex, "Failed to serialize state snapshot for {GrainId}", this.GetGrainId());
+            return Task.FromResult<string?>(null);
+        }
+    }
+
     public sealed override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _copier = ServiceProvider.GetRequiredService<DeepCopier>();

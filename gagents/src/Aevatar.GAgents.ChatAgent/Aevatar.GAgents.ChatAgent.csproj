@@ -5,8 +5,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Aevatar.Core" />
-    <PackageReference Include="Aevatar.Core.Abstractions" />
+    <ProjectReference Include="../../../framework/src/Aevatar.Core/Aevatar.Core.csproj" />
+    <ProjectReference Include="../../../framework/src/Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj" />
     <PackageReference Include="Aevatar.EventSourcing.Core" />
   </ItemGroup>
   <ItemGroup>
