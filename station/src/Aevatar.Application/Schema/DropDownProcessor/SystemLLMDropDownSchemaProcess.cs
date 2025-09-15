@@ -57,11 +57,8 @@ public class SystemLLMDropDownSchemaProcess : DropDownSchemaProcessBase, ITransi
             var configObject = new
             {
                 Name = config.Name,
-                Provider = config.Provider,
-                Type = config.Type,
                 Strengths = config.Strengths,
-                BestFor = config.BestFor,
-                Speed = config.Speed
+                BestFor = config.BestFor
             };
             configObjectList.Add(configObject);
         }

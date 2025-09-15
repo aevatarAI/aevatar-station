@@ -17,9 +17,14 @@ public class LLMConfig : LLMProviderConfig
     
     [Id(4)] public int NetworkTimeoutInSeconds { get; set; } = 100;
 
+    [Id(5)] public string Strengths { get; set; } = string.Empty;
+
+    [Id(6)] public string BestFor { get; set; } = string.Empty;
+
     public bool Equal(LLMConfig other)
     {
         return ProviderEnum == other.ProviderEnum && ModelIdEnum == other.ModelIdEnum && ModelName == other.ModelName &&
-               Endpoint == other.Endpoint && ApiKey == other.ApiKey && NetworkTimeoutInSeconds == other.NetworkTimeoutInSeconds;
+               Endpoint == other.Endpoint && ApiKey == other.ApiKey && NetworkTimeoutInSeconds == other.NetworkTimeoutInSeconds &&
+               Strengths == other.Strengths && BestFor == other.BestFor;
     }
 }
