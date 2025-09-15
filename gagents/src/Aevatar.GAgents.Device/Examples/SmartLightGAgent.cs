@@ -110,7 +110,8 @@ public class SmartLightGAgent : DeviceGAgentBase<VirtualDeviceConnection>, ISmar
             config.DeviceId,
             config.DeviceName,
             "SmartLight", // Fixed as smart light type
-            logger
+            logger,
+            config.ExtendedProperties // Pass extended properties for initial configuration
         );
     }
 

@@ -171,7 +171,8 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
             config.DeviceId,
             config.DeviceName,
             "TemperatureSensor", // Fixed as temperature sensor type
-            logger
+            logger,
+            config.ExtendedProperties // Pass extended properties for initial configuration
         );
         
         // Subscribe to property change events to record historical data

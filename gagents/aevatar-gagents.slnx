@@ -53,7 +53,7 @@
     <Project Path="src\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
     <Project Path="src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
     <Project Path="src\Aevatar.GAgents.ChatAgent\Aevatar.GAgents.ChatAgent.csproj" />
-    <Project Path="src\Aevatar.GAgents.Device\Aevatar.GAgents.Device.csproj" Type="Classic C#" />
+    <Project Path="src\Aevatar.GAgents.Device\Aevatar.GAgents.Device.csproj" />
     <Project Path="src\Aevatar.GAgents.Executor\Aevatar.GAgents.Executor.csproj" />
     <Project Path="src\Aevatar.GAgents.GraphRetrievalAgent\Aevatar.GAgents.GraphRetrievalAgent.csproj" />
     <Project Path="src\Aevatar.GAgents.GroupChat.Core\Aevatar.GAgents.GroupChat.Core.csproj" />
@@ -75,6 +75,7 @@
   <Folder Name="/test/">
     <Project Path="test\Aevatar.GAgents.AIGAgent.Test\Aevatar.GAgents.AIGAgent.Test.csproj" />
     <Project Path="test\Aevatar.GAgents.ChatAgent.Test\Aevatar.GAgents.ChatAgent.Test.csproj" />
+    <Project Path="test\Aevatar.GAgents.Device.Test\Aevatar.GAgents.Device.Test.csproj" Type="Classic C#" />
     <Project Path="test\Aevatar.GAgents.GroupChat.Test\Aevatar.GAgents.GroupChat.Test.csproj" />
     <Project Path="test\Aevatar.GAgents.MCP.Test\Aevatar.GAgents.MCP.Test.csproj" />
     <Project Path="test\Aevatar.GAgents.MultiAIChatGAgent.Test\Aevatar.GAgents.MultiAIChatGAgent.Test.csproj" />

@@ -64,6 +64,6 @@ public class DeviceConnectionFactory : IDeviceConnectionFactory
     public VirtualDeviceConnection CreateVirtualConnection(string deviceId, string deviceName, string deviceType)
     {
         var logger = _serviceProvider.GetRequiredService<ILogger<VirtualDeviceConnection>>();
-        return new VirtualDeviceConnection(deviceId, deviceName, deviceType, logger);
+        return new VirtualDeviceConnection(deviceId, deviceName, deviceType, logger, null);
     }
 }

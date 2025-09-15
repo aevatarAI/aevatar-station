@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Orleans;
 
 namespace Aevatar.GAgents.Device.Abstractions;
 
@@ -350,4 +351,41 @@ public class DeviceConnectionStatusChangedEventArgs : EventArgs
     /// Change reason description
     /// </summary>
     public string? Reason { get; set; }
+}
+
+/// <summary>
+/// Device connection information - serializable summary of device connection state
+/// </summary>
+[GenerateSerializer]
+public class DeviceConnectionInfo
+{
+    /// <summary>
+    /// Device unique identifier
+    /// </summary>
+    [Id(0)] public string DeviceId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Device name
+    /// </summary>
+    [Id(1)] public string DeviceName { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Device type
+    /// </summary>
+    [Id(2)] public string DeviceType { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Device connection status
+    /// </summary>
+    [Id(3)] public DeviceConnectionStatus Status { get; set; }
+    
+    /// <summary>
+    /// Whether device is currently connected
+    /// </summary>
+    [Id(4)] public bool IsConnected { get; set; }
+    
+    /// <summary>
+    /// Last status update time
+    /// </summary>
+    [Id(5)] public DateTime LastStatusUpdate { get; set; } = DateTime.UtcNow;
 }

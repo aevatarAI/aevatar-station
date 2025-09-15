@@ -20,10 +20,10 @@ public interface IDeviceGAgent<TDeviceConnection> : IStateGAgent<DeviceGAgentSta
     where TDeviceConnection : IDeviceConnection
 {
     /// <summary>
-    /// Get device connection instance
+    /// Get device connection information
     /// </summary>
-    /// <returns>Device connection instance</returns>
-    Task<TDeviceConnection?> GetDeviceConnectionAsync();
+    /// <returns>Device connection information</returns>
+    Task<DeviceConnectionInfo?> GetDeviceConnectionInfoAsync();
     
     /// <summary>
     /// Initialize device connection
@@ -110,9 +110,24 @@ public abstract class DeviceGAgentBase<TDeviceConnection> :
     /// <returns>Device connection instance</returns>
     protected abstract Task<TDeviceConnection> CreateDeviceConnectionAsync(DeviceConnectionConfig config);
 
-    public Task<TDeviceConnection?> GetDeviceConnectionAsync()
+    public Task<DeviceConnectionInfo?> GetDeviceConnectionInfoAsync()
     {
-        return Task.FromResult(DeviceConnection);
+        if (DeviceConnection == null)
+        {
+            return Task.FromResult<DeviceConnectionInfo?>(null);
+        }
+
+        var info = new DeviceConnectionInfo
+        {
+            DeviceId = DeviceConnection.DeviceId,
+            DeviceName = DeviceConnection.DeviceName,
+            DeviceType = DeviceConnection.DeviceType,
+            Status = DeviceConnection.Status,
+            IsConnected = DeviceConnection.Status == DeviceConnectionStatus.Connected,
+            LastStatusUpdate = DateTime.UtcNow
+        };
+
+        return Task.FromResult<DeviceConnectionInfo?>(info);
     }
 
     public async Task<bool> InitializeDeviceConnectionAsync(DeviceConnectionConfig connectionConfig)

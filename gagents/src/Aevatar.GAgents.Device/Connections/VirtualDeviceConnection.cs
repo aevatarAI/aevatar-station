@@ -21,7 +21,7 @@ public class VirtualDeviceConnection : IDeviceConnection
     public string DeviceName { get; private set; }
     public string DeviceType { get; private set; }
     public DeviceConnectionStatus Status => _status;
-    
+
     public IReadOnlyDictionary<string, DeviceProperty> Properties => _properties;
     public IReadOnlyDictionary<string, DeviceAction> SupportedActions => _supportedActions;
 
@@ -29,34 +29,41 @@ public class VirtualDeviceConnection : IDeviceConnection
     public event EventHandler<DeviceConnectionStatusChangedEventArgs>? StatusChanged;
 
     public VirtualDeviceConnection(
-        string deviceId, 
-        string deviceName, 
+        string deviceId,
+        string deviceName,
         string deviceType,
-        ILogger<VirtualDeviceConnection> logger)
+        ILogger<VirtualDeviceConnection> logger,
+        Dictionary<string, string>? extendedProperties = null)
     {
         DeviceId = deviceId;
         DeviceName = deviceName;
         DeviceType = deviceType;
         _logger = logger;
-        
+
         InitializeVirtualDevice();
+        
+        // Apply extended properties if provided
+        if (extendedProperties != null)
+        {
+            ApplyExtendedProperties(extendedProperties);
+        }
     }
 
     public async Task<bool> ConnectAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Connecting to virtual device: {DeviceId} ({DeviceName})", DeviceId, DeviceName);
-        
+
         ChangeStatus(DeviceConnectionStatus.Connecting, "Connecting");
-        
+
         // Simulate connection delay
         await Task.Delay(1000, cancellationToken);
-        
+
         if (cancellationToken.IsCancellationRequested)
         {
             ChangeStatus(DeviceConnectionStatus.Disconnected, "Connection cancelled");
             return false;
         }
-        
+
         // Simulate connection success rate (95%)
         if (_random.NextDouble() < 0.95)
         {
@@ -76,13 +83,13 @@ public class VirtualDeviceConnection : IDeviceConnection
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Disconnecting virtual device: {DeviceId}", DeviceId);
-        
+
         StopSimulation();
         ChangeStatus(DeviceConnectionStatus.Disconnected, "Manually disconnected");
-        
+
         // Simulate disconnect delay
         await Task.Delay(500, cancellationToken);
-        
+
         _logger.LogInformation("Virtual device disconnected: {DeviceId}", DeviceId);
     }
 
@@ -98,11 +105,12 @@ public class VirtualDeviceConnection : IDeviceConnection
             throw new InvalidOperationException($"Property '{propertyName}' is not readable");
 
         _logger.LogDebug("Reading virtual device property: {PropertyName} = {Value}", propertyName, property.Value);
-        
+
         return Task.FromResult(property.Value);
     }
 
-    public Task<bool> WritePropertyAsync(string propertyName, object value, CancellationToken cancellationToken = default)
+    public Task<bool> WritePropertyAsync(string propertyName, object value,
+        CancellationToken cancellationToken = default)
     {
         if (_status != DeviceConnectionStatus.Connected)
             throw new InvalidOperationException("Device not connected");
@@ -123,7 +131,8 @@ public class VirtualDeviceConnection : IDeviceConnection
             }
             catch
             {
-                throw new ArgumentException($"Value type mismatch, expected {property.PropertyType.Name}, actual {value.GetType().Name}");
+                throw new ArgumentException(
+                    $"Value type mismatch, expected {property.PropertyType.Name}, actual {value.GetType().Name}");
             }
         }
 
@@ -133,10 +142,12 @@ public class VirtualDeviceConnection : IDeviceConnection
             if (value is IComparable comparable)
             {
                 if (property.MinValue != null && comparable.CompareTo(property.MinValue) < 0)
-                    throw new ArgumentOutOfRangeException(nameof(value), $"Value less than minimum {property.MinValue}");
-                
+                    throw new ArgumentOutOfRangeException(nameof(value),
+                        $"Value less than minimum {property.MinValue}");
+
                 if (property.MaxValue != null && comparable.CompareTo(property.MaxValue) > 0)
-                    throw new ArgumentOutOfRangeException(nameof(value), $"Value greater than maximum {property.MaxValue}");
+                    throw new ArgumentOutOfRangeException(nameof(value),
+                        $"Value greater than maximum {property.MaxValue}");
             }
         }
 
@@ -144,7 +155,7 @@ public class VirtualDeviceConnection : IDeviceConnection
         property.Value = value;
         property.LastUpdated = DateTime.UtcNow;
 
-        _logger.LogInformation("Writing virtual device property: {PropertyName} = {Value} (old value: {OldValue})", 
+        _logger.LogInformation("Writing virtual device property: {PropertyName} = {Value} (old value: {OldValue})",
             propertyName, value, oldValue);
 
         // Trigger property change event
@@ -159,7 +170,8 @@ public class VirtualDeviceConnection : IDeviceConnection
         return Task.FromResult(true);
     }
 
-    public Task<DeviceActionResult> ExecuteActionAsync(string actionName, Dictionary<string, object>? parameters = null, CancellationToken cancellationToken = default)
+    public Task<DeviceActionResult> ExecuteActionAsync(string actionName, Dictionary<string, object>? parameters = null,
+        CancellationToken cancellationToken = default)
     {
         if (_status != DeviceConnectionStatus.Connected)
             throw new InvalidOperationException("Device not connected");
@@ -184,10 +196,10 @@ public class VirtualDeviceConnection : IDeviceConnection
 
             // Simulate action execution
             var result = SimulateActionExecution(actionName, parameters);
-            
+
             stopwatch.Stop();
 
-            _logger.LogInformation("Virtual device action execution completed: {ActionName}, duration: {ElapsedMs}ms", 
+            _logger.LogInformation("Virtual device action execution completed: {ActionName}, duration: {ElapsedMs}ms",
                 actionName, stopwatch.ElapsedMilliseconds);
 
             return Task.FromResult(new DeviceActionResult
@@ -201,7 +213,7 @@ public class VirtualDeviceConnection : IDeviceConnection
         catch (Exception ex)
         {
             stopwatch.Stop();
-            
+
             _logger.LogError(ex, "Virtual device action execution failed: {ActionName}", actionName);
 
             return Task.FromResult(new DeviceActionResult
@@ -216,8 +228,9 @@ public class VirtualDeviceConnection : IDeviceConnection
 
     public Task<DeviceHealthStatus> GetHealthStatusAsync(CancellationToken cancellationToken = default)
     {
-        var isHealthy = _status == DeviceConnectionStatus.Connected && _random.NextDouble() > 0.1; // 10% probability unhealthy
-        
+        var isHealthy =
+            _status == DeviceConnectionStatus.Connected && _random.NextDouble() > 0.1; // 10% probability unhealthy
+
         var healthStatus = new DeviceHealthStatus
         {
             IsHealthy = isHealthy,
@@ -255,16 +268,16 @@ public class VirtualDeviceConnection : IDeviceConnection
             case "smart light":
                 InitializeSmartLight();
                 break;
-                
+
             case "temperaturesensor":
             case "temperature sensor":
                 InitializeTemperatureSensor();
                 break;
-                
+
             case "thermostat":
                 InitializeThermostat();
                 break;
-                
+
             default:
                 InitializeGenericDevice();
                 break;
@@ -485,7 +498,8 @@ public class VirtualDeviceConnection : IDeviceConnection
 
         if (oldStatus != newStatus)
         {
-            _logger.LogInformation("Virtual device status change: {DeviceId}, {OldStatus} -> {NewStatus}, reason: {Reason}", 
+            _logger.LogInformation(
+                "Virtual device status change: {DeviceId}, {OldStatus} -> {NewStatus}, reason: {Reason}",
                 DeviceId, oldStatus, newStatus, reason);
 
             StatusChanged?.Invoke(this, new DeviceConnectionStatusChangedEventArgs
@@ -530,6 +544,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                             newValue = Math.Round(temp + (_random.NextDouble() - 0.5) * 2, 1);
                             newValue = Math.Max(-40, Math.Min(85, (double)newValue));
                         }
+
                         break;
 
                     case "Humidity":
@@ -538,10 +553,12 @@ public class VirtualDeviceConnection : IDeviceConnection
                             newValue = Math.Round(humidity + (_random.NextDouble() - 0.5) * 5, 1);
                             newValue = Math.Max(0, Math.Min(100, (double)newValue));
                         }
+
                         break;
 
                     case "CurrentTemperature":
-                        if (oldValue is double currentTemp && _properties.TryGetValue("TargetTemperature", out var targetProp))
+                        if (oldValue is double currentTemp &&
+                            _properties.TryGetValue("TargetTemperature", out var targetProp))
                         {
                             if (targetProp.Value is double targetTemp)
                             {
@@ -550,6 +567,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                                 newValue = Math.Round(currentTemp + change + (_random.NextDouble() - 0.5) * 0.2, 1);
                             }
                         }
+
                         break;
                 }
 
@@ -584,7 +602,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                     var oldValue = powerProp.Value;
                     powerProp.Value = true;
                     powerProp.LastUpdated = DateTime.UtcNow;
-                    
+
                     PropertyChanged?.Invoke(this, new DevicePropertyChangedEventArgs
                     {
                         PropertyName = "Power",
@@ -593,6 +611,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
+
                 return "Light bulb turned on";
 
             case "TurnOff":
@@ -601,7 +620,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                     var oldValue = powerOffProp.Value;
                     powerOffProp.Value = false;
                     powerOffProp.LastUpdated = DateTime.UtcNow;
-                    
+
                     PropertyChanged?.Invoke(this, new DevicePropertyChangedEventArgs
                     {
                         PropertyName = "Power",
@@ -610,17 +629,18 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
+
                 return "Light bulb turned off";
 
             case "SetBrightness":
-                if (parameters.TryGetValue("brightness", out var brightnessObj) && 
+                if (parameters.TryGetValue("brightness", out var brightnessObj) &&
                     _properties.TryGetValue("Brightness", out var brightnessProp))
                 {
                     var brightness = Convert.ToInt32(brightnessObj);
                     var oldValue = brightnessProp.Value;
                     brightnessProp.Value = brightness;
                     brightnessProp.LastUpdated = DateTime.UtcNow;
-                    
+
                     PropertyChanged?.Invoke(this, new DevicePropertyChangedEventArgs
                     {
                         PropertyName = "Brightness",
@@ -629,17 +649,18 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
+
                 return $"Brightness set to {parameters["brightness"]}%";
 
             case "SetMode":
-                if (parameters.TryGetValue("mode", out var modeObj) && 
+                if (parameters.TryGetValue("mode", out var modeObj) &&
                     _properties.TryGetValue("Mode", out var modeProp))
                 {
                     var mode = modeObj.ToString();
                     var oldValue = modeProp.Value;
                     modeProp.Value = mode;
                     modeProp.LastUpdated = DateTime.UtcNow;
-                    
+
                     PropertyChanged?.Invoke(this, new DevicePropertyChangedEventArgs
                     {
                         PropertyName = "Mode",
@@ -648,6 +669,7 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
+
                 return $"Mode set to {parameters["mode"]}";
 
             case "Calibrate":
@@ -660,12 +682,13 @@ public class VirtualDeviceConnection : IDeviceConnection
                 foreach (var prop in _properties.Values.Where(p => p.IsWritable))
                 {
                     var oldValue = prop.Value;
-                    object? defaultValue = prop.PropertyType.IsValueType ? 
-                        Activator.CreateInstance(prop.PropertyType) : null;
-                    
+                    object? defaultValue = prop.PropertyType.IsValueType
+                        ? Activator.CreateInstance(prop.PropertyType)
+                        : null;
+
                     prop.Value = defaultValue;
                     prop.LastUpdated = DateTime.UtcNow;
-                    
+
                     PropertyChanged?.Invoke(this, new DevicePropertyChangedEventArgs
                     {
                         PropertyName = prop.Name,
@@ -674,10 +697,46 @@ public class VirtualDeviceConnection : IDeviceConnection
                         ChangedAt = DateTime.UtcNow
                     });
                 }
+
                 return "Device reset";
 
             default:
                 return $"Action {actionName} execution completed";
+        }
+    }
+
+    /// <summary>
+    /// Apply extended properties from configuration to override default values
+    /// </summary>
+    private void ApplyExtendedProperties(Dictionary<string, string> extendedProperties)
+    {
+        foreach (var kvp in extendedProperties)
+        {
+            var propertyName = kvp.Key;
+            var propertyValueString = kvp.Value;
+
+            if (_properties.TryGetValue(propertyName, out var property))
+            {
+                try
+                {
+                    // Convert string value to the appropriate type
+                    var convertedValue = Convert.ChangeType(propertyValueString, property.PropertyType);
+                    property.Value = convertedValue;
+                    property.LastUpdated = DateTime.UtcNow;
+                    
+                    _logger.LogDebug("Applied extended property: {PropertyName} = {Value} ({Type})", 
+                        propertyName, convertedValue, property.PropertyType.Name);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to convert extended property {PropertyName} value '{Value}' to type {Type}", 
+                        propertyName, propertyValueString, property.PropertyType.Name);
+                }
+            }
+            else
+            {
+                _logger.LogDebug("Extended property {PropertyName} not found in device properties", propertyName);
+            }
         }
     }
 }
