@@ -270,35 +270,54 @@ namespace InterceptorDemo
 
         private static async Task TestWorkflowInterceptor()
         {
-            Console.WriteLine("=== Testing Workflow Interceptor ===\n");
+            Console.WriteLine("=== Testing Workflow Interceptor (Reflection Property Optimized) ===\n");
 
             var workflowDemo = new WorkflowDemo();
 
-            // Test Order Processing workflow
-            Console.WriteLine("Testing Order Processing Workflow...");
+            // Test Reflection optimization: Direct workflow method calls with pre-set properties
+            Console.WriteLine("Testing Reflection Property Optimization...");
+            
+            // Set WorkflowId property directly on the instance
+            workflowDemo.WorkflowId = "workflow-12345678-1234-1234-1234-123456789012";
+            
+            // Now call workflow methods directly - InterceptorAttribute will get values via reflection
+            Console.WriteLine("Calling workflow methods directly with reflection-based context:");
+            await workflowDemo.ValidateOrderDirect("ORDER-456", 150.00m);
+            await workflowDemo.ProcessPaymentDirect("ORDER-456", 150.00m, "customer@example.com");
+            Console.WriteLine();
+
+            // Test context change for different workflow
+            workflowDemo.WorkflowId = "workflow-87654321-4321-4321-4321-210987654321";
+            await workflowDemo.CreateUserAccountDirect("newuser@example.com", "New User");
+            Console.WriteLine();
+
+            // Clear properties and test without WorkflowId
+            workflowDemo.WorkflowId = null;
+            Console.WriteLine("Testing without WorkflowId property (should work with auto-derived info):");
+            await workflowDemo.StandaloneWorkflowMethod("standalone-test");
+            Console.WriteLine();
+
+            // Test with manually set properties for traditional workflow
+            Console.WriteLine("Traditional workflow with manually set properties for comparison:");
+            workflowDemo.WorkflowId = "order-proc-ORDER-123";
             await workflowDemo.ProcessOrderWorkflow("ORDER-123", "user@example.com", 99.99m);
             Console.WriteLine();
 
-            // Test User Onboarding workflow
-            Console.WriteLine("Testing User Onboarding Workflow...");
-            await workflowDemo.UserOnboardingWorkflow("john.doe@example.com", "John Doe");
-            Console.WriteLine();
-
-            // Test workflow with exception
-            Console.WriteLine("Testing Workflow Exception Handling...");
+            // Test workflow with exception using reflection approach
+            Console.WriteLine("Testing Exception Handling with Reflection approach...");
             try
             {
-                await workflowDemo.WorkflowWithException("invalid-data");
+                workflowDemo.WorkflowId = "workflow-exception-test";
+                await workflowDemo.ProcessDataWithValidationDirect("invalid-data");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Caught expected workflow exception: {ex.Message}");
             }
-            Console.WriteLine();
-
-            // Test nested workflow calls
-            Console.WriteLine("Testing Nested Workflow Calls...");
-            await workflowDemo.ParentWorkflow("nested-test");
+            finally
+            {
+                workflowDemo.WorkflowId = null;
+            }
             Console.WriteLine();
         }
     }
@@ -577,26 +596,30 @@ namespace InterceptorDemo
     public class WorkflowDemo
     {
         /// <summary>
+        /// Workflow ID for this instance, used by InterceptorAttribute via reflection
+        /// </summary>
+        public string? WorkflowId { get; set; }
+
+        /// <summary>
         /// Simulates a complete order processing workflow with multiple steps
         /// </summary>
         public async Task ProcessOrderWorkflow(string orderId, string customerEmail, decimal amount)
         {
             Console.WriteLine($"Starting order processing workflow for order: {orderId}");
             
-            // Set workflow context for all steps
-            await WorkflowContext.ExecuteInWorkflowAsync($"order-proc-{orderId}", "OrderProcessing", async () =>
-            {
-                // Step 1: Validate Order
-                var isValidOrder = await ValidateOrder(orderId, amount);
-                if (!isValidOrder) return;
-                
-                // Step 2: Process Payment
-                var paymentResult = await ProcessPayment(orderId, amount, customerEmail);
-                if (paymentResult == null) return;
-                
-                // Step 3: Fulfill Order
-                await FulfillOrder(orderId, paymentResult.TransactionId);
-            });
+            // WorkflowId and WorkflowType are now set as properties before calling this method
+            // InterceptorAttribute will automatically get them via reflection
+            
+            // Step 1: Validate Order
+            var isValidOrder = await ValidateOrder(orderId, amount);
+            if (!isValidOrder) return;
+            
+            // Step 2: Process Payment
+            var paymentResult = await ProcessPayment(orderId, amount, customerEmail);
+            if (paymentResult == null) return;
+            
+            // Step 3: Fulfill Order
+            await FulfillOrder(orderId, paymentResult.TransactionId);
             
             Console.WriteLine($"Order processing workflow completed for order: {orderId}");
         }
@@ -608,20 +631,17 @@ namespace InterceptorDemo
         {
             Console.WriteLine($"Starting user onboarding workflow for: {email}");
             
-            // Set workflow context for all steps
-            var userId = await WorkflowContext.ExecuteInWorkflowAsync($"user-onboard-{email}", "UserOnboarding", async () =>
-            {
-                // Step 1: Create User Account
-                var id = await CreateUserAccount(email, fullName);
-                
-                // Step 2: Send Welcome Email
-                await SendWelcomeEmail(email, fullName);
-                
-                // Step 3: Setup User Preferences
-                await SetupUserPreferences(id);
-                
-                return id;
-            });
+            // WorkflowId and WorkflowType are now set as properties before calling this method
+            // InterceptorAttribute will automatically get them via reflection
+            
+            // Step 1: Create User Account
+            var userId = await CreateUserAccount(email, fullName);
+            
+            // Step 2: Send Welcome Email
+            await SendWelcomeEmail(email, fullName);
+            
+            // Step 3: Setup User Preferences
+            await SetupUserPreferences(userId);
             
             Console.WriteLine($"User onboarding workflow completed for: {email}");
         }
@@ -633,10 +653,10 @@ namespace InterceptorDemo
         {
             Console.WriteLine($"Starting workflow that will throw exception with data: {data}");
             
-            await WorkflowContext.ExecuteInWorkflowAsync("data-validation-workflow", "DataProcessing", async () =>
-            {
-                await ProcessDataWithValidation(data);
-            });
+            // WorkflowId and WorkflowType are now set as properties before calling this method
+            // InterceptorAttribute will automatically get them via reflection
+            
+            await ProcessDataWithValidation(data);
         }
         
         /// <summary>
@@ -646,12 +666,12 @@ namespace InterceptorDemo
         {
             Console.WriteLine($"Starting parent workflow with data: {inputData}");
             
-            await WorkflowContext.ExecuteInWorkflowAsync("nested-parent-workflow", "NestedProcessing", async () =>
-            {
-                // Call child workflow steps
-                await ChildWorkflowStepA(inputData);
-                await ChildWorkflowStepB(inputData + "-processed");
-            });
+            // WorkflowId is now set as property before calling this method
+            // InterceptorAttribute will automatically get it via reflection
+            
+            // Call child workflow steps
+            await ChildWorkflowStepA(inputData);
+            await ChildWorkflowStepB(inputData + "-processed");
             
             Console.WriteLine("Parent workflow completed");
         }
@@ -757,6 +777,78 @@ namespace InterceptorDemo
             Console.WriteLine($"Executing child workflow step B with: {processedData}");
             await Task.Delay(90);
             Console.WriteLine("Child workflow step B completed");
+        }
+        
+        // ResourceContext Optimization Test Methods (Public for direct testing)
+        
+        /// <summary>
+        /// Direct call workflow method - tests ResourceContext optimization where WorkflowContext is pre-set
+        /// </summary>
+        [Interceptor(IsWorkflowStep = true)]
+        public async Task<bool> ValidateOrderDirect(string orderId, decimal amount)
+        {
+            Console.WriteLine($"[DIRECT] Validating order {orderId} with amount ${amount}");
+            await Task.Delay(100);
+            
+            if (amount <= 0)
+            {
+                Console.WriteLine("[DIRECT] Invalid order amount");
+                return false;
+            }
+            
+            Console.WriteLine("[DIRECT] Order validation successful");
+            return true;
+        }
+        
+        [Interceptor(IsWorkflowStep = true)]
+        public async Task<PaymentResult?> ProcessPaymentDirect(string orderId, decimal amount, string customerEmail)
+        {
+            Console.WriteLine($"[DIRECT] Processing payment for order {orderId}: ${amount}");
+            await Task.Delay(200);
+            
+            var result = new PaymentResult
+            {
+                TransactionId = $"TXN-{Guid.NewGuid().ToString("N")[..8]}",
+                Amount = amount,
+                Status = "Completed",
+                ProcessedAt = DateTime.UtcNow
+            };
+            
+            Console.WriteLine($"[DIRECT] Payment processed successfully: {result.TransactionId}");
+            return result;
+        }
+        
+        [Interceptor(IsWorkflowStep = true)]
+        public async Task<string> CreateUserAccountDirect(string email, string fullName)
+        {
+            Console.WriteLine($"[DIRECT] Creating user account for {email}");
+            await Task.Delay(120);
+            
+            var userId = $"USER-{Guid.NewGuid().ToString("N")[..8]}";
+            Console.WriteLine($"[DIRECT] User account created with ID: {userId}");
+            return userId;
+        }
+        
+        [Interceptor(IsWorkflowStep = true)]
+        public async Task ProcessDataWithValidationDirect(string data)
+        {
+            Console.WriteLine($"[DIRECT] Processing data: {data}");
+            await Task.Delay(50);
+            
+            if (data == "invalid-data")
+            {
+                throw new InvalidOperationException("Data validation failed: invalid format detected");
+            }
+            
+            Console.WriteLine("[DIRECT] Data processed successfully");
+        }
+        
+        [Interceptor(IsWorkflowStep = true)]
+        public async Task StandaloneWorkflowMethod(string input)
+        {
+            Console.WriteLine($"[STANDALONE] Processing standalone workflow method with: {input}");
+            await Task.Delay(80);
+            Console.WriteLine("[STANDALONE] Standalone method completed (no explicit WorkflowContext)");
         }
     }
 

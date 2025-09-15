@@ -34,7 +34,6 @@ public abstract partial class
         });
     }
 
-    [EventHandler]
     public async Task HandleEventAsync(ChatEvent @event)
     {
         if (@event.Speaker != this.GetPrimaryKey())
@@ -42,31 +41,12 @@ public abstract partial class
             return;
         }
 
-        // Set workflow context based on the BlackboardId from the event
-        var workflowId = $"workflow-{@event.BlackboardId}";
-        var workflowType = "WorkflowExecution";
-
-        await WorkflowContext.ExecuteInWorkflowAsync(workflowId, workflowType, async () =>
+        // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
+        var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
+        await PublishAsync(new ChatResponseEvent()
         {
-            // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
-            try
-            {
-                var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
-                await PublishAsync(new ChatResponseEvent()
-                {
-                    BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
-                    ChatResponse = talkResponse, Term = @event.Term
-                });
-            }
-            catch (Exception e)
-            {
-                Logger.LogError($"[MemberGAgentBase] Handler ChatEvent fail: {e.Message}");
-                await PublishAsync(new ChatResponseEvent()
-                {
-                    BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
-                    FailureSummary = e.ToString(), Term = @event.Term
-                });
-            }
+            BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
+            ChatResponse = talkResponse, Term = @event.Term
         });
     }
 
@@ -98,6 +78,29 @@ public abstract partial class
     protected virtual Task<bool> IgnoreBlackboardPingEvent(Guid blackboardId)
     {
         return Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Workflow ID for this member instance, used by InterceptorAttribute for workflow logging
+    /// </summary>
+    public virtual string? WorkflowId { get; protected set; }
+
+    /// <summary>
+    /// Override to automatically extract WorkflowId from ResourceContext metadata
+    /// and set it as instance property for use by InterceptorAttribute
+    /// </summary>
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        await base.OnPrepareResourceContextAsync(context);
+
+        // Extract WorkflowId from metadata if available and set as instance property
+        if (context.Metadata.TryGetValue("WorkflowId", out var workflowIdObj))
+        {
+            WorkflowId = $"workflow-{workflowIdObj}";
+            
+            Logger.LogInformation("[MemberGAgentBase] Set WorkflowId property from ResourceContext: WorkflowId={WorkflowId}", 
+                WorkflowId);
+        }
     }
 
     [GenerateSerializer]

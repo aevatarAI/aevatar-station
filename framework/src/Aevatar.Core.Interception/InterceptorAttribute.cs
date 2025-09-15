@@ -10,95 +10,9 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
-using System.Threading;
-using System.Text.RegularExpressions;
 
 namespace Aevatar.Core.Interception
 {
-    /// <summary>
-    /// Runtime context for workflow information that can be set during execution
-    /// </summary>
-    public static class WorkflowContext
-    {
-        private static readonly AsyncLocal<string?> _workflowId = new();
-        private static readonly AsyncLocal<string?> _workflowType = new();
-        
-        /// <summary>
-        /// Current workflow instance ID
-        /// </summary>
-        public static string? CurrentWorkflowId 
-        {
-            get => _workflowId.Value;
-            set => _workflowId.Value = value;
-        }
-        
-        /// <summary>
-        /// Current workflow type/category
-        /// </summary>
-        public static string? CurrentWorkflowType 
-        {
-            get => _workflowType.Value;
-            set => _workflowType.Value = value;
-        }
-        
-        /// <summary>
-        /// Set workflow context for current execution flow
-        /// </summary>
-        public static void SetWorkflow(string workflowId, string? workflowType = null)
-        {
-            _workflowId.Value = workflowId;
-            _workflowType.Value = workflowType;
-        }
-        
-        /// <summary>
-        /// Clear current workflow context
-        /// </summary>
-        public static void Clear()
-        {
-            _workflowId.Value = null;
-            _workflowType.Value = null;
-        }
-        
-        /// <summary>
-        /// Execute code within a workflow context
-        /// </summary>
-        public static async Task ExecuteInWorkflowAsync(string workflowId, string? workflowType, Func<Task> action)
-        {
-            var previousId = _workflowId.Value;
-            var previousType = _workflowType.Value;
-            
-            try
-            {
-                SetWorkflow(workflowId, workflowType);
-                await action();
-            }
-            finally
-            {
-                _workflowId.Value = previousId;
-                _workflowType.Value = previousType;
-            }
-        }
-        
-        /// <summary>
-        /// Execute code within a workflow context with return value
-        /// </summary>
-        public static async Task<T> ExecuteInWorkflowAsync<T>(string workflowId, string? workflowType, Func<Task<T>> func)
-        {
-            var previousId = _workflowId.Value;
-            var previousType = _workflowType.Value;
-            
-            try
-            {
-                SetWorkflow(workflowId, workflowType);
-                return await func();
-            }
-            finally
-            {
-                _workflowId.Value = previousId;
-                _workflowType.Value = previousType;
-            }
-        }
-    }
 
     /// <summary>
     /// Attribute that provides method tracing capabilities through Fody MethodDecorator
@@ -124,6 +38,9 @@ namespace Aevatar.Core.Interception
         private object[]? _args;
         private ILogger? _logger;
         private Activity? _activity;
+        
+        // Cached workflow ID to avoid repeated reflection
+        private string? _cachedWorkflowId;
 
         /// <summary>
         /// Called before the method execution to initialize the interceptor
@@ -178,6 +95,9 @@ namespace Aevatar.Core.Interception
             }
 
             Init();
+            
+            // Initialize workflow information once during initialization
+            InitializeWorkflowInfo();
 
             // Log initialization with appropriate level
             if (ShouldTrace())
@@ -324,13 +244,14 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Check if this is a workflow step
+                // Check if this is a workflow step (additional workflow logging)
                 if (IsWorkflowStep)
                 {
                     LogWorkflowEntry();
                 }
-                // Only log trace messages if tracing is enabled
-                else if (ShouldTrace())
+                
+                // Trace logging (independent of workflow)
+                if (ShouldTrace())
                 {
                     _logger?.LogDebug("TRACE: Entering {MethodName}", _method.Name);
                     
@@ -355,11 +276,6 @@ namespace Aevatar.Core.Interception
                     }
                 }
                 
-                // Always create activity for OpenTelemetry (regardless of workflow or trace mode)
-                if (!IsWorkflowStep)
-                {
-                    CreateActivity();
-                }
             }
         }
 
@@ -370,13 +286,14 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Check if this is a workflow step
+                // Check if this is a workflow step (additional workflow logging)
                 if (IsWorkflowStep)
                 {
                     LogWorkflowExit();
                 }
-                // Only log trace messages if tracing is enabled
-                else if (ShouldTrace())
+                
+                // Trace logging (independent of workflow)
+                if (ShouldTrace())
                 {
                     _logger?.LogDebug("TRACE: Exiting {MethodName}", _method.Name);
                 }
@@ -397,13 +314,14 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Check if this is a workflow step
+                // Check if this is a workflow step (additional workflow logging)
                 if (IsWorkflowStep)
                 {
                     LogWorkflowException(exception);
                 }
-                // Only log trace messages if tracing is enabled
-                else if (ShouldTrace())
+                
+                // Trace logging (independent of workflow)
+                if (ShouldTrace())
                 {
                     // Always include stack trace when logging exceptions
                     _logger?.LogError(exception, "TRACE: Exception in {MethodName}: {ExceptionType}: {ExceptionMessage}", 
@@ -529,186 +447,112 @@ namespace Aevatar.Core.Interception
         }
         
         /// <summary>
-        /// Logs workflow entry with enhanced formatting and context information
+        /// Logs workflow entry with input parameters
         /// </summary>
         private void LogWorkflowEntry()
         {
             if (_method == null) return;
             
-            var (workflowId, stepName, workflowType) = GetWorkflowInfo();
+            var workflowId = GetWorkflowId();
             var methodName = _method.Name;
-            var workflowContext = BuildWorkflowContext(workflowId, stepName, workflowType);
+            var workflowContext = BuildWorkflowContext(workflowId);
             
-            // Log workflow entry with structured properties for ES indexing
-            using var scope = _logger?.BeginScope(new Dictionary<string, object?>
-            {
-                ["IsWorkflow"] = true,
-                ["WorkflowId"] = workflowId,
-                ["WorkflowStep"] = stepName,
-                ["WorkflowType"] = workflowType,
-                ["WorkflowAction"] = "ENTER",
-                ["MethodName"] = methodName
-            });
-            
-            _logger?.LogInformation("WORKFLOW: {WorkflowContext} ENTER: {MethodName}", 
-                workflowContext, methodName);
-            
-            // Create OpenTelemetry activity for workflow
-            CreateWorkflowActivity();
-            
-            // Log input parameters (always enabled for workflow)
+            // Combine ENTER and INPUT into single log entry
             if (_args != null && _args.Length > 0)
             {
                 var inputData = BuildInputOutputData();
-                
-                using var inputScope = _logger?.BeginScope(new Dictionary<string, object?>
-                {
-                    ["IsWorkflow"] = true,
-                    ["WorkflowId"] = workflowId,
-                    ["WorkflowStep"] = stepName,
-                    ["WorkflowType"] = workflowType,
-                    ["WorkflowAction"] = "INPUT",
-                    ["MethodName"] = methodName,
-                    ["InputData"] = inputData
-                });
-                
-                _logger?.LogInformation("WORKFLOW: {WorkflowContext} INPUT: {InputData}", 
-                    workflowContext, inputData);
+                _logger?.LogInformation("WORKFLOW: {WorkflowContext} ENTER {MethodName}({InputData})", 
+                    workflowContext, methodName, inputData);
+            }
+            else
+            {
+                _logger?.LogInformation("WORKFLOW: {WorkflowContext} ENTER {MethodName}()", 
+                    workflowContext, methodName);
             }
         }
         
         /// <summary>
-        /// Logs workflow exit with enhanced formatting and context information
+        /// Logs workflow exit with return value
         /// </summary>
         private void LogWorkflowExit(object? returnValue = null)
         {
             if (_method == null) return;
             
-            var (workflowId, stepName, workflowType) = GetWorkflowInfo();
+            var workflowId = GetWorkflowId();
             var methodName = _method.Name;
-            var workflowContext = BuildWorkflowContext(workflowId, stepName, workflowType);
+            var workflowContext = BuildWorkflowContext(workflowId);
             
-            // Log workflow exit with structured properties for ES indexing
-            using var scope = _logger?.BeginScope(new Dictionary<string, object?>
-            {
-                ["IsWorkflow"] = true,
-                ["WorkflowId"] = workflowId,
-                ["WorkflowStep"] = stepName,
-                ["WorkflowType"] = workflowType,
-                ["WorkflowAction"] = "EXIT",
-                ["MethodName"] = methodName
-            });
-            
-            _logger?.LogInformation("WORKFLOW: {WorkflowContext} EXIT: {MethodName}", 
-                workflowContext, methodName);
-            
-            // Log output if method has return value (always enabled for workflow)
+            // Combine EXIT and OUTPUT into single log entry
             if (returnValue != null)
             {
                 var outputData = SerializeParameterValue(returnValue);
-                
-                using var outputScope = _logger?.BeginScope(new Dictionary<string, object?>
-                {
-                    ["IsWorkflow"] = true,
-                    ["WorkflowId"] = workflowId,
-                    ["WorkflowStep"] = stepName,
-                    ["WorkflowType"] = workflowType,
-                    ["WorkflowAction"] = "OUTPUT",
-                    ["MethodName"] = methodName,
-                    ["OutputData"] = outputData
-                });
-                
-                _logger?.LogInformation("WORKFLOW: {WorkflowContext} OUTPUT: {OutputData}", 
-                    workflowContext, outputData);
+                _logger?.LogInformation("WORKFLOW: {WorkflowContext} EXIT {MethodName} -> {OutputData}", 
+                    workflowContext, methodName, outputData);
+            }
+            else
+            {
+                _logger?.LogInformation("WORKFLOW: {WorkflowContext} EXIT {MethodName}", 
+                    workflowContext, methodName);
             }
         }
         
         /// <summary>
-        /// Logs workflow exception with enhanced formatting and context information
+        /// Logs workflow exception
         /// </summary>
         private void LogWorkflowException(Exception exception)
         {
             if (_method == null) return;
             
-            var (workflowId, stepName, workflowType) = GetWorkflowInfo();
+            var workflowId = GetWorkflowId();
             var methodName = _method.Name;
-            var workflowContext = BuildWorkflowContext(workflowId, stepName, workflowType);
+            var workflowContext = BuildWorkflowContext(workflowId);
             
-            // Log workflow exception with structured properties for ES indexing
-            using var scope = _logger?.BeginScope(new Dictionary<string, object?>
-            {
-                ["IsWorkflow"] = true,
-                ["WorkflowId"] = workflowId,
-                ["WorkflowStep"] = stepName,
-                ["WorkflowType"] = workflowType,
-                ["WorkflowAction"] = "EXCEPTION",
-                ["MethodName"] = methodName,
-                ["ExceptionType"] = exception.GetType().Name,
-                ["ExceptionMessage"] = exception.Message,
-                ["StackTrace"] = exception.StackTrace
-            });
-            
-            _logger?.LogError(exception, "WORKFLOW: {WorkflowContext} EXCEPTION: {MethodName} - {ExceptionType}: {ExceptionMessage}", 
-                workflowContext, methodName, exception.GetType().Name, exception.Message);
+            _logger?.LogError(exception, "WORKFLOW: {WorkflowContext} EXCEPTION {MethodName}: {ExceptionMessage}", 
+                workflowContext, methodName, exception.Message);
         }
         
         /// <summary>
-        /// Gets workflow information from runtime context and method info
+        /// Initializes workflow ID once during attribute initialization to avoid repeated reflection
         /// </summary>
-        private (string? workflowId, string stepName, string? workflowType) GetWorkflowInfo()
+        private void InitializeWorkflowInfo()
         {
-            var workflowId = WorkflowContext.CurrentWorkflowId;
-            var workflowType = WorkflowContext.CurrentWorkflowType;
-            
-            // Auto-derive step name from method name (convert PascalCase to kebab-case)
-            var stepName = ConvertToKebabCase(_method?.Name ?? "unknown-method");
-            
-            // Auto-derive workflow type from class name if not set in context
-            if (string.IsNullOrEmpty(workflowType) && _method?.DeclaringType != null)
+            // Try to get WorkflowId from instance property via reflection (similar to Logger discovery)
+            if (_instance != null)
             {
-                var className = _method.DeclaringType.Name;
-                // Remove common suffixes and convert to readable format
-                workflowType = className.Replace("Demo", "").Replace("Workflow", "").Replace("Service", "");
-                if (string.IsNullOrEmpty(workflowType))
-                    workflowType = className;
+                try
+                {
+                    var instanceType = _instance.GetType();
+                    
+                    // Try to get WorkflowId property
+                    var workflowIdProperty = instanceType.GetProperty("WorkflowId", BindingFlags.Public | BindingFlags.Instance);
+                    if (workflowIdProperty != null && workflowIdProperty.PropertyType == typeof(string))
+                    {
+                        _cachedWorkflowId = workflowIdProperty.GetValue(_instance) as string;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Silently fallback to auto-derivation if reflection fails
+                    System.Diagnostics.Debug.WriteLine($"Failed to get WorkflowId property via reflection: {ex.Message}");
+                }
             }
-            
-            return (workflowId, stepName, workflowType);
         }
         
         /// <summary>
-        /// Convert PascalCase method name to kebab-case step name
+        /// Gets cached workflow ID (no reflection overhead)
         /// </summary>
-        private static string ConvertToKebabCase(string input)
+        private string? GetWorkflowId()
         {
-            if (string.IsNullOrEmpty(input)) return input;
-            
-            var result = Regex.Replace(
-                input, 
-                "(?<!^)([A-Z][a-z]|(?<=[a-z])[A-Z])", 
-                "-$1")
-                .ToLowerInvariant();
-            
-            return result;
+            return _cachedWorkflowId;
         }
+        
         
         /// <summary>
         /// Builds workflow context string for logging
         /// </summary>
-        private string BuildWorkflowContext(string? workflowId, string stepName, string? workflowType)
+        private string BuildWorkflowContext(string? workflowId)
         {
-            var parts = new List<string>();
-            
-            if (!string.IsNullOrEmpty(workflowId))
-                parts.Add($"WorkflowId={workflowId}");
-            
-            if (!string.IsNullOrEmpty(stepName))
-                parts.Add($"Step={stepName}");
-                
-            if (!string.IsNullOrEmpty(workflowType))
-                parts.Add($"Type={workflowType}");
-            
-            return parts.Count > 0 ? $"[{string.Join("] [", parts)}]" : "[Workflow]";
+            return !string.IsNullOrEmpty(workflowId) ? $"[WorkflowId={workflowId}]" : "[Workflow]";
         }
         
         /// <summary>
@@ -783,47 +627,6 @@ namespace Aevatar.Core.Interception
             }
         }
         
-        /// <summary>
-        /// Creates an OpenTelemetry activity for workflow step tracing with enhanced context
-        /// </summary>
-        private void CreateWorkflowActivity()
-        {
-            if (_method == null) return;
-
-            var (workflowId, stepName, workflowType) = GetWorkflowInfo();
-            
-            // Create activity name with workflow context
-            var activityName = $"Workflow.{workflowType ?? "Unknown"}.{stepName}";
-            
-            _activity = _activitySource.StartActivity(activityName);
-            
-            if (_activity != null)
-            {
-                // Set basic activity attributes
-                _activity.SetTag("method.name", _method.Name);
-                _activity.SetTag("method.declaring_type", _method.DeclaringType?.FullName ?? "unknown");
-                _activity.SetTag("method.parameters_count", _args?.Length ?? 0);
-                
-                // Set workflow-specific attributes
-                _activity.SetTag("workflow.is_workflow_step", true);
-                
-                if (!string.IsNullOrEmpty(workflowId))
-                    _activity.SetTag("workflow.id", workflowId);
-                    
-                if (!string.IsNullOrEmpty(stepName))
-                    _activity.SetTag("workflow.step_name", stepName);
-                    
-                if (!string.IsNullOrEmpty(workflowType))
-                    _activity.SetTag("workflow.type", workflowType);
-                
-                // Set trace ID from TraceContext if available
-                var traceId = TraceContext.ActiveTraceId;
-                if (!string.IsNullOrEmpty(traceId))
-                {
-                    _activity.SetTag("aevatar.trace_id", traceId);
-                }
-            }
-        }
 
         /// <summary>
         /// Creates an OpenTelemetry activity for async method completion states
