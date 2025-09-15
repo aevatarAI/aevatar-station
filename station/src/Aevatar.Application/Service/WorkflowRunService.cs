@@ -146,8 +146,27 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException($"Node '{workflowNode.Name}': JsonProperties is missing");
         }
         
-        var nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
-        var initializationParam = JsonConvert.SerializeObject(nodeAgentProperties);
+        Dictionary<string, object> nodeAgentProperties;
+        string initializationParam;
+        
+        try
+        {
+            nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
+        }
+        catch (JsonSerializationException ex)
+        {
+            throw new UserFriendlyException($"Node '{workflowNode.Name}': JSON deserialization failed. {ex.Message}");
+        }
+        
+        try
+        {
+            initializationParam = JsonConvert.SerializeObject(nodeAgentProperties);
+        }
+        catch (JsonSerializationException ex)
+        {
+            throw new UserFriendlyException($"Node '{workflowNode.Name}': Failed to serialize agent properties. {ex.Message}");
+        }
+        
         await ValidateAgentConfigAsync(workflowNode.AgentType, initializationParam);
 
         _logger.LogDebug("Validation passed for node '{NodeName}' (AgentType: {AgentType})",
