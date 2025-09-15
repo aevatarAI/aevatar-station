@@ -98,7 +98,8 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var clientIp = HttpContext.GetClientIpAddress();
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+        var appType = HttpContext.GetGodGPTAppType();
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
         RequestContext.Set("IsCN", isCN);
         var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, request.Guider);
         _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
@@ -112,7 +113,8 @@ public class GodGPTController : AevatarController
     {
         var stopwatch = Stopwatch.StartNew();
         var clientIp = HttpContext.GetClientIpAddress();
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+        var appType = HttpContext.GetGodGPTAppType();
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
         RequestContext.Set("IsCN", isCN);
         var sessionId = await _godGptService.CreateSessionAsync((Guid)CurrentUser.Id!, _defaultLLM, _defaultPrompt, "");
         _logger.LogDebug("[GodGPTController][CreateSessionAsync] sessionId: {0}, duration: {1}ms",
@@ -483,9 +485,9 @@ public class GodGPTController : AevatarController
         
         try
         {
-            var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+            var appType = HttpContext.GetGodGPTAppType();
+            var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
             RequestContext.Set("IsCN", isCN);
-
             // Always check limits first to provide graceful response
             var limits = await _godGptService.GetGuestChatLimitsAsync(clientIp);
             
@@ -583,7 +585,8 @@ public class GodGPTController : AevatarController
         var processedContent = SessionTypeExtensions.SharePrompt;
         processedContent = processedContent.AppendLanguagePrompt(language);
         var clientIp = HttpContext.GetClientIpAddress();
-        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp);
+        var appType = HttpContext.GetGodGPTAppType();
+        var isCN = await _ipLocationService.IsInMainlandChinaAsync(clientIp,appType.ToString());
         RequestContext.Set("IsCN", isCN);
         var response = await _godGptService.GetShareKeyWordWithAIAsync(sessionId, processedContent, region, sessionType, language);
         _logger.LogDebug(

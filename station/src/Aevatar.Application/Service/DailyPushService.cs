@@ -77,12 +77,15 @@ public class DailyPushService : ApplicationService, IDailyPushService
             // Call GAgent with basic types - convert enum to string
             var languageString = ConvertGodGPTLanguageToString(languageEnum);
             
-            var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
+            // ✅ FORCE V2 INTERFACE: Enhanced device management
+            var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceV2Async(
                 request.DeviceId,
                 request.PushToken,
                 request.TimeZoneId,
                 request.PushEnabled,
-                languageString
+                languageString,
+                platform: "web", // Default platform for station requests
+                appVersion: null  // Can be enhanced later from request headers
             );
             
             _logger.LogInformation("Device {DeviceId} registered/updated for user {UserId}, isNew: {IsNew}, languageChanged: {LanguageChanged}", 
@@ -145,6 +148,7 @@ public class DailyPushService : ApplicationService, IDailyPushService
             throw;
         }
     }
+
     
     /// <summary>
     /// Convert GodGPTChatLanguage enum to GodGPTLanguage enum

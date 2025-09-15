@@ -3,6 +3,7 @@ using Aevatar.Application.Service;
 using Aevatar.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Orleans.Runtime;
 
 namespace Aevatar.HttpApi.Controllers;
 
@@ -28,6 +29,7 @@ public class IpLocationController : ControllerBase
         try
         {
             var ip = HttpContext.GetClientIpAddress();
+            var appType = HttpContext.GetGodGPTAppType();
 
             if (string.IsNullOrWhiteSpace(ip))
             {
@@ -36,7 +38,7 @@ public class IpLocationController : ControllerBase
 
             _logger.LogInformation("Checking if IP {IpAddress} is in mainland China", ip);
             
-            var result = await _ipLocationService.IsInMainlandChinaAsync(ip);
+            var result = await _ipLocationService.IsInMainlandChinaAsync(ip,appType.ToString());
             _logger.LogInformation($"[IsIpInMainlandCN] Check IP {ip}, result:{result}");
 
             return Ok(new
@@ -62,10 +64,12 @@ public class IpLocationController : ControllerBase
             {
                 return BadRequest("IP address is required");
             }
+            var appType = HttpContext.GetGodGPTAppType();
+            RequestContext.Set("AppType", appType.ToString());
 
             _logger.LogInformation("Checking if IP {IpAddress} is in mainland China", ip);
             
-            var result = await _ipLocationService.IsInMainlandChinaAsync(ip);
+            var result = await _ipLocationService.IsInMainlandChinaAsync(ip,appType.ToString());
             
             return Ok(new
             {
