@@ -244,11 +244,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
                     {
                         AgentId = coordinatorAgentId,
                         EventType = targetEventType,
-<<<<<<< HEAD
-                        EventProperties = request.EventProperties
-=======
                         EventProperties = request.EventProperties as Dictionary<string, object> ?? new Dictionary<string, object>()
->>>>>>> dev
                     });
 
                     _logger.LogInformation("Workflow event published successfully for agent: {AgentId}",
