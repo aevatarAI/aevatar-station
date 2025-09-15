@@ -201,10 +201,13 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
                 {
                     state.BackupWorkUnitInfos = nodeList;
                 }
-                
                 state.BlackboardId = setWorkflowCoordinatorLogEvent.BlackBoardId;
                 state.Content = setWorkflowCoordinatorLogEvent.InitContent;
                 state.EnableRunRecord = setWorkflowCoordinatorLogEvent.EnableExecutionRecord;
+                if (state.RoundId == 0)
+                {
+                    state.CreateTime = DateTime.UtcNow;
+                }
                 break;
 
             case FinishedWorkUnitLogEvent finishedWorkUnitLogEvent:
