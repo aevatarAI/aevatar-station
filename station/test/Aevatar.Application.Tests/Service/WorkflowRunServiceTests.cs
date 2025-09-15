@@ -11,6 +11,7 @@ using Aevatar.Schema;
 using Aevatar.Service;
 using Aevatar.Station.Feature.CreatorGAgent;
 using Aevatar.Subscription;
+using Aevatar.WorkflowRun;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NJsonSchema;
@@ -690,7 +691,6 @@ public class WorkflowRunServiceTests
             () => _workflowRunService.RunWorkflowAsync(request));
         exception.Message.ShouldContain("JsonProperties is missing");
     }
-
 
     // Test helper methods
     private WorkflowRunRequestDto CreateValidWorkflowRunRequest(Guid viewAgentId)
