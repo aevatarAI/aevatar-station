@@ -21,13 +21,8 @@ public class SystemLLMConfigurationProvider : DynamicConfigurationProviderBase, 
         IClusterClient clusterClient)
     {
         var configurationGAgent = clusterClient.GetGrain<ISchemaConfigurationGAgent>(Guid.NewGuid().ToString());
-
         var systemLLMOptions = await configurationGAgent.GetConfigOptionsAsync<SystemLLMConfigOptions>();
-
-        // 转换为SystemLLMConfigDto列表
         var aiModelConfigs = ConvertToSystemLLMConfigDtos(systemLLMOptions);
-
-        // 线程安全地插入配置到并发字典中
         concurrentData[OPTION_NAME] = aiModelConfigs;
     }
 
