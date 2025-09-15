@@ -16,7 +16,7 @@ using Orleans;
 namespace Aevatar.GAgents.PsiOmni;
 
 public abstract class PsiOmniAgentBase<TState, TStateLogEvent, TEvent, TConfiguration> :
-    GroupMemberGAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
+    AIGAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>
     where TState : PsiOmniGAgentState, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TEvent : EventBase
