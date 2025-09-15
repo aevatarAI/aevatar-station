@@ -11,7 +11,7 @@ namespace Aevatar.Controllers
     /// </summary>
     [ApiController]
     [Route("api/workflow")]
-    // [Authorize]
+    [Authorize]
     public class WorkflowController : AbpControllerBase
     {
         private readonly IWorkflowOrchestrationService _workflowOrchestrationService;
