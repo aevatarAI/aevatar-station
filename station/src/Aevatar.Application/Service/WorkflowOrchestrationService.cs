@@ -677,7 +677,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             var layer = layers[layerIndex];
             
             // 计算基础Y坐标，加入高精度变化
-            var baseLayerY = startY + layerIndex * verticalSpacing;
+            var baseLayerY = startY + layerIndex * (verticalSpacing + nodeHeight);
             var layerYVariation = random.NextDouble() * 15.0 - 7.5; // ±7.5像素的随机变化
             var layerY = baseLayerY + layerYVariation;
 
@@ -685,7 +685,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
             var layerStartX = startX;
             if (layer.Count > 1)
             {
-                var totalLayerWidth = (layer.Count - 1) * horizontalSpacing;
+                var totalLayerWidth = (layer.Count - 1) * (horizontalSpacing + nodeWidth);
                 layerStartX = startX - totalLayerWidth / 2.0;
             }
 
@@ -694,7 +694,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 var nodeId = layer[nodeIndex];
                 
                 // 计算基础X坐标
-                var baseNodeX = layerStartX + nodeIndex * horizontalSpacing;
+                var baseNodeX = layerStartX + nodeIndex * (horizontalSpacing + nodeWidth);
                 
                 // 添加高精度偏移和微调
                 var nodeXVariation = random.NextDouble() * 20.0 - 10.0; // ±10像素的随机变化
