@@ -38,11 +38,8 @@ public class SystemLLMConfigurationProvider : DynamicConfigurationProviderBase, 
                 var configDto = new SystemLLMConfigDto
                 {
                     Name = kvp.Key,
-                    Provider = config.ProviderEnum.ToString(),
-                    Type = config.ModelName,
-                    Strengths = new List<string> { $"Provider: {config.ProviderEnum}", $"Model: {config.ModelIdEnum}" },
-                    BestFor = new List<string> { "AI chat functionality", "Model inference" },
-                    Speed = "Variable"
+                    Strengths = config.Strengths,
+                    BestFor = config.BestFor
                 };
 
                 configDtos.Add(configDto);
