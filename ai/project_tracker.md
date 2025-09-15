@@ -13,4 +13,4 @@
 | GetSystemLLMConfigsForAgent Enhancement | ✅ | feature/get-system-llm-configs-for-agent | c6:c4:e5:e8:c6:4b | ✅已完成：增强GetSystemLLMConfigsForAgent方法，添加modelId属性检查支持，补充Azure和Google AI模型元数据配置。核心实现：1）在AgentService中增加modelId属性的反射检查 2）SystemLLMMetaInfoOptions新增Azure OpenAI和Google Gemini Pro配置 3）逻辑优化为只要有SystemLLM或modelId任一属性即返回配置 4）新增4个comprehensive单元测试覆盖各种场景，全部测试通过。支持AI模型：Azure、OpenAI、DeepSeek、Google。 |
 | GAgent Document Link Definition | 🚧 | feature/gagent-document-link-definition | c6:c4:e5:e8:c6:4b | 开发中：定义和完善GAgent文档链接标准，优化DocumentationLinkAttribute功能，建立统一的文档链接规范和验证机制。 |
 | Instruction Tooltips | 🚧 | feature/instruction-tooltips | c6:c4:e5:e8:c6:4b | 开发中：为配置表单字段添加instruction tooltips功能，改善用户体验，提供字段说明和使用指导。 |
-| SystemLLM Option Parameters Modification | 🚧 | feature/systemllm-option-params | c6:c4:e5:e8:c6:4b | 开发中：修改SystemLLMOption相关参数，优化系统LLM配置选项的参数结构和功能。 |
+| SystemLLM Option Parameters Modification | ✅ | feature/systemllm-option-params | c6:c4:e5:e8:c6:4b | ✅已完成：简化SystemLLMConfigDto结构，将Strengths和BestFor从List<string>改为string；在LLMConfig中直接添加Strengths和BestFor属性；简化转换逻辑直接从配置获取数据。编译验证通过，架构更清晰易维护。 |
