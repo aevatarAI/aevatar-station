@@ -11,8 +11,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Orleans.Core" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
-    <PackageReference Include="Aevatar.Core.Abstractions" />
-    <PackageReference Include="Aevatar.Core" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />

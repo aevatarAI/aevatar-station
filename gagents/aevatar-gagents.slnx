@@ -19,6 +19,17 @@
     <File Path="md\aevatar-gagents-semantickernel.md" />
     <File Path="md\aevatar-groupchat-analysis.md" />
   </Folder>
+  <Folder Name="/framework/">
+    <Project Path="..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" Type="Classic C#" />
+    <Project Path="..\framework\src\Aevatar.Core.Interception\Aevatar.Core.Interception.csproj" Type="Classic C#" />
+    <Project Path="..\framework\src\Aevatar.Core\Aevatar.Core.csproj" Type="Classic C#" />
+    <Project Path="..\framework\src\Aevatar.EventSourcing.Core\Aevatar.EventSourcing.Core.csproj" Type="Classic C#" />
+    <Project Path="..\framework\src\Aevatar.EventSourcing.MongoDB\Aevatar.EventSourcing.MongoDB.csproj" Type="Classic C#" />
+    <Project Path="..\framework\src\Aevatar.PermissionManagement\Aevatar.PermissionManagement.csproj" Type="Classic C#" />
+    <Project Path="..\framework\src\Aevatar.Plugins\Aevatar.Plugins.csproj" Type="Classic C#" />
+    <Project Path="..\framework\src\Aevatar.TestKit\Aevatar.TestKit.csproj" Type="Classic C#" />
+    <Project Path="..\framework\src\Aevatar\Aevatar.csproj" Type="Classic C#" />
+  </Folder>
   <Folder Name="/samples/" />
   <Folder Name="/samples/AIGAgent/">
     <Project Path="simples\AIGAgent\SimpleAIGAgent.Client\SimpleAIGAgent.Client.csproj" />
@@ -33,7 +44,7 @@
   <Folder Name="/solution-items/">
     <File Path="common.props" />
     <File Path="Directory.Build.props" />
-    <File Path="Directory.Packages.props" />
+    <File Path="..\Directory.Packages.props" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src\Aevatar.GAgents.AElf\Aevatar.GAgents.AElf.csproj" />
@@ -42,6 +53,7 @@
     <Project Path="src\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
     <Project Path="src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
     <Project Path="src\Aevatar.GAgents.ChatAgent\Aevatar.GAgents.ChatAgent.csproj" />
+    <Project Path="src\Aevatar.GAgents.Device\Aevatar.GAgents.Device.csproj" Type="Classic C#" />
     <Project Path="src\Aevatar.GAgents.Executor\Aevatar.GAgents.Executor.csproj" />
     <Project Path="src\Aevatar.GAgents.GraphRetrievalAgent\Aevatar.GAgents.GraphRetrievalAgent.csproj" />
     <Project Path="src\Aevatar.GAgents.GroupChat.Core\Aevatar.GAgents.GroupChat.Core.csproj" />
@@ -67,6 +79,7 @@
     <Project Path="test\Aevatar.GAgents.MCP.Test\Aevatar.GAgents.MCP.Test.csproj" />
     <Project Path="test\Aevatar.GAgents.MultiAIChatGAgent.Test\Aevatar.GAgents.MultiAIChatGAgent.Test.csproj" />
     <Project Path="test\Aevatar.GAgents.TestBase\Aevatar.GAgents.TestBase.csproj" />
+    <Project Path="test\Aevatar.GAgents.Twitter.Test\Aevatar.GAgents.Twitter.Test.csproj" Type="Classic C#" />
     <Project Path="test\Aevatar.GAgents.Workflow.Test\Aevatar.GAgents.Workflow.Test.csproj" />
   </Folder>
 </Solution>

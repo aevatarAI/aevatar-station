@@ -30,17 +30,17 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
 
     public async Task<ConfigValidationResultDto> ValidateConfigAsync(ValidationRequestDto request)
     {
-        _logger.LogInformation("Validating {GAgentNamespace}", request.GAgentNamespace);
+        _logger.LogInformation("[AgentValidation] Validating {GAgentNamespace}", request.GAgentNamespace);
 
         var configType = FindConfigTypeByAgentNamespace(request.GAgentNamespace);
         if (configType == null)
         {
-            _logger.LogWarning("Unknown GAgent type: {GAgentNamespace}", request.GAgentNamespace);
+            _logger.LogWarning("[AgentValidation] Unknown GAgent type: {GAgentNamespace}", request.GAgentNamespace);
             return ConfigValidationResultDto.Failure();
         }
 
         var result = await ValidateConfigByTypeAsync(configType, request.ConfigJson);
-        _logger.LogInformation("Validation completed: {GAgentNamespace}, IsValid: {IsValid}", request.GAgentNamespace,
+        _logger.LogInformation("[AgentValidation] Validation completed: {GAgentNamespace}, IsValid: {IsValid}", request.GAgentNamespace,
             result.IsValid);
         return result;
     }
@@ -51,7 +51,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
         var agentType = availableGAgents.FirstOrDefault(a => a.FullName == agentNamespace);
         if (agentType == null)
         {
-            _logger.LogWarning("Agent type not found: {AgentNamespace}", agentNamespace);
+            _logger.LogWarning("[AgentValidation] Agent type not found: {AgentNamespace}", agentNamespace);
             return null;
         }
 
@@ -106,7 +106,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
             var validationErrors = schema.Validate(configJson);
             if (validationErrors.Any())
             {
-                _logger.LogInformation("Schema validation failed for {ConfigType}", configType.Name);
+                _logger.LogInformation("[AgentValidation] Schema validation failed for {ConfigType}", configType.Name);
                 return ConfigValidationResultDto.Failure();
             }
 
@@ -123,7 +123,7 @@ public class AgentValidationService : ApplicationService, IAgentValidationServic
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Unexpected error during config validation for {ConfigType}", configType.Name);
+            _logger.LogWarning(ex, "[AgentValidation] Unexpected error during config validation for {ConfigType}", configType.Name);
             return ConfigValidationResultDto.Failure();
         }
     }
