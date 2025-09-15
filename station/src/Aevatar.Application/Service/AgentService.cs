@@ -51,6 +51,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IDocumentLinkService _documentLinkService;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -62,7 +63,8 @@ public class AgentService : ApplicationService, IAgentService
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
         IIndexingService indexingService,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IDocumentLinkService documentLinkService)
     {
         _clusterClient = clusterClient;
         _logger = logger;
@@ -74,6 +76,7 @@ public class AgentService : ApplicationService, IAgentService
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
         _serviceProvider = serviceProvider;
+        _documentLinkService = documentLinkService;
     }
 
     public async Task<List<AgentTypeDto>> GetAllAgents()
