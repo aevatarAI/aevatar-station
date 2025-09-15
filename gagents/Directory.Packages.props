@@ -152,5 +152,9 @@
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.5" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="9.0.0" />
     <PackageVersion Include="JetBrains.Annotations" Version="2023.3.0" />
+    
+    <!-- Fody packages -->
+    <PackageVersion Include="Fody" Version="6.8.2" />
+    <PackageVersion Include="MethodDecorator.Fody" Version="1.1.1" />
   </ItemGroup>
 </Project>

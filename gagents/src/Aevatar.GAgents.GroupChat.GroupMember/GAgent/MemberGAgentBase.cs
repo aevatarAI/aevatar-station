@@ -25,15 +25,16 @@ public abstract partial class
     [EventHandler]
     public async Task HandleEventAsync(EvaluationInterestEvent @event)
     {
-        var score = await GetInterestValueAsync(@event.BlackboardId);
+        var score = await GetInterestValueAsync(BlackboardId);
 
         await PublishAsync(new EvaluationInterestResponseEvent()
         {
-            MemberId = this.GetPrimaryKey(), BlackboardId = @event.BlackboardId, InterestValue = score,
+            MemberId = this.GetPrimaryKey(), BlackboardId = BlackboardId, InterestValue = score,
             ChatTerm = @event.ChatTerm
         });
     }
-
+    
+    [EventHandler]
     public async Task HandleEventAsync(ChatEvent @event)
     {
         if (@event.Speaker != this.GetPrimaryKey())
@@ -41,11 +42,11 @@ public abstract partial class
             return;
         }
 
-        // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
-        var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
+        // var history = await GetCareChatMessagesFromBlackboardAsync(BlackboardId);
+        var talkResponse = await ChatAsync(BlackboardId, @event.CoordinatorMessages);
         await PublishAsync(new ChatResponseEvent()
         {
-            BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
+            BlackboardId = BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
             ChatResponse = talkResponse, Term = @event.Term
         });
     }
@@ -53,16 +54,16 @@ public abstract partial class
     [EventHandler]
     public async Task HandleEventAsync(GroupChatFinishEvent @event)
     {
-        await GroupChatFinishAsync(@event.BlackboardId);
+        await GroupChatFinishAsync(BlackboardId);
     }
 
     [EventHandler]
     public async Task HandleEventAsync(CoordinatorPingEvent @event)
     {
-        if (await IgnoreBlackboardPingEvent(@event.BlackboardId) == false)
+        if (await IgnoreBlackboardPingEvent(BlackboardId) == false)
         {
             await PublishAsync(new CoordinatorPongEvent()
-                { BlackboardId = @event.BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName });
+                { BlackboardId = BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName });
         }
     }
 
@@ -86,6 +87,18 @@ public abstract partial class
     public virtual string? WorkflowId { get; protected set; }
 
     /// <summary>
+    /// BlackboardId as Guid, computed from WorkflowId
+    /// </summary>
+    public virtual Guid BlackboardId 
+    { 
+        get 
+        {
+            if (string.IsNullOrEmpty(WorkflowId)) return Guid.Empty;
+            return Guid.TryParse(WorkflowId, out var guid) ? guid : Guid.Empty;
+        }
+    }
+
+    /// <summary>
     /// Override to automatically extract WorkflowId from ResourceContext metadata
     /// and set it as instance property for use by InterceptorAttribute
     /// </summary>
@@ -96,7 +109,7 @@ public abstract partial class
         // Extract WorkflowId from metadata if available and set as instance property
         if (context.Metadata.TryGetValue("WorkflowId", out var workflowIdObj))
         {
-            WorkflowId = $"workflow-{workflowIdObj}";
+            WorkflowId = workflowIdObj?.ToString();
             
             Logger.LogInformation("[MemberGAgentBase] Set WorkflowId property from ResourceContext: WorkflowId={WorkflowId}", 
                 WorkflowId);

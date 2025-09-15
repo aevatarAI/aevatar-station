@@ -31,12 +31,12 @@ public abstract class
     [EventHandler]
     public async Task HandleEventAsync(EvaluationInterestEvent @event)
     {
-        var score = await GetInterestValueAsync(@event.BlackboardId);
+        var score = await GetInterestValueAsync(BlackboardId);
 
         await PublishAsync(new EvaluationInterestResponseEvent()
         {
             MemberId = this.GetPrimaryKey(),
-            BlackboardId = @event.BlackboardId,
+            BlackboardId = BlackboardId,
             InterestValue = score,
             ChatTerm = @event.ChatTerm
         });
@@ -52,11 +52,11 @@ public abstract class
 
         try
         {
-            // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
-            var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
+            // var history = await GetCareChatMessagesFromBlackboardAsync(BlackboardId);
+            var talkResponse = await ChatAsync(BlackboardId, @event.CoordinatorMessages);
             await PublishAsync(new ChatResponseEvent
             {
-                BlackboardId = @event.BlackboardId,
+                BlackboardId = BlackboardId,
                 MemberId = this.GetPrimaryKey(),
                 MemberName = State.MemberName,
                 ChatResponse = talkResponse,
@@ -68,7 +68,7 @@ public abstract class
             Logger.LogError($"[GroupMemberGAgentBase] Handler ChatEvent fail: {e.Message}");
             await PublishAsync(new ChatResponseEvent()
             {
-                BlackboardId = @event.BlackboardId,
+                BlackboardId = BlackboardId,
                 MemberId = this.GetPrimaryKey(),
                 MemberName = State.MemberName,
                 FailureSummary = e.ToString(),
@@ -80,17 +80,17 @@ public abstract class
     [EventHandler]
     public async Task HandleEventAsync(GroupChatFinishEvent @event)
     {
-        await GroupChatFinishAsync(@event.BlackboardId);
+        await GroupChatFinishAsync(BlackboardId);
     }
 
     [EventHandler]
     public async Task HandleEventAsync(CoordinatorPingEvent @event)
     {
-        if (await IgnoreBlackboardPingEvent(@event.BlackboardId) == false)
+        if (await IgnoreBlackboardPingEvent(BlackboardId) == false)
         {
             await PublishAsync(new CoordinatorPongEvent()
             {
-                BlackboardId = @event.BlackboardId,
+                BlackboardId = BlackboardId,
                 MemberId = this.GetPrimaryKey(),
                 MemberName = State.MemberName
             });
@@ -109,6 +109,41 @@ public abstract class
     protected virtual Task<bool> IgnoreBlackboardPingEvent(Guid blackboardId)
     {
         return Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Workflow ID for this group member instance, used by InterceptorAttribute for workflow logging
+    /// </summary>
+    public virtual string? WorkflowId { get; protected set; }
+
+    /// <summary>
+    /// BlackboardId as Guid, computed from WorkflowId
+    /// </summary>
+    public virtual Guid BlackboardId 
+    { 
+        get 
+        {
+            if (string.IsNullOrEmpty(WorkflowId)) return Guid.Empty;
+            return Guid.TryParse(WorkflowId, out var guid) ? guid : Guid.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Override to automatically extract WorkflowId from ResourceContext metadata
+    /// and set it as instance property for use by InterceptorAttribute
+    /// </summary>
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        await base.OnPrepareResourceContextAsync(context);
+
+        // Extract WorkflowId from metadata if available and set as instance property
+        if (context.Metadata.TryGetValue("WorkflowId", out var workflowIdObj))
+        {
+            WorkflowId = workflowIdObj?.ToString();
+            
+            Logger.LogInformation("[GroupMemberGAgentBase] Set WorkflowId property from ResourceContext: WorkflowId={WorkflowId}", 
+                WorkflowId);
+        }
     }
 
     [GenerateSerializer]

@@ -5,10 +5,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Fody" />
+    <PackageReference Include="MethodDecorator.Fody" />
+    <PackageReference Include="Aevatar.EventSourcing.Core" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <ProjectReference Include="../../../framework/src/Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj" />
     <ProjectReference Include="../../../framework/src/Aevatar.Core/Aevatar.Core.csproj" />
     <ProjectReference Include="../../../framework/src/Aevatar.Core.Interception/Aevatar.Core.Interception.csproj" />
-    <PackageReference Include="Aevatar.EventSourcing.Core" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Aevatar.GAgents.GroupChat.GroupMember\Aevatar.GAgents.GroupChat.GroupMember.csproj" />
