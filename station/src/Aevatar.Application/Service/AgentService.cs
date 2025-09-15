@@ -100,13 +100,39 @@ public class AgentService : ApplicationService, IAgentService
                         Type = p.Type.ToString()
                     }).ToList();
 
-                    paramDto.PropertyJsonSchema =
-                        await EnhanceSchemaWithDefaults(kvp.Value.InitializationData.DtoType);
+                    try
+                    {
+                        paramDto.PropertyJsonSchema =
+                            await EnhanceSchemaWithDefaults(kvp.Value.InitializationData.DtoType);
+                        
+                        if (string.IsNullOrWhiteSpace(paramDto.PropertyJsonSchema))
+                        {
+                            _logger.LogError("PropertyJsonSchema is null or empty for agent {AgentType} with DtoType {DtoType}", 
+                                kvp.Key, kvp.Value.InitializationData.DtoType.Name);
+                            paramDto.PropertyJsonSchema = "{}"; // Fallback to empty JSON object
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to generate PropertyJsonSchema for agent {AgentType} with DtoType {DtoType}", 
+                            kvp.Key, kvp.Value.InitializationData.DtoType.Name);
+                        paramDto.PropertyJsonSchema = "{}"; // Fallback to empty JSON object
+                    }
 
                     // Get default values for backward compatibility
                     paramDto.DefaultValues =
                         GetConfigurationDefaultValues(kvp.Value.InitializationData.DtoType);
                 }
+                else
+                {
+                    _logger.LogWarning("InitializationData is null for agent {AgentType}", kvp.Key);
+                    paramDto.PropertyJsonSchema = "{}"; // Fallback for agents without initialization data
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Agent metadata is null for agent type {AgentType}", kvp.Key);
+                paramDto.PropertyJsonSchema = "{}"; // Fallback for agents without metadata
             }
 
             resp.Add(paramDto);
@@ -554,7 +580,20 @@ public class AgentService : ApplicationService, IAgentService
             var context = await CreateSchemaContextAsync();
             
             // Generate base schema with context
-            var baseSchema = _schemaProvider.GetTypeSchema(configurationType, context).ToJson();
+            var schemaResult = _schemaProvider.GetTypeSchema(configurationType, context);
+            if (schemaResult == null)
+            {
+                _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);
+                return "{}";
+            }
+            
+            var baseSchema = schemaResult.ToJson();
+            if (string.IsNullOrWhiteSpace(baseSchema))
+            {
+                _logger.LogError("Schema ToJson() returned empty result for type {TypeName}", configurationType.Name);
+                return "{}";
+            }
+            
             var schemaDoc = JsonDocument.Parse(baseSchema);
             
             // Create instance to get default values
@@ -645,7 +684,27 @@ public class AgentService : ApplicationService, IAgentService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to enhance schema for type {TypeName}, returning base schema", configurationType.Name);
-            return _schemaProvider.GetTypeSchema(configurationType).ToJson();
+            try
+            {
+                var fallbackSchema = _schemaProvider.GetTypeSchema(configurationType);
+                if (fallbackSchema == null)
+                {
+                    _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);
+                    return "{}"; // Return empty JSON object as fallback
+                }
+                var jsonResult = fallbackSchema.ToJson();
+                if (string.IsNullOrWhiteSpace(jsonResult))
+                {
+                    _logger.LogError("Schema ToJson() returned empty result for type {TypeName}", configurationType.Name);
+                    return "{}"; // Return empty JSON object as fallback
+                }
+                return jsonResult;
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogError(fallbackEx, "Fallback schema generation failed for type {TypeName}, returning empty schema", configurationType.Name);
+                return "{}"; // Return empty JSON object as final fallback
+            }
         }
     }
 
