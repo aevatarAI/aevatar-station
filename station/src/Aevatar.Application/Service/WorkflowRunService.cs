@@ -23,6 +23,7 @@ using Volo.Abp;
 
 namespace Aevatar.Service;
 
+
 public interface IWorkflowRunService
 {
     Task<WorkflowRunResultDto> RunWorkflowAsync(WorkflowRunRequestDto request);
@@ -65,10 +66,32 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         await ValidateWorkflowConfigurationAsync(request.ViewAgentId);
 
         // Step 2: Publish workflow
-        var workflowCoordinatorAgentId = await PublishWorkflowAsync(request.ViewAgentId);
+        var publishedAgent = await PublishWorkflowAsync(request.ViewAgentId);
+        
+        // Validate published agent properties
+        if (publishedAgent.Properties == null)
+        {
+            throw new UserFriendlyException("Published workflow agent has no properties");
+        }
+        
+        // Try to deserialize properties to validate JSON structure
+        try
+        {
+            var _ = JsonConvert.SerializeObject(publishedAgent.Properties);
+            var __ = JsonConvert.DeserializeObject<WorkflowViewConfigDto>(JsonConvert.SerializeObject(publishedAgent.Properties));
+        }
+        catch (Newtonsoft.Json.JsonException)
+        {
+            throw new UserFriendlyException("Invalid workflow configuration in published agent");
+        }
 
         // Step 3: Execute workflow
-        var executionSuccess = await ExecuteWorkflowAsync(workflowCoordinatorAgentId, request);
+        if (!publishedAgent.WorkflowCoordinatorGAgentId.HasValue)
+        {
+            throw new UserFriendlyException("WorkflowCoordinatorGAgentId not found in published workflow");
+        }
+        
+        var executionSuccess = await ExecuteWorkflowAsync(publishedAgent.WorkflowCoordinatorGAgentId.Value, request);
 
         if (!executionSuccess)
         {
@@ -77,8 +100,9 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             return new WorkflowRunResultDto
             {
                 IsSuccess = false,
-                WorkflowId = workflowCoordinatorAgentId,
-                Message = "Workflow coordinator agent is not ready yet. Please retry the execution in a few moments."
+                WorkflowId = publishedAgent.WorkflowCoordinatorGAgentId.Value,
+                Message = "Workflow coordinator agent is not ready yet. Please retry the execution in a few moments.",
+                PublishedAgent = publishedAgent
             };
         }
 
@@ -89,8 +113,9 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         return new WorkflowRunResultDto
         {
             IsSuccess = true,
-            WorkflowId = workflowCoordinatorAgentId,
-            Message = "Workflow executed successfully"
+            WorkflowId = publishedAgent.WorkflowCoordinatorGAgentId.Value,
+            Message = "Workflow executed successfully",
+            PublishedAgent = publishedAgent
         };
     }
     
@@ -143,15 +168,34 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException($"Node '{workflowNode.Name}': JsonProperties is missing");
         }
         
-        var nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
-        var initializationParam = JsonConvert.SerializeObject(nodeAgentProperties);
+        Dictionary<string, object> nodeAgentProperties;
+        string initializationParam;
+        
+        try
+        {
+            nodeAgentProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(workflowNode.JsonProperties);
+        }
+        catch (JsonSerializationException ex)
+        {
+            throw new UserFriendlyException($"Node '{workflowNode.Name}': JSON deserialization failed. {ex.Message}");
+        }
+        
+        try
+        {
+            initializationParam = JsonConvert.SerializeObject(nodeAgentProperties);
+        }
+        catch (JsonSerializationException ex)
+        {
+            throw new UserFriendlyException($"Node '{workflowNode.Name}': Failed to serialize agent properties. {ex.Message}");
+        }
+        
         await ValidateAgentConfigAsync(workflowNode.AgentType, initializationParam);
 
         _logger.LogDebug("Validation passed for node '{NodeName}' (AgentType: {AgentType})",
             workflowNode.Name, workflowNode.AgentType);
     }
 
-    private async Task<Guid> PublishWorkflowAsync(Guid viewAgentId)
+    private async Task<AgentDto> PublishWorkflowAsync(Guid viewAgentId)
     {
         _logger.LogInformation("[PublishWorkflow] Starting workflow publication for ViewAgentId: {ViewAgentId}", viewAgentId);
 
@@ -167,46 +211,10 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _logger.LogInformation("[PublishWorkflow] Successfully published workflow agent: {PublishedAgentId}, Name: {AgentName} for ViewAgentId: {ViewAgentId}", 
             publishedAgent.Id, publishedAgent.Name, viewAgentId);
 
-        // Extract WorkflowCoordinatorGAgentId from publishedAgent properties
-        if (publishedAgent.Properties == null)
-        {
-            _logger.LogError("[PublishWorkflow] Published agent has null Properties. AgentId: {PublishedAgentId}, ViewAgentId: {ViewAgentId}", 
-                publishedAgent.Id, viewAgentId);
-            throw new UserFriendlyException("Published workflow agent has no properties");
-        }
-
-        _logger.LogDebug("[PublishWorkflow] Published agent has {PropertiesCount} properties. AgentId: {PublishedAgentId}", 
-            publishedAgent.Properties.Count, publishedAgent.Id);
-
-        var configJson = JsonConvert.SerializeObject(publishedAgent.Properties);
-        _logger.LogDebug("[PublishWorkflow] Serialized properties to JSON. Length: {JsonLength}, AgentId: {PublishedAgentId}", 
-            configJson.Length, publishedAgent.Id);
-
-        WorkflowViewConfigDto? viewConfigDto;
-        try
-        {
-            viewConfigDto = JsonConvert.DeserializeObject<WorkflowViewConfigDto>(configJson);
-            _logger.LogDebug("[PublishWorkflow] Successfully deserialized WorkflowViewConfigDto. AgentId: {PublishedAgentId}", publishedAgent.Id);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[PublishWorkflow] Failed to deserialize workflow configuration from published agent: {PublishedAgentId}, ViewAgentId: {ViewAgentId}, ConfigJson: {ConfigJson}", 
-                publishedAgent.Id, viewAgentId, configJson);
-            throw new UserFriendlyException("Invalid workflow configuration in published agent");
-        }
-
-        if (viewConfigDto?.WorkflowCoordinatorGAgentId == null || viewConfigDto.WorkflowCoordinatorGAgentId == Guid.Empty)
-        {
-            _logger.LogError("[PublishWorkflow] WorkflowCoordinatorGAgentId is null or empty. ViewConfigDto: {ViewConfigDto}, PublishedAgentId: {PublishedAgentId}, ViewAgentId: {ViewAgentId}", 
-                viewConfigDto, publishedAgent.Id, viewAgentId);
-            throw new UserFriendlyException("WorkflowCoordinatorGAgentId not found in published workflow");
-        }
-
-        _logger.LogInformation("[PublishWorkflow] Successfully extracted WorkflowCoordinatorGAgentId: {CoordinatorId} from published workflow ViewAgentId: {ViewAgentId}, PublishedAgentId: {PublishedAgentId}", 
-            viewConfigDto.WorkflowCoordinatorGAgentId, viewAgentId, publishedAgent.Id);
-
-        return viewConfigDto.WorkflowCoordinatorGAgentId;
+        return publishedAgent;
     }
+
+
 
     /// <summary>
     /// 执行工作流 - 检查事件是否可用后再发布

@@ -1,4 +1,5 @@
 using System;
+using Aevatar.Agent;
 
 namespace Aevatar.WorkflowRun;
 
@@ -21,4 +22,9 @@ public class WorkflowRunResultDto
     /// 执行结果消息
     /// </summary>
     public string Message { get; set; } = string.Empty;
+
+    /// <summary>
+    /// PublishWorkflowAsync返回的已发布Agent信息
+    /// </summary>
+    public AgentDto? PublishedAgent { get; set; }
 }
