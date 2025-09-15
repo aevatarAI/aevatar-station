@@ -37,7 +37,7 @@ public class AgentController : AevatarController
 
     [HttpGet("agent-type-info-list")]
     // [Authorize(Policy = AevatarPermissions.Agent.ViewAllType)]
-    // [Authorize]
+    [Authorize]
     public async Task<List<AgentTypeDto>> GetAllAgent()
     {
         return await _agentService.GetAllAgents();
