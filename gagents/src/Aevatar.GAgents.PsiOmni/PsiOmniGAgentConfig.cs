@@ -12,7 +12,9 @@ public class PsiOmniGAgentConfig : GroupMemberConfigDto
 
     // ReSharper disable once InconsistentNaming
     [Id(3)] public string SystemLLM { get; set; } = "OpenAI";
+#if ENABLE_SELF_LLM_CONFIG
     [Id(4)] public SelfLLMConfig SelfLlmConfig { get; set; } = new();
+#endif
     [Id(5)] public string Description { get; set; } = string.Empty;
     [Id(6)] public string Examples { get; set; } = string.Empty;
 }
