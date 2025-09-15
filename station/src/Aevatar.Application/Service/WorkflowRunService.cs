@@ -12,6 +12,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
 using Aevatar.Schema;
 using Aevatar.Subscription;
+using Aevatar.WorkflowRun;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NJsonSchema.Validation;
@@ -243,7 +244,11 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
                     {
                         AgentId = coordinatorAgentId,
                         EventType = targetEventType,
+<<<<<<< HEAD
                         EventProperties = request.EventProperties
+=======
+                        EventProperties = request.EventProperties as Dictionary<string, object> ?? new Dictionary<string, object>()
+>>>>>>> dev
                     });
 
                     _logger.LogInformation("Workflow event published successfully for agent: {AgentId}",
