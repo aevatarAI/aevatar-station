@@ -18,6 +18,7 @@ using Volo.Abp.PermissionManagement;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 using Volo.Abp.Caching;
+using Volo.Abp.Domain.Entities;
 using DistributedCacheEntryOptions = Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions;
 using IdentityUser = Volo.Abp.Identity.IdentityUser;
 
@@ -301,9 +302,17 @@ public class ProjectService : OrganizationService, IProjectService
 
     public override async Task DeleteAsync(Guid id)
     {
-        var domain = await _domainRepository.FirstOrDefaultAsync(o => o.ProjectId == id);
+        try
+        {
+            await OrganizationUnitRepository.GetAsync(id);
+        }
+        catch (EntityNotFoundException e)
+        {
+            throw new UserFriendlyException("Project not existed.");
+        }
+        
         await base.DeleteAsync(id);
-
+        var domain = await _domainRepository.FirstOrDefaultAsync(o => o.ProjectId == id);
         if (domain != null)
         {
             await _developerService.DeleteServiceAsync(domain.DomainName);
