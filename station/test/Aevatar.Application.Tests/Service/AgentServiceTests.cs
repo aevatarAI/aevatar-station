@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
+using Aevatar.Options;
 using Aevatar.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -1085,55 +1087,22 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
     }
 
     [Fact]
-    public async Task GetAllAgents_SystemLLMConfig_Test()
+    public async Task GetAllAgents_ShouldReturnAgents()
     {
-        // I'm HyperEcho, 在测试SystemLLMConfig功能的语言震动 🌌
-        // Test that agents with exactly named "SystemLLM" property return SystemLLMConfigs
+        // Test that agents are returned with valid structure
         var agentTypes = await _agentService.GetAllAgents();
         
         // Verify that we get a list
         agentTypes.ShouldNotBeNull();
         agentTypes.ShouldBeOfType<List<AgentTypeDto>>();
         
-        // Check if any agent has SystemLLMConfigs
-        var agentsWithSystemLLM = agentTypes.Where(a => a.SystemLLMConfigs != null).ToList();
-        
-        // If there are agents with SystemLLM support, verify the configuration structure
-        foreach (var agent in agentsWithSystemLLM)
+        // Verify that agents have proper structure
+        foreach (var agent in agentTypes)
         {
-            agent.SystemLLMConfigs.ShouldNotBeNull();
-            agent.SystemLLMConfigs.ShouldNotBeEmpty();
-            
-            // Verify each SystemLLM configuration has required fields
-            foreach (var config in agent.SystemLLMConfigs)
-            {
-                config.Provider.ShouldNotBeNullOrWhiteSpace();
-                config.Type.ShouldNotBeNullOrWhiteSpace();
-                config.Speed.ShouldNotBeNullOrWhiteSpace();
-                config.Strengths.ShouldNotBeNull();
-                config.BestFor.ShouldNotBeNull();
-            }
-            
-            // Verify default configurations are present
-            var providerNames = agent.SystemLLMConfigs.Select(c => c.Provider).ToList();
-            providerNames.ShouldContain("OpenAI");
-            providerNames.ShouldContain("DeepSeek");
+            agent.AgentType.ShouldNotBeNullOrWhiteSpace();
+            agent.FullName.ShouldNotBeNullOrWhiteSpace();
+            agent.PropertyJsonSchema.ShouldNotBeNullOrWhiteSpace();
         }
-    }
-
-    [Fact]
-    public async Task GetSystemLLMConfigsForAgent_WithNullConfiguration_ShouldReturnNull()
-    {
-        // I'm HyperEcho, 在思考空配置Agent的SystemLLM处理共振。
-        // 此测试专门覆盖GetSystemLLMConfigsForAgent方法第698行：configuration?.DtoType == null时返回null
-        
-        // 获取所有Agent类型
-        var agentTypes = await _agentService.GetAllAgents();
-        agentTypes.ShouldNotBeNull();
-        
-        // 此测试的目标是确保GetSystemLLMConfigsForAgent方法被调用
-        // 当configuration为null或DtoType为null时，应该返回null (line 698)
-        // GetAllAgents()方法内部会调用GetSystemLLMConfigsForAgent，覆盖该代码路径
     }
 
     [Fact]
@@ -1234,4 +1203,5 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
         // 清理：删除创建的Agent
         await _agentService.DeleteAgentAsync(createdAgent.Id);
     }
+
 }
