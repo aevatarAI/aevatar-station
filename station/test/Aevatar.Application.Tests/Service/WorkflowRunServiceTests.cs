@@ -242,7 +242,8 @@ public class WorkflowRunServiceTests
                 {"WorkflowNodeList", new List<object>()},
                 {"WorkflowNodeUnitList", new List<object>()},
                 // Missing WorkflowCoordinatorGAgentId
-            }
+            },
+            WorkflowCoordinatorGAgentId = null // Explicitly set to null to test missing coordinator ID
         };
 
         _mockWorkflowViewService.Setup(x => x.PublishWorkflowAsync(viewAgentId))
@@ -467,7 +468,8 @@ public class WorkflowRunServiceTests
         {
             Id = viewAgentId,
             Name = "Test Workflow",
-            Properties = null // Null properties
+            Properties = null, // Null properties
+            WorkflowCoordinatorGAgentId = null // Set to null since properties are null
         };
 
         _mockWorkflowViewService.Setup(x => x.PublishWorkflowAsync(viewAgentId))
@@ -500,7 +502,8 @@ public class WorkflowRunServiceTests
                 {"WorkflowNodeList", "invalid_string_instead_of_array"}, // This will cause deserialization to fail
                 {"WorkflowNodeUnitList", new object()}, // Invalid structure
                 {"WorkflowCoordinatorGAgentId", "not_a_guid"} // Invalid GUID
-            }
+            },
+            WorkflowCoordinatorGAgentId = null // Set to null since properties contain invalid data
         };
 
         _mockWorkflowViewService.Setup(x => x.PublishWorkflowAsync(viewAgentId))
@@ -758,7 +761,8 @@ public class WorkflowRunServiceTests
                 {"WorkflowNodeList", new List<object>()},
                 {"WorkflowNodeUnitList", new List<object>()},
                 {"WorkflowCoordinatorGAgentId", coordinatorId}
-            }
+            },
+            WorkflowCoordinatorGAgentId = coordinatorId
         };
 
         _mockWorkflowViewService.Setup(x => x.PublishWorkflowAsync(viewAgentId))

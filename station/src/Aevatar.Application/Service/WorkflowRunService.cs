@@ -67,9 +67,31 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
         // Step 2: Publish workflow
         var publishedAgent = await PublishWorkflowAsync(request.ViewAgentId);
+        
+        // Validate published agent properties
+        if (publishedAgent.Properties == null)
+        {
+            throw new UserFriendlyException("Published workflow agent has no properties");
+        }
+        
+        // Try to deserialize properties to validate JSON structure
+        try
+        {
+            var _ = JsonConvert.SerializeObject(publishedAgent.Properties);
+            var __ = JsonConvert.DeserializeObject<WorkflowViewConfigDto>(JsonConvert.SerializeObject(publishedAgent.Properties));
+        }
+        catch (Newtonsoft.Json.JsonException)
+        {
+            throw new UserFriendlyException("Invalid workflow configuration in published agent");
+        }
 
         // Step 3: Execute workflow
-        var executionSuccess = await ExecuteWorkflowAsync(publishedAgent.WorkflowCoordinatorGAgentId!.Value, request);
+        if (!publishedAgent.WorkflowCoordinatorGAgentId.HasValue)
+        {
+            throw new UserFriendlyException("WorkflowCoordinatorGAgentId not found in published workflow");
+        }
+        
+        var executionSuccess = await ExecuteWorkflowAsync(publishedAgent.WorkflowCoordinatorGAgentId.Value, request);
 
         if (!executionSuccess)
         {
@@ -78,7 +100,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             return new WorkflowRunResultDto
             {
                 IsSuccess = false,
-                WorkflowId = publishedAgent.WorkflowCoordinatorGAgentId ?? Guid.Empty,
+                WorkflowId = publishedAgent.WorkflowCoordinatorGAgentId.Value,
                 Message = "Workflow coordinator agent is not ready yet. Please retry the execution in a few moments.",
                 PublishedAgent = publishedAgent
             };
@@ -91,7 +113,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         return new WorkflowRunResultDto
         {
             IsSuccess = true,
-            WorkflowId = publishedAgent.WorkflowCoordinatorGAgentId ?? Guid.Empty,
+            WorkflowId = publishedAgent.WorkflowCoordinatorGAgentId.Value,
             Message = "Workflow executed successfully",
             PublishedAgent = publishedAgent
         };
