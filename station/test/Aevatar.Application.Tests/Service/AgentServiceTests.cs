@@ -1928,7 +1928,6 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
         
         var updateInput = new UpdateAgentInputDto
         {
-            Id = createdAgent.Id,
             Name = "Updated Simple Test",
             Properties = new Dictionary<string, object>
             {
@@ -1936,7 +1935,7 @@ public abstract class AgentServiceTests<TStartupModule> : AevatarApplicationTest
             }
         };
 
-        var updatedAgent = await _agentService.UpdateAgentAsync(updateInput);
+        var updatedAgent = await _agentService.UpdateAgentAsync(createdAgent.Id, updateInput);
         updatedAgent.ShouldNotBeNull();
     }
 
