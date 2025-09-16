@@ -58,10 +58,8 @@ public class ProjectService : OrganizationService, IProjectService
     {
         ValidateDisplayName(input.DisplayName);
 
-        var domainName = new string(input.DisplayName
-            .ToLowerInvariant()
-            .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')
-            .ToArray());
+        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+        var domainName = GenerateDomainName(input.DisplayName, organization);
 
         // Ensure the generated domain name is not empty after filtering
         if (string.IsNullOrEmpty(domainName))
@@ -81,7 +79,6 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException($"DomainName: {domainName} already exists");
         }
 
-        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
         var trimmedDisplayName = input.DisplayName.Trim();
         var projectId = GuidGenerator.Create();
         var project = new OrganizationUnit(
@@ -367,5 +364,28 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("No recent used projectId");
         }
         return JsonConvert.DeserializeObject<RecentUsedProjectDto>(value)!;
+    }
+    
+    private static string GenerateDomainName(string displayName, OrganizationUnit organization)
+    {
+        // Generate project slug from display name
+        // Note: ValidateDisplayName already ensures at least one letter/digit exists
+        var projectSlug = new string(displayName
+                .ToLowerInvariant()
+                .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == ' ')
+                .ToArray())
+            .Replace(' ', '-') // Replace spaces with hyphens
+            .Trim('-'); // Remove leading/trailing hyphens
+        
+        // Use organization ID directly as identifier
+        var orgIdentifier = organization.Id.ToString("N");
+        
+        // Generate unique suffix using timestamp and hash (guaranteed unique)
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var hash = (displayName + organization.Id.ToString() + timestamp).GetHashCode();
+        var uniqueSuffix = Math.Abs(hash).ToString("x")[..6]; // Take first 6 hex digits
+        
+        // Format: {project-slug}-{org-identifier}-{unique-suffix}
+        return $"{projectSlug}-{orgIdentifier}-{uniqueSuffix}";
     }
 }
