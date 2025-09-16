@@ -462,37 +462,25 @@ namespace Aevatar.Core.Interception
         {
             if (_method == null) return;
             
-            var contextValue = GetContextValue();
             var methodName = _method.Name;
             
-            // Combine ENTER and INPUT into single log entry with structured context fields
+            // Combine ENTER and INPUT into single log entry with dynamic structured context fields
             if (_args != null && _args.Length > 0)
             {
                 var inputData = BuildInputOutputData();
+                var (template, parameters) = BuildDynamicLogTemplate(
+                    "{LogCategory}: ENTER {MethodName}({InputData})", 
+                    LogCategory, methodName, inputData);
                 
-                if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
-                {
-                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}({InputData}) [{ContextValue}]", 
-                        LogCategory, methodName, inputData, contextValue);
-                }
-                else
-                {
-                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}({InputData})", 
-                        LogCategory, methodName, inputData);
-                }
+                _logger?.LogInformation(template, parameters);
             }
             else
             {
-                if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
-                {
-                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}() [{ContextValue}]", 
-                        LogCategory, methodName, contextValue);
-                }
-                else
-                {
-                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}()", 
-                        LogCategory, methodName);
-                }
+                var (template, parameters) = BuildDynamicLogTemplate(
+                    "{LogCategory}: ENTER {MethodName}()", 
+                    LogCategory, methodName);
+                
+                _logger?.LogInformation(template, parameters);
             }
         }
         
@@ -503,37 +491,25 @@ namespace Aevatar.Core.Interception
         {
             if (_method == null) return;
             
-            var contextValue = GetContextValue();
             var methodName = _method.Name;
             
-            // Combine EXIT and OUTPUT into single log entry with structured context fields
+            // Combine EXIT and OUTPUT into single log entry with dynamic structured context fields
             if (returnValue != null)
             {
                 var outputData = SerializeParameterValue(returnValue);
+                var (template, parameters) = BuildDynamicLogTemplate(
+                    "{LogCategory}: EXIT {MethodName} -> {OutputData}", 
+                    LogCategory, methodName, outputData);
                 
-                if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
-                {
-                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} -> {OutputData} [{ContextValue}]", 
-                        LogCategory, methodName, outputData, contextValue);
-                }
-                else
-                {
-                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} -> {OutputData}", 
-                        LogCategory, methodName, outputData);
-                }
+                _logger?.LogInformation(template, parameters);
             }
             else
             {
-                if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
-                {
-                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} [{ContextValue}]", 
-                        LogCategory, methodName, contextValue);
-                }
-                else
-                {
-                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName}", 
-                        LogCategory, methodName);
-                }
+                var (template, parameters) = BuildDynamicLogTemplate(
+                    "{LogCategory}: EXIT {MethodName}", 
+                    LogCategory, methodName);
+                
+                _logger?.LogInformation(template, parameters);
             }
         }
         
@@ -544,20 +520,14 @@ namespace Aevatar.Core.Interception
         {
             if (_method == null) return;
             
-            var contextValue = GetContextValue();
             var methodName = _method.Name;
             
-            // Log exception with structured context fields
-            if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
-            {
-                _logger?.LogError(exception, "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage} [{ContextValue}]", 
-                    LogCategory, methodName, exception.Message, contextValue);
-            }
-            else
-            {
-                _logger?.LogError(exception, "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage}", 
-                    LogCategory, methodName, exception.Message);
-            }
+            // Log exception with dynamic structured context fields
+            var (template, parameters) = BuildDynamicLogTemplate(
+                "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage}", 
+                LogCategory, methodName, exception.Message);
+            
+            _logger?.LogError(exception, template, parameters);
         }
         
         /// <summary>
@@ -601,19 +571,28 @@ namespace Aevatar.Core.Interception
         }
         
         /// <summary>
-        /// Gets cached context property values as formatted string (no reflection overhead)
-        /// Returns comma-separated key=value pairs for multiple properties
+        /// Builds dynamic log template with context properties as separate structured fields
+        /// Returns (template, parameters) tuple for structured logging
         /// </summary>
-        private string? GetContextValue()
+        private (string template, object[] parameters) BuildDynamicLogTemplate(string baseTemplate, params object[] baseParams)
         {
             if (_cachedContextValues.Count == 0)
-                return null;
+                return (baseTemplate, baseParams);
             
-            var validValues = _cachedContextValues
-                .Where(kvp => !string.IsNullOrEmpty(kvp.Value))
-                .Select(kvp => $"{kvp.Key}={kvp.Value}");
+            // Build context placeholders like "{WorkflowId} {GrainId}"
+            var validContexts = _cachedContextValues.Where(kvp => !string.IsNullOrEmpty(kvp.Value));
+            var contextPlaceholders = string.Join(" ", validContexts.Select(kvp => $"{{{kvp.Key}}}"));
             
-            return validValues.Any() ? string.Join(",", validValues) : null;
+            if (string.IsNullOrEmpty(contextPlaceholders))
+                return (baseTemplate, baseParams);
+            
+            var fullTemplate = $"{baseTemplate} {contextPlaceholders}";
+            
+            // Combine base parameters with context values
+            var contextValues = validContexts.Select(kvp => (object)kvp.Value).ToArray();
+            var allParams = baseParams.Concat(contextValues).ToArray();
+            
+            return (fullTemplate, allParams);
         }
         
         
