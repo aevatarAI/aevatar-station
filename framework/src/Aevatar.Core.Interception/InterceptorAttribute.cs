@@ -30,11 +30,11 @@ namespace Aevatar.Core.Interception
         public string? LogCategory { get; set; }
         
         /// <summary>
-        /// 要通过反射查找的上下文属性名，如 "WorkflowId", "SessionId", "OrderId" 等
-        /// 支持单个属性或逗号分隔的多个属性，如 "WorkflowId,SessionId,OrderId"
+        /// 要通过反射查找的上下文属性名数组，如 {"WorkflowId", "SessionId", "OrderId"} 等
+        /// 支持单个或多个属性，语法：ContextProperty = {"WorkflowId", "SessionId", "OrderId"}
         /// 由使用方完全自定义，同时用作日志中的标签名
         /// </summary>
-        public string? ContextProperty { get; set; }
+        public string[]? ContextProperty { get; set; }
         
         /// <summary>
         /// Static service provider for DI-based logger resolution
@@ -470,7 +470,7 @@ namespace Aevatar.Core.Interception
             {
                 var inputData = BuildInputOutputData();
                 
-                if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+                if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
                 {
                     _logger?.LogInformation("{LogCategory}: ENTER {MethodName}({InputData}) [{ContextValue}]", 
                         LogCategory, methodName, inputData, contextValue);
@@ -483,7 +483,7 @@ namespace Aevatar.Core.Interception
             }
             else
             {
-                if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+                if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
                 {
                     _logger?.LogInformation("{LogCategory}: ENTER {MethodName}() [{ContextValue}]", 
                         LogCategory, methodName, contextValue);
@@ -511,7 +511,7 @@ namespace Aevatar.Core.Interception
             {
                 var outputData = SerializeParameterValue(returnValue);
                 
-                if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+                if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
                 {
                     _logger?.LogInformation("{LogCategory}: EXIT {MethodName} -> {OutputData} [{ContextValue}]", 
                         LogCategory, methodName, outputData, contextValue);
@@ -524,7 +524,7 @@ namespace Aevatar.Core.Interception
             }
             else
             {
-                if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+                if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
                 {
                     _logger?.LogInformation("{LogCategory}: EXIT {MethodName} [{ContextValue}]", 
                         LogCategory, methodName, contextValue);
@@ -548,7 +548,7 @@ namespace Aevatar.Core.Interception
             var methodName = _method.Name;
             
             // Log exception with structured context fields
-            if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+            if (!string.IsNullOrEmpty(contextValue) && ContextProperty?.Length > 0)
             {
                 _logger?.LogError(exception, "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage} [{ContextValue}]", 
                     LogCategory, methodName, exception.Message, contextValue);
@@ -562,24 +562,23 @@ namespace Aevatar.Core.Interception
         
         /// <summary>
         /// Initializes context property values once during attribute initialization to avoid repeated reflection
-        /// Supports single property or comma-separated multiple properties
+        /// Supports multiple properties via array syntax
         /// </summary>
         private void InitializeContextProperty()
         {
-            // Only initialize if ContextProperty is specified and LogCategory is set
-            if (_instance != null && !string.IsNullOrEmpty(ContextProperty) && !string.IsNullOrEmpty(LogCategory))
+            // Only initialize if ContextProperty array is specified and LogCategory is set
+            if (_instance != null && ContextProperty?.Length > 0 && !string.IsNullOrEmpty(LogCategory))
             {
                 try
                 {
                     var instanceType = _instance.GetType();
                     
-                    // Split ContextProperty by comma to support multiple properties
-                    var propertyNames = ContextProperty.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                                      .Select(p => p.Trim())
-                                                      .Where(p => !string.IsNullOrEmpty(p));
-                    
-                    foreach (var propertyName in propertyNames)
+                    // Directly iterate over the property names array
+                    foreach (var propertyName in ContextProperty)
                     {
+                        if (string.IsNullOrWhiteSpace(propertyName))
+                            continue;
+                            
                         var contextProperty = instanceType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
                         if (contextProperty != null && contextProperty.PropertyType == typeof(string))
                         {
@@ -596,7 +595,7 @@ namespace Aevatar.Core.Interception
                 catch (Exception ex)
                 {
                     // Silently fallback if reflection fails
-                    System.Diagnostics.Debug.WriteLine($"Failed to get {ContextProperty} properties via reflection: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Failed to get context properties via reflection: {ex.Message}");
                 }
             }
         }

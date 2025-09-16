@@ -700,7 +700,7 @@ namespace InterceptorDemo
         }
         
         // Order Processing Workflow Steps
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task<bool> ValidateOrder(string orderId, decimal amount)
         {
             Console.WriteLine($"Validating order {orderId} with amount ${amount}");
@@ -716,7 +716,7 @@ namespace InterceptorDemo
             return true;
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task<PaymentResult?> ProcessPayment(string orderId, decimal amount, string customerEmail)
         {
             Console.WriteLine($"Processing payment for order {orderId}: ${amount}");
@@ -734,7 +734,7 @@ namespace InterceptorDemo
             return result;
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task FulfillOrder(string orderId, string transactionId)
         {
             Console.WriteLine($"Fulfilling order {orderId} with transaction {transactionId}");
@@ -743,7 +743,7 @@ namespace InterceptorDemo
         }
         
         // User Onboarding Workflow Steps
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task<string> CreateUserAccount(string email, string fullName)
         {
             Console.WriteLine($"Creating user account for {email}");
@@ -754,7 +754,7 @@ namespace InterceptorDemo
             return userId;
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task SendWelcomeEmail(string email, string fullName)
         {
             Console.WriteLine($"Sending welcome email to {email}");
@@ -762,7 +762,7 @@ namespace InterceptorDemo
             Console.WriteLine("Welcome email sent successfully");
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task SetupUserPreferences(string userId)
         {
             Console.WriteLine($"Setting up preferences for user {userId}");
@@ -771,7 +771,7 @@ namespace InterceptorDemo
         }
         
         // Exception Handling Workflow
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task ProcessDataWithValidation(string data)
         {
             Console.WriteLine($"Processing data: {data}");
@@ -786,7 +786,7 @@ namespace InterceptorDemo
         }
         
         // Nested Workflow Steps
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task ChildWorkflowStepA(string inputData)
         {
             Console.WriteLine($"Executing child workflow step A with: {inputData}");
@@ -794,7 +794,7 @@ namespace InterceptorDemo
             Console.WriteLine("Child workflow step A completed");
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         private async Task ChildWorkflowStepB(string processedData)
         {
             Console.WriteLine($"Executing child workflow step B with: {processedData}");
@@ -807,7 +807,7 @@ namespace InterceptorDemo
         /// <summary>
         /// Direct call workflow method - tests ResourceContext optimization where WorkflowContext is pre-set
         /// </summary>
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         public async Task<bool> ValidateOrderDirect(string orderId, decimal amount)
         {
             Console.WriteLine($"[DIRECT] Validating order {orderId} with amount ${amount}");
@@ -823,7 +823,7 @@ namespace InterceptorDemo
             return true;
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         public async Task<PaymentResult?> ProcessPaymentDirect(string orderId, decimal amount, string customerEmail)
         {
             Console.WriteLine($"[DIRECT] Processing payment for order {orderId}: ${amount}");
@@ -841,7 +841,7 @@ namespace InterceptorDemo
             return result;
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         public async Task<string> CreateUserAccountDirect(string email, string fullName)
         {
             Console.WriteLine($"[DIRECT] Creating user account for {email}");
@@ -852,7 +852,7 @@ namespace InterceptorDemo
             return userId;
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         public async Task ProcessDataWithValidationDirect(string data)
         {
             Console.WriteLine($"[DIRECT] Processing data: {data}");
@@ -866,7 +866,7 @@ namespace InterceptorDemo
             Console.WriteLine("[DIRECT] Data processed successfully");
         }
         
-        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId"})]
         public async Task StandaloneWorkflowMethod(string input)
         {
             Console.WriteLine($"[STANDALONE] Processing standalone workflow method with: {input}");
@@ -899,7 +899,7 @@ namespace InterceptorDemo
             UserId = userId;
         }
         
-        [Interceptor(LogCategory = "ORDER", ContextProperty = "WorkflowId,SessionId,UserId")]
+        [Interceptor(LogCategory = "ORDER", ContextProperty = new[] {"WorkflowId", "SessionId", "UserId"})]
         public async Task ProcessOrderAsync(string orderId, string? sessionId, string userId)
         {
             SetContext($"workflow-{orderId}", sessionId, userId);
@@ -911,7 +911,7 @@ namespace InterceptorDemo
             Console.WriteLine($"Order {orderId} processed successfully");
         }
         
-        [Interceptor(LogCategory = "PAYMENT", ContextProperty = "WorkflowId")]
+        [Interceptor(LogCategory = "PAYMENT", ContextProperty = new[] {"WorkflowId"})]
         public async Task ProcessPaymentAsync(string paymentId)
         {
             WorkflowId = $"payment-{paymentId}";
