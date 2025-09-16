@@ -51,6 +51,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IDocumentLinkService _documentLinkService;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -62,7 +63,8 @@ public class AgentService : ApplicationService, IAgentService
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
         IIndexingService indexingService,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IDocumentLinkService documentLinkService)
     {
         _clusterClient = clusterClient;
         _logger = logger;
@@ -74,6 +76,7 @@ public class AgentService : ApplicationService, IAgentService
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
         _serviceProvider = serviceProvider;
+        _documentLinkService = documentLinkService;
     }
 
     public async Task<List<AgentTypeDto>> GetAllAgents()
@@ -889,5 +892,35 @@ public class AgentService : ApplicationService, IAgentService
             _logger.LogError(ex, "[AgentService] Failed to create schema context using plugin architecture");
             throw;
         }
+    }
+
+    /// <summary>
+    /// Creates schema processing context by scanning configuration type for documentation links
+    /// </summary>
+    /// <param name="configurationType">The configuration type to scan</param>
+    /// <returns>Schema processing context with invalid URLs</returns>
+    private async Task<SchemaProcessingContext> CreateSchemaContextAsync(Type configurationType)
+    {
+        var context = new SchemaProcessingContext();
+        var properties = configurationType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        
+        foreach (var property in properties)
+        {
+            var docLinkAttributes = property.GetCustomAttributes<Aevatar.GAgents.Basic.Common.DocumentationLinkAttribute>(true);
+            
+            foreach (var attribute in docLinkAttributes)
+            {
+                var url = attribute.DocumentationUrl;
+                if (string.IsNullOrWhiteSpace(url)) continue;
+
+                var isValid = await _documentLinkService.GetDocumentLinkStatusAsync(url);
+                if (!isValid)
+                {
+                    context.InvalidUrls.Add(url);
+                }
+            }
+        }
+
+        return context;
     }
 }
