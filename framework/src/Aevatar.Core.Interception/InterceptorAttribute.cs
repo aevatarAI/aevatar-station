@@ -23,9 +23,16 @@ namespace Aevatar.Core.Interception
         private static readonly ActivitySource _activitySource = new("Aevatar.Core.Interception");
         
         /// <summary>
-        /// Indicates this is a workflow step and enables workflow-specific logging
+        /// 日志分类标签，如 "WORKFLOW", "PERFORMANCE", "BUSINESS" 等
+        /// 由使用方完全自定义
         /// </summary>
-        public bool IsWorkflowStep { get; set; } = false;
+        public string? LogCategory { get; set; }
+        
+        /// <summary>
+        /// 要通过反射查找的上下文属性名，如 "WorkflowId", "SessionId", "OrderId" 等
+        /// 由使用方完全自定义，同时用作日志中的标签名
+        /// </summary>
+        public string? ContextProperty { get; set; }
         
         /// <summary>
         /// Static service provider for DI-based logger resolution
@@ -39,8 +46,8 @@ namespace Aevatar.Core.Interception
         private ILogger? _logger;
         private Activity? _activity;
         
-        // Cached workflow ID to avoid repeated reflection
-        private string? _cachedWorkflowId;
+        // Cached context property value to avoid repeated reflection
+        private string? _cachedContextValue;
 
         /// <summary>
         /// Called before the method execution to initialize the interceptor
@@ -96,8 +103,8 @@ namespace Aevatar.Core.Interception
 
             Init();
             
-            // Initialize workflow information once during initialization
-            InitializeWorkflowInfo();
+            // Initialize context property value once during initialization
+            InitializeContextProperty();
 
             // Log initialization with appropriate level
             if (ShouldTrace())
@@ -244,10 +251,10 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Check if this is a workflow step (additional workflow logging)
-                if (IsWorkflowStep)
+                // Check if this has custom log category (additional contextual logging)
+                if (!string.IsNullOrEmpty(LogCategory))
                 {
-                    LogWorkflowEntry();
+                    LogContextualEntry();
                 }
                 
                 // Trace logging (independent of workflow)
@@ -286,10 +293,10 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Check if this is a workflow step (additional workflow logging)
-                if (IsWorkflowStep)
+                // Check if this has custom log category (additional contextual logging)
+                if (!string.IsNullOrEmpty(LogCategory))
                 {
-                    LogWorkflowExit();
+                    LogContextualExit();
                 }
                 
                 // Trace logging (independent of workflow)
@@ -314,10 +321,10 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Check if this is a workflow step (additional workflow logging)
-                if (IsWorkflowStep)
+                // Check if this has custom log category (additional contextual logging)
+                if (!string.IsNullOrEmpty(LogCategory))
                 {
-                    LogWorkflowException(exception);
+                    LogContextualException(exception);
                 }
                 
                 // Trace logging (independent of workflow)
@@ -447,113 +454,145 @@ namespace Aevatar.Core.Interception
         }
         
         /// <summary>
-        /// Logs workflow entry with input parameters
+        /// Logs contextual entry with input parameters
         /// </summary>
-        private void LogWorkflowEntry()
+        private void LogContextualEntry()
         {
             if (_method == null) return;
             
-            var workflowId = GetWorkflowId();
+            var contextValue = GetContextValue();
             var methodName = _method.Name;
-            var workflowContext = BuildWorkflowContext(workflowId);
             
-            // Combine ENTER and INPUT into single log entry
+            // Combine ENTER and INPUT into single log entry with structured context fields
             if (_args != null && _args.Length > 0)
             {
                 var inputData = BuildInputOutputData();
-                _logger?.LogInformation("WORKFLOW: {WorkflowContext} ENTER {MethodName}({InputData})", 
-                    workflowContext, methodName, inputData);
+                
+                if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+                {
+                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}({InputData}) [{ContextProperty}={ContextValue}]", 
+                        LogCategory, methodName, inputData, ContextProperty, contextValue);
+                }
+                else
+                {
+                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}({InputData})", 
+                        LogCategory, methodName, inputData);
+                }
             }
             else
             {
-                _logger?.LogInformation("WORKFLOW: {WorkflowContext} ENTER {MethodName}()", 
-                    workflowContext, methodName);
+                if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+                {
+                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}() [{ContextProperty}={ContextValue}]", 
+                        LogCategory, methodName, ContextProperty, contextValue);
+                }
+                else
+                {
+                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}()", 
+                        LogCategory, methodName);
+                }
             }
         }
         
         /// <summary>
-        /// Logs workflow exit with return value
+        /// Logs contextual exit with return value
         /// </summary>
-        private void LogWorkflowExit(object? returnValue = null)
+        private void LogContextualExit(object? returnValue = null)
         {
             if (_method == null) return;
             
-            var workflowId = GetWorkflowId();
+            var contextValue = GetContextValue();
             var methodName = _method.Name;
-            var workflowContext = BuildWorkflowContext(workflowId);
             
-            // Combine EXIT and OUTPUT into single log entry
+            // Combine EXIT and OUTPUT into single log entry with structured context fields
             if (returnValue != null)
             {
                 var outputData = SerializeParameterValue(returnValue);
-                _logger?.LogInformation("WORKFLOW: {WorkflowContext} EXIT {MethodName} -> {OutputData}", 
-                    workflowContext, methodName, outputData);
+                
+                if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+                {
+                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} -> {OutputData} [{ContextProperty}={ContextValue}]", 
+                        LogCategory, methodName, outputData, ContextProperty, contextValue);
+                }
+                else
+                {
+                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} -> {OutputData}", 
+                        LogCategory, methodName, outputData);
+                }
             }
             else
             {
-                _logger?.LogInformation("WORKFLOW: {WorkflowContext} EXIT {MethodName}", 
-                    workflowContext, methodName);
+                if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+                {
+                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} [{ContextProperty}={ContextValue}]", 
+                        LogCategory, methodName, ContextProperty, contextValue);
+                }
+                else
+                {
+                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName}", 
+                        LogCategory, methodName);
+                }
             }
         }
         
         /// <summary>
-        /// Logs workflow exception
+        /// Logs contextual exception
         /// </summary>
-        private void LogWorkflowException(Exception exception)
+        private void LogContextualException(Exception exception)
         {
             if (_method == null) return;
             
-            var workflowId = GetWorkflowId();
+            var contextValue = GetContextValue();
             var methodName = _method.Name;
-            var workflowContext = BuildWorkflowContext(workflowId);
             
-            _logger?.LogError(exception, "WORKFLOW: {WorkflowContext} EXCEPTION {MethodName}: {ExceptionMessage}", 
-                workflowContext, methodName, exception.Message);
+            // Log exception with structured context fields
+            if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
+            {
+                _logger?.LogError(exception, "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage} [{ContextProperty}={ContextValue}]", 
+                    LogCategory, methodName, exception.Message, ContextProperty, contextValue);
+            }
+            else
+            {
+                _logger?.LogError(exception, "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage}", 
+                    LogCategory, methodName, exception.Message);
+            }
         }
         
         /// <summary>
-        /// Initializes workflow ID once during attribute initialization to avoid repeated reflection
+        /// Initializes context property value once during attribute initialization to avoid repeated reflection
         /// </summary>
-        private void InitializeWorkflowInfo()
+        private void InitializeContextProperty()
         {
-            // Try to get WorkflowId from instance property via reflection (similar to Logger discovery)
-            if (_instance != null)
+            // Only initialize if ContextProperty is specified and LogCategory is set
+            if (_instance != null && !string.IsNullOrEmpty(ContextProperty) && !string.IsNullOrEmpty(LogCategory))
             {
                 try
                 {
                     var instanceType = _instance.GetType();
                     
-                    // Try to get WorkflowId property
-                    var workflowIdProperty = instanceType.GetProperty("WorkflowId", BindingFlags.Public | BindingFlags.Instance);
-                    if (workflowIdProperty != null && workflowIdProperty.PropertyType == typeof(string))
+                    // Try to get the specified context property
+                    var contextProperty = instanceType.GetProperty(ContextProperty, BindingFlags.Public | BindingFlags.Instance);
+                    if (contextProperty != null && contextProperty.PropertyType == typeof(string))
                     {
-                        _cachedWorkflowId = workflowIdProperty.GetValue(_instance) as string;
+                        _cachedContextValue = contextProperty.GetValue(_instance) as string;
                     }
                 }
                 catch (Exception ex)
                 {
-                    // Silently fallback to auto-derivation if reflection fails
-                    System.Diagnostics.Debug.WriteLine($"Failed to get WorkflowId property via reflection: {ex.Message}");
+                    // Silently fallback if reflection fails
+                    System.Diagnostics.Debug.WriteLine($"Failed to get {ContextProperty} property via reflection: {ex.Message}");
                 }
             }
         }
         
         /// <summary>
-        /// Gets cached workflow ID (no reflection overhead)
+        /// Gets cached context property value (no reflection overhead)
         /// </summary>
-        private string? GetWorkflowId()
+        private string? GetContextValue()
         {
-            return _cachedWorkflowId;
+            return _cachedContextValue;
         }
         
-        
-        /// <summary>
-        /// Builds workflow context string for logging
-        /// </summary>
-        private string BuildWorkflowContext(string? workflowId)
-        {
-            return !string.IsNullOrEmpty(workflowId) ? $"[WorkflowId={workflowId}]" : "[Workflow]";
-        }
         
         /// <summary>
         /// Builds input data JSON for workflow logging
