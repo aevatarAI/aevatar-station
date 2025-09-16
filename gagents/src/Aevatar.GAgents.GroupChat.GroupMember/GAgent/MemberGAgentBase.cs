@@ -87,6 +87,11 @@ public abstract partial class
     public virtual string? WorkflowId { get; protected set; }
 
     /// <summary>
+    /// GrainId for this member instance, used by InterceptorAttribute for workflow logging
+    /// </summary>
+    public virtual string GrainId => this.GetPrimaryKey().ToString();
+
+    /// <summary>
     /// BlackboardId as Guid, computed from WorkflowId
     /// </summary>
     public virtual Guid BlackboardId 
