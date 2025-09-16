@@ -650,33 +650,8 @@ public class AgentService : ApplicationService, IAgentService
                                 propertySchema["default"] = defaultValue;
                             }
                             
-                            // Check for DefaultValuesAttribute
-                            var defaultValuesAttribute = property.GetCustomAttribute<DefaultValuesAttribute>();
-                            if (defaultValuesAttribute?.Values != null && defaultValuesAttribute.Values.Length > 1)
-                            {
-                                // Only create enum if there are multiple values (single values don't make sense for enums)
-                                propertySchema["enum"] = defaultValuesAttribute.Values;
-                                
-                                // Add descriptions if available
-                                if (defaultValuesAttribute.Descriptions != null && 
-                                    defaultValuesAttribute.Descriptions.Length == defaultValuesAttribute.Values.Length)
-                                {
-                                    var hasDescriptions = defaultValuesAttribute.Descriptions.Any(d => !string.IsNullOrEmpty(d));
-                                    if (hasDescriptions)
-                                    {
-                                        propertySchema["x-descriptions"] = defaultValuesAttribute.Descriptions;
-                                        _logger.LogDebug("Added x-descriptions for property {PropertyName}: {Descriptions}",
-                                            property.Name, string.Join(", ", defaultValuesAttribute.Descriptions));
-                                    }
-                                }
-                                
-                                // Log warning if default doesn't match first enum value
-                                if (!Equals(defaultValue, defaultValuesAttribute.Values[0]))
-                                {
-                                    _logger.LogWarning("Property {PropertyName} default ({Default}) doesn't match first enum value ({EnumValue})",
-                                        property.Name, defaultValue, defaultValuesAttribute.Values[0]);
-                                }
-                            }
+                            // Process DefaultValuesAttribute 
+                            ProcessDefaultValuesAttribute(property, propertySchema, defaultValue);
                             
                             // Update the properties dictionary with enhanced schema
                             schemaProperties[propertyName] = propertySchema;
@@ -731,38 +706,132 @@ public class AgentService : ApplicationService, IAgentService
     {
         var defaultValues = new Dictionary<string, object?>();
 
+        var instance = CreateTypeInstance(configurationType);
+        if (instance == null)
+        {
+            return defaultValues;
+        }
+
+        ExtractPropertyDefaultValues(instance, configurationType, defaultValues);
+        return defaultValues;
+    }
+
+    /// <summary>
+    /// Create an instance of the specified type with error handling
+    /// </summary>
+    private object CreateTypeInstance(Type configurationType)
+    {
         try
         {
-            // Create configuration instance to get default values
-            var instance = Activator.CreateInstance(configurationType);
-            if (instance != null)
-            {
-                var properties = configurationType.GetProperties(BindingFlags.Public | 
-                    BindingFlags.Instance | BindingFlags.DeclaredOnly);
-
-                foreach (var property in properties)
-                {
-                    var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-                    try
-                    {
-                        var defaultValue = property.GetValue(instance);
-                        defaultValues[propertyName] = defaultValue;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to get default value for property {PropertyName} on type {TypeName}", 
-                            property.Name, configurationType.Name);
-                        defaultValues[propertyName] = null;
-                    }
-                }
-            }
+            return Activator.CreateInstance(configurationType);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create instance of {TypeName} for default values", configurationType.Name);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extract default values from all properties of an instance
+    /// </summary>
+    private void ExtractPropertyDefaultValues(object instance, Type configurationType, Dictionary<string, object?> defaultValues)
+    {
+        var properties = configurationType.GetProperties(BindingFlags.Public | 
+            BindingFlags.Instance | BindingFlags.DeclaredOnly);
+
+        foreach (var property in properties)
+        {
+            var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+            var propertyValue = GetPropertyValueSafely(property, instance);
+            defaultValues[propertyName] = propertyValue;
+        }
+    }
+
+    /// <summary>
+    /// Get property value with exception handling
+    /// </summary>
+    private object GetPropertyValueSafely(PropertyInfo property, object instance)
+    {
+        try
+        {
+            return property.GetValue(instance);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get default value for property {PropertyName} on type {TypeName}", 
+                property.Name, instance.GetType().Name);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Process DefaultValuesAttribute for a property and update its schema
+    /// </summary>
+    private void ProcessDefaultValuesAttribute(PropertyInfo property, Dictionary<string, object> propertySchema, object defaultValue)
+    {
+        var defaultValuesAttribute = property.GetCustomAttribute<DefaultValuesAttribute>();
+        if (!ShouldProcessDefaultValuesAttribute(defaultValuesAttribute))
+        {
+            return;
         }
 
-        return defaultValues;
+        // Add enum values
+        propertySchema["enum"] = defaultValuesAttribute.Values;
+        
+        // Process descriptions
+        ProcessAttributeDescriptions(property, propertySchema, defaultValuesAttribute);
+        
+        // Validate default value against enum
+        ValidateDefaultValueAgainstEnum(property, defaultValue, defaultValuesAttribute);
+    }
+
+    /// <summary>
+    /// Check if DefaultValuesAttribute should be processed
+    /// </summary>
+    private static bool ShouldProcessDefaultValuesAttribute(DefaultValuesAttribute attribute)
+    {
+        return attribute?.Values != null && attribute.Values.Length > 1;
+    }
+
+    /// <summary>
+    /// Process descriptions from DefaultValuesAttribute
+    /// </summary>
+    private void ProcessAttributeDescriptions(PropertyInfo property, Dictionary<string, object> propertySchema, DefaultValuesAttribute attribute)
+    {
+        if (!HasValidDescriptions(attribute))
+        {
+            return;
+        }
+
+        var hasNonEmptyDescriptions = attribute.Descriptions.Any(d => !string.IsNullOrEmpty(d));
+        if (hasNonEmptyDescriptions)
+        {
+            propertySchema["x-descriptions"] = attribute.Descriptions;
+            _logger.LogDebug("Added x-descriptions for property {PropertyName}: {Descriptions}",
+                property.Name, string.Join(", ", attribute.Descriptions));
+        }
+    }
+
+    /// <summary>
+    /// Check if attribute has valid descriptions
+    /// </summary>
+    private static bool HasValidDescriptions(DefaultValuesAttribute attribute)
+    {
+        return attribute.Descriptions != null && 
+               attribute.Descriptions.Length == attribute.Values.Length;
+    }
+
+    /// <summary>
+    /// Validate that default value matches the first enum value
+    /// </summary>
+    private void ValidateDefaultValueAgainstEnum(PropertyInfo property, object defaultValue, DefaultValuesAttribute attribute)
+    {
+        if (!Equals(defaultValue, attribute.Values[0]))
+        {
+            _logger.LogWarning("Property {PropertyName} default ({Default}) doesn't match first enum value ({EnumValue})",
+                property.Name, defaultValue, attribute.Values[0]);
+        }
     }
 
     private ConfigurationBase SetupConfigurationData(Configuration configuration,
