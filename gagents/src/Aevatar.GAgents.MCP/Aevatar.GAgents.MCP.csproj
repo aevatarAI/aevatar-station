@@ -5,12 +5,12 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
-        <ProjectReference Include="../../../framework/src/Aevatar.Core/Aevatar.Core.csproj" />
-        <ProjectReference Include="../../../framework/src/Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj" />
-        <PackageReference Include="Aevatar.EventSourcing.Core" />
         <PackageReference Include="ModelContextProtocol.Core" />
     </ItemGroup>
     <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.EventSourcing.Core\Aevatar.EventSourcing.Core.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.GroupChat.GroupMember\Aevatar.GAgents.GroupChat.GroupMember.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.GroupChat\Aevatar.GAgents.GroupChat.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.MCP.Core\Aevatar.GAgents.MCP.Core.csproj" />

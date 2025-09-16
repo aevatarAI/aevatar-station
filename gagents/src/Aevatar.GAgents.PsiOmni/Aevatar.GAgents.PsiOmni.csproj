@@ -16,7 +16,8 @@
     <ItemGroup>
         <ProjectReference Include="..\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.GroupChat\Aevatar.GAgents.GroupChat.csproj" />
-        <ProjectReference Include="../../../framework/src/Aevatar.Core.Abstractions/Aevatar.Core.Abstractions.csproj" />
-        <ProjectReference Include="../../../framework/src/Aevatar.Core/Aevatar.Core.csproj" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
     </ItemGroup>
 </Project>

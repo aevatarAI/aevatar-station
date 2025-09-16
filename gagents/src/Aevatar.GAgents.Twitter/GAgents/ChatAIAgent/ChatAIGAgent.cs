@@ -115,7 +115,7 @@ public class ChatAIGAgent :
         await InitializeAsync(new InitializeDto
         {
             Instructions = configuration.Instructions,
-            LLMConfig = new LLMConfigDto { SystemLLM = configuration.SystemLLM },
+            LLMConfig = new LLMConfigDto { SystemLLM = configuration.SystemLLM.ToString() },
             MCPServers = configuration.MCPServers,
             ToolGAgentTypes = configuration.ToolGAgentTypes,
             ToolGAgents = configuration.ToolGAgents,

@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.Application.Grains.Agents.AI;
+using Aevatar.Application.Grains.Agents.Configuration;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Application.Grains.Subscription;
 using Aevatar.Common;
@@ -12,13 +15,17 @@ using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
 using Aevatar.Exceptions;
 using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.AI.Options;
 using Aevatar.Options;
 using Aevatar.Query;
 using Aevatar.Schema;
+using Aevatar.Provider;
 using Aevatar.Station.Feature.CreatorGAgent;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using NJsonSchema;
 using Newtonsoft.Json.Serialization;
 using NJsonSchema.Validation;
 using Orleans;
@@ -43,7 +50,7 @@ public class AgentService : ApplicationService, IAgentService
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly ISchemaProvider _schemaProvider;
     private readonly IIndexingService _indexingService;
-    private readonly IOptionsMonitor<SystemLLMMetaInfoOptions> _systemLLMConfigOptions;
+    private readonly IServiceProvider _serviceProvider;
 
     public AgentService(
         IClusterClient clusterClient,
@@ -55,7 +62,7 @@ public class AgentService : ApplicationService, IAgentService
         GrainTypeResolver grainTypeResolver,
         ISchemaProvider schemaProvider,
         IIndexingService indexingService,
-        IOptionsMonitor<SystemLLMMetaInfoOptions> systemLLMConfigOptions)
+        IServiceProvider serviceProvider)
     {
         _clusterClient = clusterClient;
         _logger = logger;
@@ -66,7 +73,7 @@ public class AgentService : ApplicationService, IAgentService
         _grainTypeResolver = grainTypeResolver;
         _schemaProvider = schemaProvider;
         _indexingService = indexingService;
-        _systemLLMConfigOptions = systemLLMConfigOptions;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<List<AgentTypeDto>> GetAllAgents()
@@ -93,16 +100,39 @@ public class AgentService : ApplicationService, IAgentService
                         Type = p.Type.ToString()
                     }).ToList();
 
-                    paramDto.PropertyJsonSchema =
-                        await EnhanceSchemaWithDefaults(kvp.Value.InitializationData.DtoType);
+                    try
+                    {
+                        paramDto.PropertyJsonSchema =
+                            await EnhanceSchemaWithDefaults(kvp.Value.InitializationData.DtoType);
+                        
+                        if (string.IsNullOrWhiteSpace(paramDto.PropertyJsonSchema))
+                        {
+                            _logger.LogError("PropertyJsonSchema is null or empty for agent {AgentType} with DtoType {DtoType}", 
+                                kvp.Key, kvp.Value.InitializationData.DtoType.Name);
+                            paramDto.PropertyJsonSchema = "{}"; // Fallback to empty JSON object
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to generate PropertyJsonSchema for agent {AgentType} with DtoType {DtoType}", 
+                            kvp.Key, kvp.Value.InitializationData.DtoType.Name);
+                        paramDto.PropertyJsonSchema = "{}"; // Fallback to empty JSON object
+                    }
 
                     // Get default values for backward compatibility
                     paramDto.DefaultValues =
                         GetConfigurationDefaultValues(kvp.Value.InitializationData.DtoType);
-
-                    // Check if agent has SystemLLMConfig and add it
-                    paramDto.SystemLLMConfigs = GetSystemLLMConfigsForAgent(kvp.Value.InitializationData);
                 }
+                else
+                {
+                    _logger.LogWarning("InitializationData is null for agent {AgentType}", kvp.Key);
+                    paramDto.PropertyJsonSchema = "{}"; // Fallback for agents without initialization data
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Agent metadata is null for agent type {AgentType}", kvp.Key);
+                paramDto.PropertyJsonSchema = "{}"; // Fallback for agents without metadata
             }
 
             resp.Add(paramDto);
@@ -547,8 +577,23 @@ public class AgentService : ApplicationService, IAgentService
     {
         try
         {
-            // Generate base schema
-            var baseSchema = _schemaProvider.GetTypeSchema(configurationType).ToJson();
+            var context = await CreateSchemaContextAsync();
+            
+            // Generate base schema with context
+            var schemaResult = _schemaProvider.GetTypeSchema(configurationType, context);
+            if (schemaResult == null)
+            {
+                _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);
+                return "{}";
+            }
+            
+            var baseSchema = schemaResult.ToJson();
+            if (string.IsNullOrWhiteSpace(baseSchema))
+            {
+                _logger.LogError("Schema ToJson() returned empty result for type {TypeName}", configurationType.Name);
+                return "{}";
+            }
+            
             var schemaDoc = JsonDocument.Parse(baseSchema);
             
             // Create instance to get default values
@@ -639,7 +684,27 @@ public class AgentService : ApplicationService, IAgentService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to enhance schema for type {TypeName}, returning base schema", configurationType.Name);
-            return _schemaProvider.GetTypeSchema(configurationType).ToJson();
+            try
+            {
+                var fallbackSchema = _schemaProvider.GetTypeSchema(configurationType);
+                if (fallbackSchema == null)
+                {
+                    _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);
+                    return "{}"; // Return empty JSON object as fallback
+                }
+                var jsonResult = fallbackSchema.ToJson();
+                if (string.IsNullOrWhiteSpace(jsonResult))
+                {
+                    _logger.LogError("Schema ToJson() returned empty result for type {TypeName}", configurationType.Name);
+                    return "{}"; // Return empty JSON object as fallback
+                }
+                return jsonResult;
+            }
+            catch (Exception fallbackEx)
+            {
+                _logger.LogError(fallbackEx, "Fallback schema generation failed for type {TypeName}, returning empty schema", configurationType.Name);
+                return "{}"; // Return empty JSON object as final fallback
+            }
         }
     }
 
@@ -762,23 +827,54 @@ public class AgentService : ApplicationService, IAgentService
 
         return subAgentGrainIds;
     }
-
-    /// <summary>
-    /// Check if agent configuration DTO has SystemLLM property and return the configuration list
-    /// </summary>
-    private List<SystemLLMConfigDto>? GetSystemLLMConfigsForAgent(Configuration? configuration)
+    private async Task<DynamicDropDownContext> CreateSchemaContextAsync()
     {
-        if (configuration?.DtoType == null)
-            return null;
+        try
+        {
+            _logger.LogDebug("[AgentService] Starting schema context creation using plugin architecture");
+            
+            // 创建线程安全的并发字典用于多个processor并发写入
+            var concurrentData = new ConcurrentDictionary<string, object>();
+            var configurationProviders = _serviceProvider.GetServices<IDynamicConfigurationProvider>().ToList();
+            
+            if (!configurationProviders.Any())
+            {
+                _logger.LogError("[AgentService] No configuration providers found, plugin architecture not properly configured");
+                throw new InvalidOperationException("Configuration provider plugin architecture not properly configured - no IDynamicConfigurationProvider implementations found");
+            }
 
-        // Check if the configuration DTO has SystemLLM property using reflection
-        var hasSystemLLMProperty = configuration.DtoType
-            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Any(p => p.Name.Equals("SystemLLM", StringComparison.OrdinalIgnoreCase));
+            _logger.LogInformation("[AgentService] Found {ProviderCount} configuration providers", configurationProviders.Count);
 
-        if (!hasSystemLLMProperty)
-            return null;
+            // 为每个配置提供者执行处理逻辑
+            var processingTasks = configurationProviders.Select(async provider =>
+            {
+                try
+                {
+                    _logger.LogDebug("[AgentService] Processing with provider: {ProviderType}", 
+                        provider.GetType().Name);
 
-        return _systemLLMConfigOptions.CurrentValue.SystemLLMConfigs;
+                    // 直接调用provider的处理方法，传递concurrentData和clusterClient
+                    await provider.ProcessSchemaAsync(concurrentData, _clusterClient);
+                    
+                    _logger.LogInformation("[AgentService] Successfully processed configuration with {ProviderType}", 
+                        provider.GetType().Name);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[AgentService] Failed to process with provider: {ProviderType}", 
+                        provider.GetType().Name);
+                }
+            });
+
+            // 等待所有配置提供者完成
+            await Task.WhenAll(processingTasks);
+
+            return new DynamicDropDownContext { AdditionalData = new Dictionary<string, object>(concurrentData) };;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[AgentService] Failed to create schema context using plugin architecture");
+            throw;
+        }
     }
 }
