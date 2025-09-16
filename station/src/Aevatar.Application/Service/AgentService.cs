@@ -625,44 +625,37 @@ public class AgentService : ApplicationService, IAgentService
                     
                     if (schemaProperties != null && schemaProperties.TryGetValue(propertyName, out var propertySchemaObj))
                     {
-                        try
+                        Dictionary<string, object> propertySchema;
+                        
+                        // Handle JsonElement objects (preserve all properties including x-enumNames)
+                        if (propertySchemaObj is JsonElement jsonElement)
                         {
-                            Dictionary<string, object> propertySchema;
-                            
-                            // Handle JsonElement objects (preserve all properties including x-enumNames)
-                            if (propertySchemaObj is JsonElement jsonElement)
-                            {
-                                propertySchema = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText()) ?? new Dictionary<string, object>();
-                            }
-                            else if (propertySchemaObj is Dictionary<string, object> dict)
-                            {
-                                propertySchema = new Dictionary<string, object>(dict);
-                            }
-                            else
-                            {
-                                propertySchema = new Dictionary<string, object>();
-                            }
-                            
-                            // Get default value
-                            var defaultValue = property.GetValue(instance);
-                            if (defaultValue != null)
-                            {
-                                propertySchema["default"] = defaultValue;
-                            }
-                            
-                            // Process DefaultValuesAttribute 
-                            ProcessDefaultValuesAttribute(property, propertySchema, defaultValue);
-                            
-                            // Update the properties dictionary with enhanced schema
-                            schemaProperties[propertyName] = propertySchema;
-                            
-                            _logger.LogDebug("Enhanced schema property {PropertyName} with default: {DefaultValue}",
-                                property.Name, defaultValue);
+                            propertySchema = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText()) ?? new Dictionary<string, object>();
                         }
-                        catch (Exception ex)
+                        else if (propertySchemaObj is Dictionary<string, object> dict)
                         {
-                            _logger.LogWarning(ex, "Failed to enhance schema for property {PropertyName}", property.Name);
+                            propertySchema = new Dictionary<string, object>(dict);
                         }
+                        else
+                        {
+                            propertySchema = new Dictionary<string, object>();
+                        }
+                        
+                        // Get default value
+                        var defaultValue = property.GetValue(instance);
+                        if (defaultValue != null)
+                        {
+                            propertySchema["default"] = defaultValue;
+                        }
+                        
+                        // Process DefaultValuesAttribute 
+                        ProcessDefaultValuesAttribute(property, propertySchema, defaultValue);
+                        
+                        // Update the properties dictionary with enhanced schema
+                        schemaProperties[propertyName] = propertySchema;
+                        
+                        _logger.LogDebug("Enhanced schema property {PropertyName} with default: {DefaultValue}",
+                            property.Name, defaultValue);
                     }
                 }
                 
@@ -675,27 +668,22 @@ public class AgentService : ApplicationService, IAgentService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to enhance schema for type {TypeName}, returning base schema", configurationType.Name);
-            try
+            
+            var fallbackSchema = _schemaProvider.GetTypeSchema(configurationType);
+            if (fallbackSchema == null)
             {
-                var fallbackSchema = _schemaProvider.GetTypeSchema(configurationType);
-                if (fallbackSchema == null)
-                {
-                    _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);
-                    return "{}"; // Return empty JSON object as fallback
-                }
-                var jsonResult = fallbackSchema.ToJson();
-                if (string.IsNullOrWhiteSpace(jsonResult))
-                {
-                    _logger.LogError("Schema ToJson() returned empty result for type {TypeName}", configurationType.Name);
-                    return "{}"; // Return empty JSON object as fallback
-                }
-                return jsonResult;
+                _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);
+                return "{}"; // Return empty JSON object as fallback
             }
-            catch (Exception fallbackEx)
+            
+            var jsonResult = fallbackSchema.ToJson();
+            if (string.IsNullOrWhiteSpace(jsonResult))
             {
-                _logger.LogError(fallbackEx, "Fallback schema generation failed for type {TypeName}, returning empty schema", configurationType.Name);
-                return "{}"; // Return empty JSON object as final fallback
+                _logger.LogError("Schema ToJson() returned empty result for type {TypeName}", configurationType.Name);
+                return "{}"; // Return empty JSON object as fallback
             }
+            
+            return jsonResult;
         }
     }
 
@@ -749,20 +737,11 @@ public class AgentService : ApplicationService, IAgentService
     }
 
     /// <summary>
-    /// Get property value with exception handling
+    /// Get property value (simplified - property access rarely fails on valid instances)
     /// </summary>
     private object GetPropertyValueSafely(PropertyInfo property, object instance)
     {
-        try
-        {
-            return property.GetValue(instance);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to get default value for property {PropertyName} on type {TypeName}", 
-                property.Name, instance.GetType().Name);
-            return null;
-        }
+        return property.GetValue(instance);
     }
 
     /// <summary>
