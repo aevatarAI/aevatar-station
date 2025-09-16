@@ -26,9 +26,6 @@
     <PackageReference Include="Volo.Abp.AutoMapper" />
     <PackageReference Include="Volo.Abp.TestBase" />
     <PackageReference Include="Volo.Abp.Authorization" />
-    <PackageReference Include="Aevatar" />
-    <PackageReference Include="Aevatar.Core" />
-    <PackageReference Include="Aevatar.EventSourcing.Core" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aevatar.GAgents.AI.Abstractions\Aevatar.GAgents.AI.Abstractions.csproj" />

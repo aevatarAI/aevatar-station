@@ -28,6 +28,7 @@
     <ItemGroup>
       <ProjectReference Include="..\..\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.GAgents.GroupChat\Aevatar.GAgents.GroupChat.csproj" />
+      <ProjectReference Include="..\..\src\Aevatar.GAgents.InputGAgent\Aevatar.GAgents.InputGAgent.csproj" />
       <ProjectReference Include="..\Aevatar.GAgents.TestBase\Aevatar.GAgents.TestBase.csproj" />
     </ItemGroup>
 
