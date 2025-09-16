@@ -580,10 +580,14 @@ public class AgentService : ApplicationService, IAgentService
     {
         try
         {
-            var context = await CreateSchemaContextAsync();
+            // Create context for dynamic dropdown configurations
+            var dynamicContext = await CreateSchemaContextAsync();
             
-            // Generate base schema with context
-            var schemaResult = _schemaProvider.GetTypeSchema(configurationType, context);
+            // Create context for documentation link validation
+            var documentationContext = await CreateSchemaContextAsync(configurationType);
+            
+            // Generate base schema with both contexts
+            var schemaResult = _schemaProvider.GetTypeSchema(configurationType, dynamicContext, documentationContext);
             if (schemaResult == null)
             {
                 _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);

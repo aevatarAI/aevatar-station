@@ -73,7 +73,7 @@ public class WorkflowRunServiceTests
         var simpleSchema = JsonSchema.CreateAnySchema();
         
         // Setup SchemaProvider to return the simple schema for any type
-        _mockSchemaProvider.Setup(x => x.GetTypeSchema(It.IsAny<Type>(), It.IsAny<DynamicDropDownContext?>()))
+        _mockSchemaProvider.Setup(x => x.GetTypeSchema(It.IsAny<Type>(), It.IsAny<DynamicDropDownContext?>(), It.IsAny<SchemaProcessingContext?>()))
             .Returns(simpleSchema);
     }
 
