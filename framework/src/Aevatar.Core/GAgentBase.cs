@@ -277,15 +277,7 @@ public abstract partial class
     {
         try
         {
-            var snapshot = new
-            {
-                targetAgentId = this.GetGrainId().ToString(),
-                timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                agentType = this.GetType().Name,
-                stateType = typeof(TState).Name,
-                state = State
-            };
-            return Task.FromResult<string?>(System.Text.Json.JsonSerializer.Serialize(snapshot));
+            return Task.FromResult<string?>(System.Text.Json.JsonSerializer.Serialize(State));
         }
         catch (Exception ex)
         {
