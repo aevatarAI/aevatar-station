@@ -19,18 +19,18 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
         _dynamicDropDownProcessor = dynamicDropDownProcessor;
     }
 
-    public JsonSchema GetTypeSchema(Type type, DynamicDropDownContext? context = null)
+    public JsonSchema GetTypeSchema(Type type, DynamicDropDownContext? dynamicContext = null, SchemaProcessingContext? documentationContext = null)
     {
         lock (_lockObj)
         {
-            // Skip caching when context is provided to allow dynamic processing
-            if (context == null && _schemaDic.TryGetValue(type, out var queryData))
+            // Skip caching when any context is provided to allow dynamic processing
+            if (dynamicContext == null && documentationContext == null && _schemaDic.TryGetValue(type, out var queryData))
             {
                 return queryData;
             }
 
-            // 设置context到processor中
-            _dynamicDropDownProcessor.SetContext(context);
+            // 设置dynamic context到processor中
+            _dynamicDropDownProcessor.SetContext(dynamicContext);
 
             var settings = new SystemTextJsonSchemaGeneratorSettings
             {
@@ -38,10 +38,16 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
                 GenerateEnumMappingDescription = true,
                 SchemaProcessors = { 
                     new IgnoreSpecificBaseProcessor(),
-                    // new DynamicDropDownProcessor(context) 
                     _dynamicDropDownProcessor  // 使用注入的实例
                 }
             };
+            
+            // 如果有documentation context，添加DocumentationLinkProcessor
+            if (documentationContext != null)
+            {
+                settings.SchemaProcessors.Add(new DocumentationLinkProcessor(documentationContext));
+            }
+            
             settings.SerializerOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase
@@ -49,7 +55,7 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
 
             var schemaData = JsonSchema.FromType(type, settings);
             // Only cache when no context is provided
-            if (context == null)
+            if (dynamicContext == null && documentationContext == null)
             {
                 _schemaDic.Add(type, schemaData);
             }
