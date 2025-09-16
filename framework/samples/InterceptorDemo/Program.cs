@@ -89,6 +89,9 @@ namespace InterceptorDemo
                 
                 // Test multiple context properties
                 await TestMultipleContextProperties();
+                
+                // Test InputGAgent-like ChatAsync interception
+                await TestInputGAgentChatAsync();
             }
 
             Console.WriteLine("\nAll tests completed successfully!");
@@ -342,6 +345,28 @@ namespace InterceptorDemo
             // Test single property for comparison
             Console.WriteLine("\nTesting single context property...");
             await multiContextDemo.ProcessPaymentAsync("PAYMENT123");
+        }
+
+        private static async Task TestInputGAgentChatAsync()
+        {
+            Console.WriteLine("=== Testing InputGAgent ChatAsync Interception ===\n");
+            
+            var inputAgent = new InputGAgentDemo();
+            
+            // Set context properties for interceptor
+            inputAgent.SetContext("workflow-chat-test-12345", "grain-input-agent-001");
+            
+            Console.WriteLine("Testing ChatAsync with WorkflowId and GrainId context...");
+            var chatMessages = new List<ChatMessage>
+            {
+                new ChatMessage { AgentName = "User", Content = "Hello InputAgent!" },
+                new ChatMessage { AgentName = "System", Content = "Process this input" }
+            };
+            
+            var response = await inputAgent.ChatAsync(Guid.NewGuid(), chatMessages);
+            
+            Console.WriteLine($"Chat response: {response.Content}");
+            Console.WriteLine($"Continue: {response.Continue}, Skip: {response.Skip}");
         }
     }
 
@@ -920,5 +945,57 @@ namespace InterceptorDemo
             
             await Task.Delay(50); // Simulate work
         }
+    }
+
+    public class InputGAgentDemo
+    {
+        public string? WorkflowId { get; set; }
+        public string? GrainId { get; set; }
+        public string Input { get; set; } = "Default input response from InputGAgent";
+
+        public void SetContext(string? workflowId, string? grainId)
+        {
+            WorkflowId = workflowId;
+            GrainId = grainId;
+        }
+
+        [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] {"WorkflowId", "GrainId"})]
+        public async Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
+        {
+            Console.WriteLine($"ChatAsync called with blackboardId: {blackboardId}");
+            
+            if (messages != null)
+            {
+                Console.WriteLine($"Processing {messages.Count} messages:");
+                foreach (var msg in messages)
+                {
+                    Console.WriteLine($"  - {msg.AgentName}: {msg.Content}");
+                }
+            }
+
+            await Task.Delay(100); // Simulate processing
+
+            var response = new ChatResponse
+            {
+                Content = Input,
+                Continue = true,
+                Skip = false
+            };
+
+            return response;
+        }
+    }
+
+    public class ChatMessage
+    {
+        public string AgentName { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+    }
+
+    public class ChatResponse
+    {
+        public string Content { get; set; } = string.Empty;
+        public bool Continue { get; set; }
+        public bool Skip { get; set; }
     }
 }
