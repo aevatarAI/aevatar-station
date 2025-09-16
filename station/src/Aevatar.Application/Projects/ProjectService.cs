@@ -67,8 +67,8 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("Project name must contain at least one valid character (letter, digit, or hyphen) for domain name generation");
         }
 
-        _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
-            input.OrganizationId, input.DisplayName, domainName);
+        _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName} (Length: {DomainLength})", 
+            input.OrganizationId, input.DisplayName, domainName, domainName.Length);
 
         var domain = await _domainRepository.FirstOrDefaultAsync(o =>
             o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
@@ -377,15 +377,35 @@ public class ProjectService : OrganizationService, IProjectService
             .Replace(' ', '-') // Replace spaces with hyphens
             .Trim('-'); // Remove leading/trailing hyphens
         
-        // Use organization ID directly as identifier
-        var orgIdentifier = organization.Id.ToString("N");
+        // Limit project slug to max 20 characters to ensure total domain length stays within Kubernetes limits
+        if (projectSlug.Length > 20)
+        {
+            projectSlug = projectSlug[..20].TrimEnd('-');
+        }
         
-        // Generate unique suffix using timestamp and hash (guaranteed unique)
+        // Use first 8 characters of organization ID as identifier (sufficient for uniqueness)
+        var orgIdentifier = organization.Id.ToString("N")[..8];
+        
+        // Generate unique suffix using timestamp and hash (4 characters for compactness)
         var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
         var hash = (displayName + organization.Id.ToString() + timestamp).GetHashCode();
-        var uniqueSuffix = Math.Abs(hash).ToString("x")[..6]; // Take first 6 hex digits
+        var uniqueSuffix = Math.Abs(hash).ToString("x")[..4]; // Take first 4 hex digits
         
         // Format: {project-slug}-{org-identifier}-{unique-suffix}
-        return $"{projectSlug}-{orgIdentifier}-{uniqueSuffix}";
+        // Max length: 20 + 1 + 8 + 1 + 4 = 34 characters
+        // With Kubernetes prefixes/suffixes (deployment- + -silo-1 = 18 chars), total ≤ 52 chars (well under 63 limit)
+        var domainName = $"{projectSlug}-{orgIdentifier}-{uniqueSuffix}";
+        
+        // Additional safety check: ensure domain name doesn't exceed 45 characters
+        if (domainName.Length > 45)
+        {
+            // Further trim project slug if needed
+            var excessLength = domainName.Length - 45;
+            var newSlugLength = Math.Max(1, projectSlug.Length - excessLength);
+            projectSlug = projectSlug[..newSlugLength].TrimEnd('-');
+            domainName = $"{projectSlug}-{orgIdentifier}-{uniqueSuffix}";
+        }
+        
+        return domainName;
     }
 }
