@@ -1,15 +1,16 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Aevatar.Core.Interception.Context;
 using Aevatar.Core.Interception.Configurations;
 using Aevatar.Core.Interception.Models;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Text.Json;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Aevatar.Core.Interception
 {
@@ -30,6 +31,7 @@ namespace Aevatar.Core.Interception
         
         /// <summary>
         /// 要通过反射查找的上下文属性名，如 "WorkflowId", "SessionId", "OrderId" 等
+        /// 支持单个属性或逗号分隔的多个属性，如 "WorkflowId,SessionId,OrderId"
         /// 由使用方完全自定义，同时用作日志中的标签名
         /// </summary>
         public string? ContextProperty { get; set; }
@@ -46,8 +48,8 @@ namespace Aevatar.Core.Interception
         private ILogger? _logger;
         private Activity? _activity;
         
-        // Cached context property value to avoid repeated reflection
-        private string? _cachedContextValue;
+        // Cached context property values to avoid repeated reflection
+        private Dictionary<string, string?> _cachedContextValues = new Dictionary<string, string?>();
 
         /// <summary>
         /// Called before the method execution to initialize the interceptor
@@ -470,8 +472,8 @@ namespace Aevatar.Core.Interception
                 
                 if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
                 {
-                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}({InputData}) [{ContextProperty}={ContextValue}]", 
-                        LogCategory, methodName, inputData, ContextProperty, contextValue);
+                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}({InputData}) [{ContextValue}]", 
+                        LogCategory, methodName, inputData, contextValue);
                 }
                 else
                 {
@@ -483,8 +485,8 @@ namespace Aevatar.Core.Interception
             {
                 if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
                 {
-                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}() [{ContextProperty}={ContextValue}]", 
-                        LogCategory, methodName, ContextProperty, contextValue);
+                    _logger?.LogInformation("{LogCategory}: ENTER {MethodName}() [{ContextValue}]", 
+                        LogCategory, methodName, contextValue);
                 }
                 else
                 {
@@ -511,8 +513,8 @@ namespace Aevatar.Core.Interception
                 
                 if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
                 {
-                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} -> {OutputData} [{ContextProperty}={ContextValue}]", 
-                        LogCategory, methodName, outputData, ContextProperty, contextValue);
+                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} -> {OutputData} [{ContextValue}]", 
+                        LogCategory, methodName, outputData, contextValue);
                 }
                 else
                 {
@@ -524,8 +526,8 @@ namespace Aevatar.Core.Interception
             {
                 if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
                 {
-                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} [{ContextProperty}={ContextValue}]", 
-                        LogCategory, methodName, ContextProperty, contextValue);
+                    _logger?.LogInformation("{LogCategory}: EXIT {MethodName} [{ContextValue}]", 
+                        LogCategory, methodName, contextValue);
                 }
                 else
                 {
@@ -548,8 +550,8 @@ namespace Aevatar.Core.Interception
             // Log exception with structured context fields
             if (!string.IsNullOrEmpty(contextValue) && !string.IsNullOrEmpty(ContextProperty))
             {
-                _logger?.LogError(exception, "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage} [{ContextProperty}={ContextValue}]", 
-                    LogCategory, methodName, exception.Message, ContextProperty, contextValue);
+                _logger?.LogError(exception, "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage} [{ContextValue}]", 
+                    LogCategory, methodName, exception.Message, contextValue);
             }
             else
             {
@@ -559,7 +561,8 @@ namespace Aevatar.Core.Interception
         }
         
         /// <summary>
-        /// Initializes context property value once during attribute initialization to avoid repeated reflection
+        /// Initializes context property values once during attribute initialization to avoid repeated reflection
+        /// Supports single property or comma-separated multiple properties
         /// </summary>
         private void InitializeContextProperty()
         {
@@ -570,28 +573,50 @@ namespace Aevatar.Core.Interception
                 {
                     var instanceType = _instance.GetType();
                     
-                    // Try to get the specified context property
-                    var contextProperty = instanceType.GetProperty(ContextProperty, BindingFlags.Public | BindingFlags.Instance);
-                    if (contextProperty != null && contextProperty.PropertyType == typeof(string))
+                    // Split ContextProperty by comma to support multiple properties
+                    var propertyNames = ContextProperty.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                                      .Select(p => p.Trim())
+                                                      .Where(p => !string.IsNullOrEmpty(p));
+                    
+                    foreach (var propertyName in propertyNames)
                     {
-                        _cachedContextValue = contextProperty.GetValue(_instance) as string;
+                        var contextProperty = instanceType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+                        if (contextProperty != null && contextProperty.PropertyType == typeof(string))
+                        {
+                            var value = contextProperty.GetValue(_instance) as string;
+                            _cachedContextValues[propertyName] = value;
+                        }
+                        else
+                        {
+                            // Property not found or wrong type, cache null
+                            _cachedContextValues[propertyName] = null;
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
                     // Silently fallback if reflection fails
-                    System.Diagnostics.Debug.WriteLine($"Failed to get {ContextProperty} property via reflection: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"Failed to get {ContextProperty} properties via reflection: {ex.Message}");
                 }
             }
         }
         
         /// <summary>
-        /// Gets cached context property value (no reflection overhead)
+        /// Gets cached context property values as formatted string (no reflection overhead)
+        /// Returns comma-separated key=value pairs for multiple properties
         /// </summary>
         private string? GetContextValue()
         {
-            return _cachedContextValue;
+            if (_cachedContextValues.Count == 0)
+                return null;
+            
+            var validValues = _cachedContextValues
+                .Where(kvp => !string.IsNullOrEmpty(kvp.Value))
+                .Select(kvp => $"{kvp.Key}={kvp.Value}");
+            
+            return validValues.Any() ? string.Join(",", validValues) : null;
         }
+        
         
         
         /// <summary>

@@ -86,6 +86,9 @@ namespace InterceptorDemo
 
                 // Test workflow interceptor functionality
                 await TestWorkflowInterceptor();
+                
+                // Test multiple context properties
+                await TestMultipleContextProperties();
             }
 
             Console.WriteLine("\nAll tests completed successfully!");
@@ -319,6 +322,26 @@ namespace InterceptorDemo
                 workflowDemo.WorkflowId = null;
             }
             Console.WriteLine();
+        }
+
+        private static async Task TestMultipleContextProperties()
+        {
+            Console.WriteLine("=== Testing Multiple Context Properties ===\n");
+            
+            var multiContextDemo = new MultiContextDemo();
+            
+            // Test with multiple properties
+            Console.WriteLine("Testing multiple context properties...");
+            await multiContextDemo.ProcessOrderAsync("ORDER123", "SESSION456", "USER789");
+            
+            // Test with some null properties
+            Console.WriteLine("\nTesting with partial context properties...");
+            multiContextDemo.SetContext("ORDER999", null, "USER999");
+            await multiContextDemo.ProcessOrderAsync("ORDER999", null, "USER999");
+            
+            // Test single property for comparison
+            Console.WriteLine("\nTesting single context property...");
+            await multiContextDemo.ProcessPaymentAsync("PAYMENT123");
         }
     }
 
@@ -861,5 +884,41 @@ namespace InterceptorDemo
         public decimal Amount { get; set; }
         public string Status { get; set; } = string.Empty;
         public DateTime ProcessedAt { get; set; }
+    }
+
+    public class MultiContextDemo
+    {
+        public string? WorkflowId { get; set; }
+        public string? SessionId { get; set; }
+        public string? UserId { get; set; }
+        
+        public void SetContext(string? workflowId, string? sessionId, string? userId)
+        {
+            WorkflowId = workflowId;
+            SessionId = sessionId;
+            UserId = userId;
+        }
+        
+        [Interceptor(LogCategory = "ORDER", ContextProperty = "WorkflowId,SessionId,UserId")]
+        public async Task ProcessOrderAsync(string orderId, string? sessionId, string userId)
+        {
+            SetContext($"workflow-{orderId}", sessionId, userId);
+            
+            Console.WriteLine($"Processing order {orderId} for user {userId} in session {sessionId}");
+                
+            await Task.Delay(100); // Simulate work
+            
+            Console.WriteLine($"Order {orderId} processed successfully");
+        }
+        
+        [Interceptor(LogCategory = "PAYMENT", ContextProperty = "WorkflowId")]
+        public async Task ProcessPaymentAsync(string paymentId)
+        {
+            WorkflowId = $"payment-{paymentId}";
+            
+            Console.WriteLine($"Processing payment {paymentId}");
+            
+            await Task.Delay(50); // Simulate work
+        }
     }
 }
