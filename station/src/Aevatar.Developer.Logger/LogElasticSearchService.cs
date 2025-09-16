@@ -51,40 +51,47 @@ public class LogElasticSearchService : ILogService
         return $"{nameSpace}-{appId}-{version}-log-index".ToLower();
     }
 
-    public async Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, int pageSize = 100)
-    {
-        return await GetWorkflowLogsWithFilterAsync(indexName, workflowId, null, null, pageSize);
-    }
-
-    public async Task<List<HostLogIndex>> GetWorkflowLogsWithFilterAsync(string indexName, string workflowId, string? workflowStep = null, string? workflowAction = null, int pageSize = 100)
+    public async Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, string? grainId = null, string? level = null, string? messagePattern = null, int pageSize = 100)
     {
         var mustQueries = new List<Query>();
 
-        // Search for workflow logs containing the specific WorkflowId
-        var workflowIdQuery = Query.Wildcard(new WildcardQuery(new Field("app_log.@m"))
+        // Required: LogCategory must be WORKFLOW
+        mustQueries.Add(Query.Term(new TermQuery(new Field("app_log.LogCategory.keyword"))
         {
-            Value = $"*WORKFLOW:*[WorkflowId={workflowId}]*"
-        });
-        mustQueries.Add(workflowIdQuery);
+            Value = "WORKFLOW"
+        }));
 
-        // Add optional step filter
-        if (!string.IsNullOrEmpty(workflowStep))
+        // Required: WorkflowId must match exactly
+        mustQueries.Add(Query.Term(new TermQuery(new Field("app_log.WorkflowId.keyword"))
         {
-            var stepQuery = Query.Wildcard(new WildcardQuery(new Field("app_log.@m"))
+            Value = workflowId
+        }));
+
+        // Optional: GrainId exact match
+        if (!string.IsNullOrEmpty(grainId))
+        {
+            mustQueries.Add(Query.Term(new TermQuery(new Field("app_log.GrainId.keyword"))
             {
-                Value = $"*[Step={workflowStep}]*"
-            });
-            mustQueries.Add(stepQuery);
+                Value = grainId
+            }));
         }
 
-        // Add optional action filter
-        if (!string.IsNullOrEmpty(workflowAction))
+        // Optional: Log level exact match
+        if (!string.IsNullOrEmpty(level))
         {
-            var actionQuery = Query.Wildcard(new WildcardQuery(new Field("app_log.@m"))
+            mustQueries.Add(Query.Term(new TermQuery(new Field("app_log.@l.keyword"))
             {
-                Value = $"*{workflowAction}:*"
-            });
-            mustQueries.Add(actionQuery);
+                Value = level
+            }));
+        }
+
+        // Optional: Message pattern fuzzy match
+        if (!string.IsNullOrEmpty(messagePattern))
+        {
+            mustQueries.Add(Query.Wildcard(new WildcardQuery(new Field("app_log.@m"))
+            {
+                Value = $"*{messagePattern}*"
+            }));
         }
 
         var sortOptions = new SortOptionsDescriptor<HostLogIndex>()
@@ -109,12 +116,13 @@ public class LogElasticSearchService : ILogService
                 .Where(source => source != null)
                 .ToList()!;
 
-            _logger.LogInformation("Found {Count} workflow logs for WorkflowId: {WorkflowId}", results.Count, workflowId);
+            _logger.LogInformation("Found {Count} workflow logs for WorkflowId: {WorkflowId}, GrainId: {GrainId}, Level: {Level}", 
+                results.Count, workflowId, grainId ?? "Any", level ?? "Any");
             return results;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error querying workflow logs for WorkflowId: {WorkflowId}", workflowId);
+            _logger.LogError(ex, "Error querying workflow logs for WorkflowId: {WorkflowId}, GrainId: {GrainId}", workflowId, grainId);
             throw;
         }
     }

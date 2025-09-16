@@ -9,22 +9,14 @@ public interface ILogService
     string GetHostLogIndexAliasName(string nameSpace, string appId, string version);
     
     /// <summary>
-    /// Get workflow logs by WorkflowId
+    /// Get workflow logs using structured fields for precise filtering
     /// </summary>
     /// <param name="indexName">ES index name</param>
-    /// <param name="workflowId">Workflow ID to search for</param>
+    /// <param name="workflowId">Workflow ID to search for (required)</param>
+    /// <param name="grainId">Optional GrainId for precise filtering</param>
+    /// <param name="level">Optional log level for filtering (Information, Warning, Error, etc.)</param>
+    /// <param name="messagePattern">Optional message pattern for fuzzy matching in @m field</param>
     /// <param name="pageSize">Number of logs to return</param>
     /// <returns>List of workflow logs</returns>
-    Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, int pageSize = 100);
-    
-    /// <summary>
-    /// Get workflow logs by WorkflowId with step filtering
-    /// </summary>
-    /// <param name="indexName">ES index name</param>
-    /// <param name="workflowId">Workflow ID to search for</param>
-    /// <param name="workflowStep">Optional workflow step to filter</param>
-    /// <param name="workflowAction">Optional workflow action to filter (ENTER, INPUT, OUTPUT, EXIT, EXCEPTION)</param>
-    /// <param name="pageSize">Number of logs to return</param>
-    /// <returns>List of workflow logs</returns>
-    Task<List<HostLogIndex>> GetWorkflowLogsWithFilterAsync(string indexName, string workflowId, string? workflowStep = null, string? workflowAction = null, int pageSize = 100);
+    Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, string? grainId = null, string? level = null, string? messagePattern = null, int pageSize = 100);
 }
