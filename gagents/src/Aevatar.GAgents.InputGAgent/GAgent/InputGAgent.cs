@@ -23,14 +23,14 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.FromResult("Input agent that returns configured input text");
     }
 
-    [Interceptor(IsWorkflowStep = true)]
+    [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
     protected override Task<int> GetInterestValueAsync(Guid blackboardId)
     {
         
         return Task.FromResult(100);
     }
 
-    [Interceptor(IsWorkflowStep = true)]
+    [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
     protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
     {
         var response = new ChatResponse
@@ -48,7 +48,7 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.CompletedTask;
     }
 
-    [Interceptor(IsWorkflowStep = true)]
+    [Interceptor(LogCategory = "WORKFLOW", ContextProperty = "WorkflowId")]
     protected override async Task PerformConfigAsync(InputConfigDto configuration)
     {
         await base.PerformConfigAsync(configuration);
