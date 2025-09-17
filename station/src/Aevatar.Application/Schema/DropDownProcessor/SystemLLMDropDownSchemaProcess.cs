@@ -42,6 +42,12 @@ public class SystemLLMDropDownSchemaProcess : DropDownSchemaProcessBase, ITransi
     private void InjectSystemLLMConfigurations(IDictionary<string, object?> extensionData,
         DynamicDropDownContext? dropDownContext)
     {
+        // Check if dropDownContext is null or doesn't have additional data
+        if (dropDownContext?.AdditionalData == null)
+        {
+            return; // No context or additional data available
+        }
+        
         // Get AI model configurations from the dictionary
         if (!dropDownContext.AdditionalData.TryGetValue(OptionName, out var aiModelConfigsObj) ||
             aiModelConfigsObj is not List<SystemLLMConfigDto> aiModelConfigs)
@@ -63,13 +69,12 @@ public class SystemLLMDropDownSchemaProcess : DropDownSchemaProcessBase, ITransi
             configObjectList.Add(configObject);
         }
 
-        // Create enum structure like MCPServerType with integer type
+        // Create enum structure like MCPServerType with string type
         var enumNames = aiModelConfigs.Select(c => c.Name).ToArray();
-        var enumValues = aiModelConfigs.Select((c, i) => i).ToArray(); // Use integer indices
 
         // Inject the real configurations with enum structure
         extensionData["x-descriptions"] = configObjectList;
         extensionData["x-enumNames"] = enumNames;
-        extensionData["enum"] = enumValues;
+        extensionData["enum"] = enumNames;
     }
 }

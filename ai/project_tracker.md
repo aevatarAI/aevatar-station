@@ -15,3 +15,4 @@
 | GAgent Document Link Definition | 🚧 | feature/gagent-document-link-definition | c6:c4:e5:e8:c6:4b | 开发中：定义和完善GAgent文档链接标准，优化DocumentationLinkAttribute功能，建立统一的文档链接规范和验证机制。 |
 | Instruction Tooltips | 🚧 | feature/instruction-tooltips | c6:c4:e5:e8:c6:4b | 开发中：为配置表单字段添加instruction tooltips功能，改善用户体验，提供字段说明和使用指导。 |
 | SystemLLM Option Parameters Modification | ✅ | feature/systemllm-option-params | c6:c4:e5:e8:c6:4b | ✅已完成：完全重构SystemLLMOption参数结构。1）简化SystemLLMConfigDto只保留Name、Strengths、BestFor三个必要字段，移除Provider、Type、Speed冗余字段；2）在LLMConfig中直接添加Strengths和BestFor属性并支持Orleans序列化；3）简化转换逻辑直接从配置获取数据无需复杂映射。最终架构简洁高效，编译验证通过。 |
+| Input Parameter Description Attribute | 🚧 | feature/input-parameter-description-attribute | c6:c4:e5:e8:c6:4b | 开发中：为输入参数添加描述属性(Description Attribute)支持，增强用户体验通过为表单字段和输入参数提供描述性说明，改善配置界面的可用性和用户指导。 |
