@@ -183,6 +183,7 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     {
         Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
+        //Skip dictionary parsing when saving state.  start
         if (underlyingType.IsGenericType)
         {
             var genericDef = underlyingType.GetGenericTypeDefinition();
@@ -197,7 +198,8 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
                 return IsBasicType(genericArgs[0]);
             }
         }
-
+        //end 
+        
         if (underlyingType.IsPrimitive)
             return true;
 
