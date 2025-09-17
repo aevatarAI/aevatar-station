@@ -15,7 +15,7 @@ namespace Aevatar.Controllers;
 [RemoteService]
 [ControllerName("Host")]
 [Route("api/host")]
-[Authorize]
+//[Authorize]
 public class HostController
 {
     private readonly ILogService _logService;
@@ -52,14 +52,13 @@ public class HostController
     [HttpGet("workflow-log")]
     public async Task<List<HostLogIndex>> GetWorkflowLogs(
         string appId, 
-        HostTypeEnum hostType, 
         string workflowId, 
         string? grainId = null, 
         string? level = null,
         string? messagePattern = null,
         int pageSize = 100)
     {
-        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId + "-"+hostType.ToString().ToLower(), "1");
+        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId + "-"+HostTypeEnum.Silo.ToString().ToLower(), "1");
         return await _logService.GetWorkflowLogsAsync(indexName, workflowId, grainId, level, messagePattern, pageSize);
     }
 }
