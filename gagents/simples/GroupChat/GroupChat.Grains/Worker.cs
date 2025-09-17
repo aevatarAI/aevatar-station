@@ -1,4 +1,5 @@
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
 using Aevatar.GAgents.GroupChat.Core.Dto;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
@@ -6,6 +7,7 @@ using GroupChat.GAgent.GEvent;
 
 namespace GroupChat.Grain;
 
+[GAgent(nameof(Worker))]
 public class Worker : GroupMemberGAgentBase<GroupMemberState, WorkerEventLog, EventBase, GroupMemberConfigDto>, IWorker
 {
     public override Task<string> GetDescriptionAsync()
@@ -13,6 +15,7 @@ public class Worker : GroupMemberGAgentBase<GroupMemberState, WorkerEventLog, Ev
         return Task.FromResult("you are worker");
     }
 
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
     protected override Task<int> GetInterestValueAsync(Guid blackboardId)
     {
         var random = new Random();
@@ -20,6 +23,7 @@ public class Worker : GroupMemberGAgentBase<GroupMemberState, WorkerEventLog, Ev
         return Task.FromResult(random.Next(1, 90));
     }
 
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
     protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
     {
         var response = new ChatResponse();

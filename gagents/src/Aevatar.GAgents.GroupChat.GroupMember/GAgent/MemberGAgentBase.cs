@@ -98,6 +98,17 @@ public abstract partial class
         }
     }
 
+    // Workflow logging configuration constants
+    /// <summary>
+    /// Log category constant for workflow interceptor
+    /// </summary>
+    protected const string WorkflowLogCategory = "WORKFLOW";
+
+    /// <summary>
+    /// Workflow context property constants for interceptor
+    /// </summary>
+    protected const string WorkflowIdProperty = "WorkflowId";
+
     /// <summary>
     /// Override to automatically extract WorkflowId from ResourceContext metadata
     /// and set it as instance property for use by InterceptorAttribute

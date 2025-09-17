@@ -5,6 +5,12 @@
         <Nullable>enable</Nullable>
         <RootNamespace>ClassLibrary1</RootNamespace>
     </PropertyGroup>
+    
+    <ItemGroup>
+        <PackageReference Include="Fody" />
+        <PackageReference Include="MethodDecorator.Fody" />
+    </ItemGroup>
+    
     <ItemGroup>
         <ProjectReference Include="..\..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
         <ProjectReference Include="..\..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />

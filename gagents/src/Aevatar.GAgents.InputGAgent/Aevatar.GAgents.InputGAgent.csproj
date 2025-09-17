@@ -4,10 +4,12 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+    
     <ItemGroup>
         <PackageReference Include="Fody" />
         <PackageReference Include="MethodDecorator.Fody" />
     </ItemGroup>
+    
     <ItemGroup>
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
