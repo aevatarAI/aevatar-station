@@ -54,11 +54,22 @@ public class DefaultValuesProcessor : ISchemaProcessor
                                      descriptions.Length == defaultValuesAttribute.Values.Length &&
                                      descriptions.Any(d => !string.IsNullOrEmpty(d));
             
-            if (hasValidDescriptions)
+            // Always add enum and x-enumNames if we have values
+            if (defaultValuesAttribute.Values != null && defaultValuesAttribute.Values.Length > 0)
             {
-                // Add x-descriptions to the property schema
+                // Add enum and x-enumNames to the property schema
                 propertySchema.ExtensionData ??= new Dictionary<string, object>();
-                propertySchema.ExtensionData["x-descriptions"] = descriptions;
+                
+                // Convert values to string array for enum
+                var enumValues = defaultValuesAttribute.Values.Select(v => v?.ToString() ?? "").ToArray();
+                propertySchema.ExtensionData["enum"] = enumValues;
+                propertySchema.ExtensionData["x-enumNames"] = enumValues;
+                
+                // Only add x-descriptions if there are valid descriptions
+                if (hasValidDescriptions)
+                {
+                    propertySchema.ExtensionData["x-descriptions"] = descriptions;
+                }
             }
         }
     }

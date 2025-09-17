@@ -69,7 +69,7 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
     }
 
     [Fact]
-    public void SchemaProvider_WithDefaultValuesAndDescriptions_ShouldAddXDescriptionsToSchema()
+    public void SchemaProvider_WithDefaultValuesAndDescriptions_ShouldAddAllSchemaExtensions()
     {
         // Arrange & Act
         var schema = _schemaProvider.GetTypeSchema(typeof(TestConfigWithDescriptions));
@@ -82,8 +82,25 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         schema.Properties.ShouldContainKey("modelName");
         var modelNameProperty = schema.Properties["modelName"];
         modelNameProperty.ExtensionData.ShouldNotBeNull();
-        modelNameProperty.ExtensionData.ShouldContainKey("x-descriptions");
         
+        // Should have enum values
+        modelNameProperty.ExtensionData.ShouldContainKey("enum");
+        var enumValues = modelNameProperty.ExtensionData["enum"] as string[];
+        enumValues.ShouldNotBeNull();
+        enumValues.Length.ShouldBe(3);
+        enumValues[0].ShouldBe("gpt-4");
+        enumValues[1].ShouldBe("claude-3");
+        enumValues[2].ShouldBe("gemini-pro");
+        
+        // Should have x-enumNames
+        modelNameProperty.ExtensionData.ShouldContainKey("x-enumNames");
+        var enumNames = modelNameProperty.ExtensionData["x-enumNames"] as string[];
+        enumNames.ShouldNotBeNull();
+        enumNames.Length.ShouldBe(3);
+        enumNames.ShouldBe(enumValues); // Should match enum values
+        
+        // Should have x-descriptions
+        modelNameProperty.ExtensionData.ShouldContainKey("x-descriptions");
         var descriptions = modelNameProperty.ExtensionData["x-descriptions"] as string[];
         descriptions.ShouldNotBeNull();
         descriptions.Length.ShouldBe(3);
@@ -95,25 +112,39 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         schema.Properties.ShouldContainKey("outputFormat");
         var outputFormatProperty = schema.Properties["outputFormat"];
         outputFormatProperty.ExtensionData.ShouldNotBeNull();
-        outputFormatProperty.ExtensionData.ShouldContainKey("x-descriptions");
         
+        // Should have enum values
+        outputFormatProperty.ExtensionData.ShouldContainKey("enum");
+        var outputEnumValues = outputFormatProperty.ExtensionData["enum"] as string[];
+        outputEnumValues.ShouldNotBeNull();
+        outputEnumValues.Length.ShouldBe(2);
+        outputEnumValues[0].ShouldBe("json");
+        outputEnumValues[1].ShouldBe("xml");
+        
+        // Should have x-enumNames
+        outputFormatProperty.ExtensionData.ShouldContainKey("x-enumNames");
+        
+        // Should have x-descriptions
+        outputFormatProperty.ExtensionData.ShouldContainKey("x-descriptions");
         var outputDescriptions = outputFormatProperty.ExtensionData["x-descriptions"] as string[];
         outputDescriptions.ShouldNotBeNull();
         outputDescriptions.Length.ShouldBe(2);
         outputDescriptions[0].ShouldBe("JSON format - Structured data");
         outputDescriptions[1].ShouldBe("XML format - Hierarchical markup");
 
-        // Check RegularProperty (should not have x-descriptions)
+        // Check RegularProperty (should not have any extension data)
         schema.Properties.ShouldContainKey("regularProperty");
         var regularProperty = schema.Properties["regularProperty"];
         if (regularProperty.ExtensionData != null)
         {
             regularProperty.ExtensionData.ShouldNotContainKey("x-descriptions");
+            regularProperty.ExtensionData.ShouldNotContainKey("enum");
+            regularProperty.ExtensionData.ShouldNotContainKey("x-enumNames");
         }
     }
 
     [Fact]
-    public void SchemaProvider_WithEmptyDescriptions_ShouldNotAddXDescriptionsToSchema()
+    public void SchemaProvider_WithEmptyDescriptions_ShouldAddEnumButNotDescriptions()
     {
         // Arrange & Act
         var schema = _schemaProvider.GetTypeSchema(typeof(TestConfigWithEmptyDescriptions));
@@ -124,15 +155,24 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         schema.Properties.ShouldContainKey("emptyDescriptions");
         
         var property = schema.Properties["emptyDescriptions"];
+        property.ExtensionData.ShouldNotBeNull();
+        
+        // Should have enum and x-enumNames even with empty descriptions
+        property.ExtensionData.ShouldContainKey("enum");
+        property.ExtensionData.ShouldContainKey("x-enumNames");
+        
+        var enumValues = property.ExtensionData["enum"] as string[];
+        enumValues.ShouldNotBeNull();
+        enumValues.Length.ShouldBe(2);
+        enumValues[0].ShouldBe("option1");
+        enumValues[1].ShouldBe("option2");
+        
         // Should not have x-descriptions because all descriptions are empty
-        if (property.ExtensionData != null)
-        {
-            property.ExtensionData.ShouldNotContainKey("x-descriptions");
-        }
+        property.ExtensionData.ShouldNotContainKey("x-descriptions");
     }
 
     [Fact]
-    public void SchemaProvider_WithSingleValueAndDescription_ShouldAddXDescriptionsToSchema()
+    public void SchemaProvider_WithSingleValueAndDescription_ShouldAddAllExtensions()
     {
         // Arrange & Act
         var schema = _schemaProvider.GetTypeSchema(typeof(TestConfigWithSingleDescription));
@@ -144,8 +184,18 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         
         var property = schema.Properties["singleValue"];
         property.ExtensionData.ShouldNotBeNull();
-        property.ExtensionData.ShouldContainKey("x-descriptions");
         
+        // Should have enum and x-enumNames
+        property.ExtensionData.ShouldContainKey("enum");
+        property.ExtensionData.ShouldContainKey("x-enumNames");
+        
+        var enumValues = property.ExtensionData["enum"] as string[];
+        enumValues.ShouldNotBeNull();
+        enumValues.Length.ShouldBe(1);
+        enumValues[0].ShouldBe("single-value");
+        
+        // Should have x-descriptions
+        property.ExtensionData.ShouldContainKey("x-descriptions");
         var descriptions = property.ExtensionData["x-descriptions"] as string[];
         descriptions.ShouldNotBeNull();
         descriptions.Length.ShouldBe(1);
@@ -201,10 +251,10 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
     }
 
     [Fact]
-    public void SchemaProvider_WithMixedDescriptions_ShouldAddXDescriptionsToSchema()
+    public void SchemaProvider_WithMixedDescriptions_ShouldAddAllExtensions()
     {
         // Even if some descriptions are empty, as long as at least one is not empty,
-        // x-descriptions should be added
+        // x-descriptions should be added, and enum/x-enumNames should always be added
         
         // Arrange & Act
         var schema = _schemaProvider.GetTypeSchema(typeof(TestConfigWithMixedDescriptions));
@@ -216,8 +266,20 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         
         var property = schema.Properties["mixedDescriptions"];
         property.ExtensionData.ShouldNotBeNull();
-        property.ExtensionData.ShouldContainKey("x-descriptions");
         
+        // Should have enum and x-enumNames
+        property.ExtensionData.ShouldContainKey("enum");
+        property.ExtensionData.ShouldContainKey("x-enumNames");
+        
+        var enumValues = property.ExtensionData["enum"] as string[];
+        enumValues.ShouldNotBeNull();
+        enumValues.Length.ShouldBe(3);
+        enumValues[0].ShouldBe("option1");
+        enumValues[1].ShouldBe("option2");
+        enumValues[2].ShouldBe("option3");
+        
+        // Should have x-descriptions because at least one description is not empty
+        property.ExtensionData.ShouldContainKey("x-descriptions");
         var descriptions = property.ExtensionData["x-descriptions"] as string[];
         descriptions.ShouldNotBeNull();
         descriptions.Length.ShouldBe(3);

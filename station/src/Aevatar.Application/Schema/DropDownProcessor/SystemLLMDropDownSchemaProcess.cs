@@ -65,11 +65,10 @@ public class SystemLLMDropDownSchemaProcess : DropDownSchemaProcessBase, ITransi
 
         // Create enum structure like MCPServerType with string type
         var enumNames = aiModelConfigs.Select(c => c.Name).ToArray();
-        var enumValues = aiModelConfigs.Select(c => c.Name).ToArray(); // Use configuration names
 
         // Inject the real configurations with enum structure
         extensionData["x-descriptions"] = configObjectList;
         extensionData["x-enumNames"] = enumNames;
-        extensionData["enum"] = enumValues;
+        extensionData["enum"] = enumNames;
     }
 }
