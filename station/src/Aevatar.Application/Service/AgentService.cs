@@ -95,7 +95,6 @@ public class AgentService : ApplicationService, IAgentService
             if (kvp.Value != null)
             {
                 paramDto.FullName = kvp.Value.FullName ?? "";
-                _logger.LogTrace("Processing agent {AgentType} with metadata", kvp.Key);
                 if (kvp.Value.InitializationData != null)
                 {
                     paramDto.AgentParams = kvp.Value.InitializationData.Properties.Select(p => new ParamDto
@@ -579,11 +578,14 @@ public class AgentService : ApplicationService, IAgentService
     /// </summary>
     private async Task<string> EnhanceSchemaWithDefaults(Type configurationType)
     {
+        _logger.LogDebug("[AgentService] Starting schema enhancement for type {TypeName}", configurationType.Name);
+        
         try
         {
+            _logger.LogDebug("[AgentService] Creating schema context for type {TypeName}", configurationType.Name);
             var context = await CreateSchemaContextAsync();
             
-            // Generate base schema with context
+            _logger.LogDebug("[AgentService] Generating base schema for type {TypeName}", configurationType.Name);
             var schemaResult = _schemaProvider.GetTypeSchema(configurationType, context);
             if (schemaResult == null)
             {
@@ -598,28 +600,35 @@ public class AgentService : ApplicationService, IAgentService
                 return "{}";
             }
             
+            _logger.LogInformation("[AgentService] Successfully generated base schema for type {TypeName}", configurationType.Name);
             var schemaDoc = JsonDocument.Parse(baseSchema);
-            
+
             // Create instance to get default values
+            _logger.LogDebug("[AgentService] Creating instance of type {TypeName} for default values", configurationType.Name);
             var instance = Activator.CreateInstance(configurationType);
             if (instance == null)
             {
-                _logger.LogDebug("Instance creation failed for type {TypeName}, returning base schema", configurationType.Name);
+                _logger.LogWarning("[AgentService] Cannot create instance of type {TypeName}, returning base schema", configurationType.Name);
                 return baseSchema;
             }
-            _logger.LogDebug("Processing schema enhancement for type {TypeName}", configurationType.Name);
             
             var properties = configurationType.GetProperties(BindingFlags.Public | 
                 BindingFlags.Instance | BindingFlags.DeclaredOnly);
             
-            // Parse schema as mutable JSON
+            _logger.LogDebug("[AgentService] Found {PropertyCount} properties to process for type {TypeName}", properties.Length, configurationType.Name);
             using var jsonDoc = JsonDocument.Parse(baseSchema);
+
+            // Parse schema as mutable JSON
             var schemaObject = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(baseSchema);
             
-            if (schemaObject != null && schemaObject.TryGetValue("properties", out var propertiesObj) && propertiesObj is JsonElement propertiesElement)
+            if (schemaObject != null && 
+                schemaObject.TryGetValue("properties", out var propertiesObj) &&
+                propertiesObj is JsonElement propertiesElement)
             {
-                _logger.LogDebug("Found properties in schema for type {TypeName}", configurationType.Name);
                 var schemaProperties = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(propertiesElement.GetRawText());
+                
+                var enhancedCount = 0;
+                var skippedCount = 0;
                 
                 foreach (var property in properties)
                 {
@@ -627,48 +636,107 @@ public class AgentService : ApplicationService, IAgentService
                     
                     if (schemaProperties != null && schemaProperties.TryGetValue(propertyName, out var propertySchemaObj))
                     {
-                        // Handle JsonElement objects (preserve all properties including x-enumNames)
-                        Dictionary<string, object> propertySchema = propertySchemaObj is JsonElement jsonElement
-                            ? System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText()) ?? new Dictionary<string, object>()
-                            : propertySchemaObj is Dictionary<string, object> dict
-                                ? new Dictionary<string, object>(dict)
-                                : new Dictionary<string, object>();
-                        _logger.LogTrace("Processing property schema for {PropertyName}", propertyName);
-                        
-                        // Get default value
-                        var defaultValue = property.GetValue(instance);
-                        if (defaultValue != null) propertySchema["default"] = defaultValue;
-                        _logger.LogTrace("Property {PropertyName} processed with value: {Value}", property.Name, defaultValue);
-                        
-                        // Check for DefaultValuesAttribute
-                        var defaultValuesAttribute = property.GetCustomAttribute<DefaultValuesAttribute>();
-                        if (defaultValuesAttribute?.Values != null && defaultValuesAttribute.Values.Length > 1)
+                        try
                         {
-                            propertySchema["enum"] = defaultValuesAttribute.Values;
-                            _logger.LogTrace("Added enum values for property {PropertyName}", property.Name);
-                            if (!Equals(defaultValue, defaultValuesAttribute.Values[0]))
-                                _logger.LogWarning("Property {PropertyName} default ({Default}) doesn't match first enum value ({EnumValue})",
-                                    property.Name, defaultValue, defaultValuesAttribute.Values[0]);
+                            Dictionary<string, object> propertySchema;
+                            
+                            // Handle JsonElement objects (preserve all properties including x-enumNames)
+                            if (propertySchemaObj is JsonElement jsonElement)
+                            {
+                                propertySchema = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(jsonElement.GetRawText()) ?? new Dictionary<string, object>();
+                            }
+                            else if (propertySchemaObj is Dictionary<string, object> dict)
+                            {
+                                propertySchema = new Dictionary<string, object>(dict);
+                            }
+                            else
+                            {
+                                propertySchema = new Dictionary<string, object>();
+                            }
+                            
+                            // Get default value
+                            var defaultValue = property.GetValue(instance);
+                            if (defaultValue != null)
+                            {
+                                propertySchema["default"] = defaultValue;
+                                _logger.LogDebug("[AgentService] Added default value for property {PropertyName}: {DefaultValue}", property.Name, defaultValue);
+                            }
+                            
+                            // Check for DefaultValuesAttribute
+                            var defaultValuesAttribute = property.GetCustomAttribute<DefaultValuesAttribute>();
+                            if (defaultValuesAttribute?.Values != null && defaultValuesAttribute.Values.Length > 1)
+                            {
+                                // Only create enum if there are multiple values (single values don't make sense for enums)
+                                propertySchema["enum"] = defaultValuesAttribute.Values;
+                                _logger.LogDebug("[AgentService] Added enum values for property {PropertyName}: {EnumCount} values", property.Name, defaultValuesAttribute.Values.Length);
+                                
+                                // Add descriptions if available
+                                if (defaultValuesAttribute.Descriptions != null && 
+                                    defaultValuesAttribute.Descriptions.Length == defaultValuesAttribute.Values.Length)
+                                {
+                                    var hasDescriptions = defaultValuesAttribute.Descriptions.Any(d => !string.IsNullOrEmpty(d));
+                                    if (hasDescriptions)
+                                    {
+                                        propertySchema["x-descriptions"] = defaultValuesAttribute.Descriptions;
+                                        _logger.LogDebug("Added x-descriptions for property {PropertyName}: {Descriptions}",
+                                            property.Name, string.Join(", ", defaultValuesAttribute.Descriptions));
+                                    }
+                                }
+                                
+                                // Log warning if default doesn't match first enum value
+                                if (!Equals(defaultValue, defaultValuesAttribute.Values[0]))
+                                {
+                                    _logger.LogWarning("Property {PropertyName} default ({Default}) doesn't match first enum value ({EnumValue})",
+                                        property.Name, defaultValue, defaultValuesAttribute.Values[0]);
+                                }
+                            }
+                        
+                            // Update the properties dictionary with enhanced schema
+                            schemaProperties[propertyName] = propertySchema;
+                            enhancedCount++;
+                        
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to enhance schema for property {PropertyName}", property.Name);
                         }
                         
-                        // Update the properties dictionary with enhanced schema
-                        schemaProperties[propertyName] = propertySchema;
-                        _logger.LogDebug("Enhanced schema property {PropertyName} with default: {DefaultValue}", property.Name, defaultValue);
+                    }
+                    else
+                    {
+                        skippedCount++;
+                        _logger.LogDebug("[AgentService] Property {PropertyName} not found in schema for type {TypeName}", property.Name, configurationType.Name);
                     }
                 }
                 
+                _logger.LogInformation("[AgentService] Enhanced {EnhancedCount} properties, skipped {SkippedCount} properties for type {TypeName}", enhancedCount, skippedCount, configurationType.Name);
+                
                 // Update the schema object with enhanced properties
                 schemaObject["properties"] = schemaProperties;
-                _logger.LogDebug("Schema enhancement completed for type {TypeName}", configurationType.Name);
+            }
+            else
+            {
+                _logger.LogWarning("[AgentService] Schema does not contain valid properties section for type {TypeName}", configurationType.Name);
             }
             
-            return System.Text.Json.JsonSerializer.Serialize(schemaObject, new JsonSerializerOptions { WriteIndented = false });
+            var result = System.Text.Json.JsonSerializer.Serialize(schemaObject, new JsonSerializerOptions { WriteIndented = false });
+            _logger.LogInformation("[AgentService] Successfully completed schema enhancement for type {TypeName}", configurationType.Name);
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to enhance schema for type {TypeName}, using fallback", configurationType.Name);
+            _logger.LogWarning(ex, "[AgentService] Schema enhancement failed for type {TypeName}, using fallback", configurationType.Name);
+            _logger.LogDebug("[AgentService] Generating fallback schema for type {TypeName}", configurationType.Name);
+            
             var fallbackSchema = _schemaProvider.GetTypeSchema(configurationType);
-            return fallbackSchema?.ToJson() ?? "{}";
+            if (fallbackSchema?.ToJson() is string jsonResult && !string.IsNullOrWhiteSpace(jsonResult))
+            {
+                _logger.LogInformation("[AgentService] Successfully generated fallback schema for type {TypeName}", configurationType.Name);
+                return jsonResult;
+            }
+            
+            _logger.LogWarning("[AgentService] Using empty schema as final fallback for type {TypeName}", configurationType.Name);
+            return "{}";
         }
     }
 
@@ -685,16 +753,23 @@ public class AgentService : ApplicationService, IAgentService
             var instance = Activator.CreateInstance(configurationType);
             if (instance != null)
             {
-                _logger.LogTrace("Created instance for default values extraction: {TypeName}", configurationType.Name);
                 var properties = configurationType.GetProperties(BindingFlags.Public | 
                     BindingFlags.Instance | BindingFlags.DeclaredOnly);
 
                 foreach (var property in properties)
                 {
                     var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
-                    var defaultValue = property.GetValue(instance);
-                    defaultValues[propertyName] = defaultValue;
-                    _logger.LogTrace("Extracted default value for {PropertyName}: {Value}", propertyName, defaultValue);
+                    try
+                    {
+                        var defaultValue = property.GetValue(instance);
+                        defaultValues[propertyName] = defaultValue;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to get default value for property {PropertyName} on type {TypeName}", 
+                            property.Name, configurationType.Name);
+                        defaultValues[propertyName] = null;
+                    }
                 }
             }
         }
