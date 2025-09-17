@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.ComponentModel;
-using Aevatar.GAgents.AI.Common;
-using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.Basic;
 using Aevatar.GAgents.GroupChat.Core.Dto;
 using Aevatar.GAgents.MCP.Options;
