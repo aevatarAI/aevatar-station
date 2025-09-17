@@ -33,12 +33,4 @@ public class ChatAIGAgentConfigDto : GroupMemberConfigDto
     [Id(4)] 
     [Description("List of specific GAgent instances that can be invoked as tools by the AI chat agent")]
     public List<GrainId> ToolGAgents { get; set; } = [];
-    
-    [Id(5)]
-    [Description("ChatAIGAgentTestOption description")]
-    [DefaultValues(
-        new object[] { "option1", "option2", "option3" },
-        new string[] { "Only one description" }
-    )]
-    public string ChatAIGAgentTestOption { get; set; } = "Option1";
 }

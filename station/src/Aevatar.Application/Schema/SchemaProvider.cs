@@ -41,8 +41,8 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
                 SchemaProcessors = { 
                     new IgnoreSpecificBaseProcessor(),
                     // new DynamicDropDownProcessor(context) 
-                    _dynamicDropDownProcessor,  // 使用注入的实例
-                    _defaultValuesProcessor     // 添加DefaultValues处理器
+                    _defaultValuesProcessor,    // 添加DefaultValues处理器
+                    _dynamicDropDownProcessor  // 使用注入的实例
                 }
             };
             settings.SerializerOptions = new JsonSerializerOptions
