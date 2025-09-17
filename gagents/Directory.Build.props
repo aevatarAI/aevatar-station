@@ -3,4 +3,13 @@
         <CompatibilityTargetFrameworks>netstandard2.0</CompatibilityTargetFrameworks>
         <DefaultTargetFramework>net9.0</DefaultTargetFramework>
     </PropertyGroup>
+
+    <!-- Auto-include Fody packages for projects that use Interceptor -->
+    <!-- Projects can opt-in by setting UseInterceptor=true in their csproj -->
+    <ItemGroup Condition="'$(UseInterceptor)' == 'true'">
+        <PackageReference Include="Fody" />
+        <PackageReference Include="MethodDecorator.Fody" />
+    </ItemGroup>
+
+
 </Project>
