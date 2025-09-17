@@ -62,10 +62,9 @@ public class DefaultValuesProcessor : ISchemaProcessor
                 
                 // Convert values to string array for enum
                 var enumValues = defaultValuesAttribute.Values.Select(v => v?.ToString() ?? "").ToArray();
+                propertySchema.ExtensionData["default"] = enumValues[0];
                 propertySchema.ExtensionData["enum"] = enumValues;
                 propertySchema.ExtensionData["x-enumNames"] = enumValues;
-                
-                // Only add x-descriptions if there are valid descriptions
                 if (hasValidDescriptions)
                 {
                     propertySchema.ExtensionData["x-descriptions"] = descriptions;

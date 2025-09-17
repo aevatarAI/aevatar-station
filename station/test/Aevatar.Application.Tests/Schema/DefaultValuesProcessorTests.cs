@@ -99,6 +99,12 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         enumNames.Length.ShouldBe(3);
         enumNames.ShouldBe(enumValues); // Should match enum values
         
+        // Should have default value (first enum value)
+        modelNameProperty.ExtensionData.ShouldContainKey("default");
+        var defaultValue = modelNameProperty.ExtensionData["default"] as string;
+        defaultValue.ShouldNotBeNull();
+        defaultValue.ShouldBe("gpt-4");
+        
         // Should have x-descriptions
         modelNameProperty.ExtensionData.ShouldContainKey("x-descriptions");
         var descriptions = modelNameProperty.ExtensionData["x-descriptions"] as string[];
@@ -124,6 +130,12 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         // Should have x-enumNames
         outputFormatProperty.ExtensionData.ShouldContainKey("x-enumNames");
         
+        // Should have default value
+        outputFormatProperty.ExtensionData.ShouldContainKey("default");
+        var outputDefaultValue = outputFormatProperty.ExtensionData["default"] as string;
+        outputDefaultValue.ShouldNotBeNull();
+        outputDefaultValue.ShouldBe("json");
+        
         // Should have x-descriptions
         outputFormatProperty.ExtensionData.ShouldContainKey("x-descriptions");
         var outputDescriptions = outputFormatProperty.ExtensionData["x-descriptions"] as string[];
@@ -140,6 +152,7 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
             regularProperty.ExtensionData.ShouldNotContainKey("x-descriptions");
             regularProperty.ExtensionData.ShouldNotContainKey("enum");
             regularProperty.ExtensionData.ShouldNotContainKey("x-enumNames");
+            regularProperty.ExtensionData.ShouldNotContainKey("default");
         }
     }
 
@@ -167,6 +180,12 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         enumValues[0].ShouldBe("option1");
         enumValues[1].ShouldBe("option2");
         
+        // Should have default value
+        property.ExtensionData.ShouldContainKey("default");
+        var defaultValue = property.ExtensionData["default"] as string;
+        defaultValue.ShouldNotBeNull();
+        defaultValue.ShouldBe("option1");
+        
         // Should not have x-descriptions because all descriptions are empty
         property.ExtensionData.ShouldNotContainKey("x-descriptions");
     }
@@ -193,6 +212,12 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         enumValues.ShouldNotBeNull();
         enumValues.Length.ShouldBe(1);
         enumValues[0].ShouldBe("single-value");
+        
+        // Should have default value
+        property.ExtensionData.ShouldContainKey("default");
+        var defaultValue = property.ExtensionData["default"] as string;
+        defaultValue.ShouldNotBeNull();
+        defaultValue.ShouldBe("single-value");
         
         // Should have x-descriptions
         property.ExtensionData.ShouldContainKey("x-descriptions");
@@ -277,6 +302,12 @@ public class DefaultValuesProcessorTests : AevatarApplicationTestBase
         enumValues[0].ShouldBe("option1");
         enumValues[1].ShouldBe("option2");
         enumValues[2].ShouldBe("option3");
+        
+        // Should have default value
+        property.ExtensionData.ShouldContainKey("default");
+        var defaultValue = property.ExtensionData["default"] as string;
+        defaultValue.ShouldNotBeNull();
+        defaultValue.ShouldBe("option1");
         
         // Should have x-descriptions because at least one description is not empty
         property.ExtensionData.ShouldContainKey("x-descriptions");
