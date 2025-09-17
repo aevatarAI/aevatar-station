@@ -42,6 +42,12 @@ public class SystemLLMDropDownSchemaProcess : DropDownSchemaProcessBase, ITransi
     private void InjectSystemLLMConfigurations(IDictionary<string, object?> extensionData,
         DynamicDropDownContext? dropDownContext)
     {
+        // Check if dropDownContext is null or doesn't have additional data
+        if (dropDownContext?.AdditionalData == null)
+        {
+            return; // No context or additional data available
+        }
+        
         // Get AI model configurations from the dictionary
         if (!dropDownContext.AdditionalData.TryGetValue(OptionName, out var aiModelConfigsObj) ||
             aiModelConfigsObj is not List<SystemLLMConfigDto> aiModelConfigs)
