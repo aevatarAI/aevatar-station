@@ -15,11 +15,39 @@ public class DefaultValuesAttribute : Attribute
     public object[] Values { get; }
     
     /// <summary>
-    /// Constructor
+    /// Descriptions for each default value, empty string if no description
+    /// </summary>
+    public string[] Descriptions { get; }
+    
+    /// <summary>
+    /// Constructor with values only
     /// </summary>
     /// <param name="values">Default values list, first element as the default value</param>
     public DefaultValuesAttribute(params object[] values)
     {
         Values = values ?? new object[0];
+        Descriptions = new string[Values.Length];
+    }
+    
+    /// <summary>
+    /// Constructor with values and descriptions
+    /// </summary>
+    /// <param name="values">Default values list, first element as the default value</param>
+    /// <param name="descriptions">Descriptions for each value, use empty string if no description</param>
+    public DefaultValuesAttribute(object[] values, string[] descriptions)
+    {
+        Values = values ?? new object[0];
+        Descriptions = descriptions ?? new string[Values.Length];
+        
+        // Ensure descriptions array matches values length
+        if (Descriptions.Length != Values.Length)
+        {
+            var adjustedDescriptions = new string[Values.Length];
+            for (int i = 0; i < Values.Length; i++)
+            {
+                adjustedDescriptions[i] = i < Descriptions.Length ? Descriptions[i] ?? string.Empty : string.Empty;
+            }
+            Descriptions = adjustedDescriptions;
+        }
     }
 } 
