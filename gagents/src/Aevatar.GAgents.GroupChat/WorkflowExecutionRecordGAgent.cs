@@ -197,8 +197,6 @@ public class WorkflowExecutionRecordGAgent :
         }
     }
 }
-    
-}
 
 [GenerateSerializer]
 public class WorkflowExecutionRecordLogEvent : StateLogEventBase<WorkflowExecutionRecordLogEvent>
