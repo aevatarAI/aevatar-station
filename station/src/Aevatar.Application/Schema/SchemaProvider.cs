@@ -13,10 +13,12 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
     private readonly object _lockObj = new object();
     private readonly Dictionary<Type, JsonSchema> _schemaDic = new Dictionary<Type, JsonSchema>();
     private readonly DynamicDropDownProcessor _dynamicDropDownProcessor;
+    private readonly DefaultValuesProcessor _defaultValuesProcessor;
 
-    public SchemaProvider(DynamicDropDownProcessor dynamicDropDownProcessor)
+    public SchemaProvider(DynamicDropDownProcessor dynamicDropDownProcessor, DefaultValuesProcessor defaultValuesProcessor)
     {
         _dynamicDropDownProcessor = dynamicDropDownProcessor;
+        _defaultValuesProcessor = defaultValuesProcessor;
     }
 
     public JsonSchema GetTypeSchema(Type type, DynamicDropDownContext? dynamicContext = null, SchemaProcessingContext? documentationContext = null)
@@ -38,6 +40,8 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
                 GenerateEnumMappingDescription = true,
                 SchemaProcessors = { 
                     new IgnoreSpecificBaseProcessor(),
+                    // new DynamicDropDownProcessor(context) 
+                    _defaultValuesProcessor,    // 添加DefaultValues处理器
                     _dynamicDropDownProcessor  // 使用注入的实例
                 }
             };
