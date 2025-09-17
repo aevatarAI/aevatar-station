@@ -1,14 +1,18 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Threading;
+using System.Threading.Tasks;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.Device.Abstractions;
-using Aevatar.GAgents.Device.Connections;
 using Aevatar.GAgents.Device.GAgents;
 using Aevatar.GAgents.Device.State;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Orleans;
 
-namespace Aevatar.GAgents.Device.Examples;
+namespace Aevatar.GAgents.Device.Virtual;
 
 /// <summary>
 /// Smart light GAgent interface
@@ -328,9 +332,9 @@ public class SmartLightGAgent : DeviceGAgentBase<VirtualDeviceConnection>, ISmar
         };
     }
 
-    protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        await base.OnAIGAgentActivateAsync(cancellationToken);
+        await base.OnGAgentActivateAsync(cancellationToken);
         
         Logger.LogInformation("Smart light GAgent activated: {GrainId}", this.GetGrainId());
         

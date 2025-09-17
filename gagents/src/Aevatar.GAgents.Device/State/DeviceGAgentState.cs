@@ -1,6 +1,9 @@
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.State;
 using Aevatar.GAgents.Device.Abstractions;
+using Confluent.Kafka;
+using GroupChat.GAgent.Dto;
+using GroupChat.GAgent.GEvent;
 
 namespace Aevatar.GAgents.Device.State;
 
@@ -8,7 +11,7 @@ namespace Aevatar.GAgents.Device.State;
 /// Device GAgent state class
 /// </summary>
 [GenerateSerializer]
-public class DeviceGAgentState : AIGAgentStateBase
+public class DeviceGAgentState : MemberState
 {
     /// <summary>
     /// Device connection configuration
@@ -90,7 +93,7 @@ public class DeviceGAgentState : AIGAgentStateBase
 /// Device connection configuration
 /// </summary>
 [GenerateSerializer]
-public class DeviceConnectionConfig
+public class DeviceConnectionConfig : MemberConfigDto
 {
     /// <summary>
     /// Device ID

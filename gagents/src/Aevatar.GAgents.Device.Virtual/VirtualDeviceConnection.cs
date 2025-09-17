@@ -1,8 +1,12 @@
-using System.ComponentModel;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Aevatar.GAgents.Device.Abstractions;
 using Microsoft.Extensions.Logging;
 
-namespace Aevatar.GAgents.Device.Connections;
+namespace Aevatar.GAgents.Device.Virtual;
 
 /// <summary>
 /// Virtual device connection implementation - for development, testing and demonstration

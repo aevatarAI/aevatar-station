@@ -53,6 +53,8 @@
     <Project Path="src\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
     <Project Path="src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
     <Project Path="src\Aevatar.GAgents.ChatAgent\Aevatar.GAgents.ChatAgent.csproj" />
+    <Project Path="src\Aevatar.GAgents.Device.Http\Aevatar.GAgents.Device.Http.csproj" Type="Classic C#" />
+    <Project Path="src\Aevatar.GAgents.Device.Virtual\Aevatar.GAgents.Device.Virtual.csproj" Type="Classic C#" />
     <Project Path="src\Aevatar.GAgents.Device\Aevatar.GAgents.Device.csproj" />
     <Project Path="src\Aevatar.GAgents.Executor\Aevatar.GAgents.Executor.csproj" />
     <Project Path="src\Aevatar.GAgents.GraphRetrievalAgent\Aevatar.GAgents.GraphRetrievalAgent.csproj" />

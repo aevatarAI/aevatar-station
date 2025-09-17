@@ -1,11 +1,14 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.Device.Abstractions;
 using Aevatar.GAgents.Device.Events;
 using Aevatar.GAgents.Device.State;
+using GroupChat.GAgent;
+using GroupChat.GAgent.Feature.Common;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
@@ -16,7 +19,7 @@ namespace Aevatar.GAgents.Device.GAgents;
 /// <summary>
 /// Device GAgent interface
 /// </summary>
-public interface IDeviceGAgent<TDeviceConnection> : IStateGAgent<DeviceGAgentState>, IAIGAgent
+public interface IDeviceGAgent<TDeviceConnection> : IStateGAgent<DeviceGAgentState>
     where TDeviceConnection : IDeviceConnection
 {
     /// <summary>
@@ -52,7 +55,7 @@ public interface IDeviceGAgent<TDeviceConnection> : IStateGAgent<DeviceGAgentSta
 /// <typeparam name="TDeviceConnection">Device connection type</typeparam>
 [Description("Smart device agent providing device connection, status monitoring, property read/write and operation execution, supports device management through AI assistant")]
 public abstract class DeviceGAgentBase<TDeviceConnection> : 
-    AIGAgentBase<DeviceGAgentState, DeviceGAgentStateLogEvent>, 
+    MemberGAgentBase<DeviceGAgentState, DeviceGAgentStateLogEvent, EventBase, DeviceConnectionConfig>, 
     IDeviceGAgent<TDeviceConnection>
     where TDeviceConnection : class, IDeviceConnection
 {
@@ -67,10 +70,10 @@ public abstract class DeviceGAgentBase<TDeviceConnection> :
         return $"Smart {deviceType} agent ({deviceName}) - Provides device connection management, status monitoring, property read/write and operation execution, supports intelligent device control through AI assistant";
     }
 
-    protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
         Logger.LogInformation("DeviceGAgent {GrainId} is activating", this.GetGrainId());
-        await base.OnAIGAgentActivateAsync(cancellationToken);
+        await base.OnGAgentActivateAsync(cancellationToken);
         
         // If there's connection config in state, try to reconnect device
         if (State.ConnectionConfig != null)
@@ -157,7 +160,7 @@ public abstract class DeviceGAgentBase<TDeviceConnection> :
                 {
                     DeviceConnection = connection;
                 }
-                
+
                 // Update state
                 RaiseEvent(new DeviceConnectionInitializedLogEvent
                 {
@@ -167,23 +170,18 @@ public abstract class DeviceGAgentBase<TDeviceConnection> :
                     DeviceType = connection.DeviceType,
                     ConnectedAt = DateTime.UtcNow
                 });
-                
+
                 await ConfirmEvents();
-                
-                // Register device actions as Semantic Kernel functions
-                await RegisterDeviceActionsAsKernelFunctionsAsync();
                 
                 Logger.LogInformation("Device connection initialized successfully: {DeviceId} ({DeviceName})", 
                     connection.DeviceId, connection.DeviceName);
                 
                 return true;
             }
-            else
-            {
-                connection.Dispose();
-                Logger.LogWarning("Device connection failed: {DeviceId}", connectionConfig.DeviceId);
-                return false;
-            }
+
+            connection.Dispose();
+            Logger.LogWarning("Device connection failed: {DeviceId}", connectionConfig.DeviceId);
+            return false;
         }
         catch (Exception ex)
         {
@@ -279,6 +277,25 @@ public abstract class DeviceGAgentBase<TDeviceConnection> :
         
         await ConfirmEvents();
         return true;
+    }
+
+    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    {
+        return Task.FromResult(1);
+    }
+
+    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+    {
+        return Task.FromResult(new ChatResponse
+        {
+            Skip = true,
+            Continue = false
+        });
+    }
+
+    protected override async Task PerformConfigAsync(DeviceConnectionConfig configuration)
+    {
+        await InitializeDeviceConnectionAsync(configuration);
     }
 
     #region Event Handlers
@@ -580,7 +597,7 @@ public abstract class DeviceGAgentBase<TDeviceConnection> :
 
     #region State Transitions
 
-    protected override void AIGAgentTransitionState(DeviceGAgentState state, StateLogEventBase<DeviceGAgentStateLogEvent> @event)
+    protected override void GAgentTransitionState(DeviceGAgentState state, StateLogEventBase<DeviceGAgentStateLogEvent> @event)
     {
         switch (@event)
         {
@@ -744,49 +761,6 @@ public abstract class DeviceGAgentBase<TDeviceConnection> :
                 Logger.LogError(ex, "Failed to publish device connection status change event");
             }
         });
-    }
-
-    private async Task RegisterDeviceActionsAsKernelFunctionsAsync()
-    {
-        if (DeviceConnection == null) return;
-        
-        try
-        {
-            var kernel = GetKernelFromBrain();
-            if (kernel == null)
-            {
-                Logger.LogWarning("Cannot get Semantic Kernel instance, skipping device action registration");
-                return;
-            }
-
-            var deviceActions = DeviceConnection.SupportedActions;
-            var functions = new List<KernelFunction>();
-            
-            foreach (var action in deviceActions)
-            {
-                var function = CreateKernelFunctionForDeviceAction(action.Key, action.Value);
-                if (function != null)
-                {
-                    functions.Add(function);
-                }
-            }
-            
-            // Add device property read/write functions
-            functions.AddRange(CreateKernelFunctionsForDeviceProperties());
-            
-            if (functions.Count > 0)
-            {
-                var pluginName = $"Device_{DeviceConnection.DeviceId.Replace("-", "_")}";
-                kernel.Plugins.AddFromFunctions(pluginName, functions);
-                
-                Logger.LogInformation("Registered {Count} device actions as Semantic Kernel functions, plugin name: {PluginName}", 
-                    functions.Count, pluginName);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error occurred while registering device actions as Semantic Kernel functions");
-        }
     }
 
     private KernelFunction? CreateKernelFunctionForDeviceAction(string actionName, DeviceAction action)

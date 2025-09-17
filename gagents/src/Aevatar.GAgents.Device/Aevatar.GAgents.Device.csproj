@@ -20,4 +20,9 @@
         <PackageReference Include="System.Text.Json" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Connections\" />
+      <Folder Include="Examples\" />
+    </ItemGroup>
+
 </Project>

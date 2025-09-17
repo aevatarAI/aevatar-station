@@ -1,14 +1,18 @@
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using Aevatar.Core;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.Device.Abstractions;
-using Aevatar.GAgents.Device.Connections;
 using Aevatar.GAgents.Device.GAgents;
 using Aevatar.GAgents.Device.State;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Orleans;
 
-namespace Aevatar.GAgents.Device.Examples;
+namespace Aevatar.GAgents.Device.Virtual;
 
 /// <summary>
 /// Temperature sensor GAgent interface
@@ -405,9 +409,9 @@ public class TemperatureSensorGAgent : DeviceGAgentBase<VirtualDeviceConnection>
         };
     }
 
-    protected override async Task OnAIGAgentActivateAsync(CancellationToken cancellationToken)
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        await base.OnAIGAgentActivateAsync(cancellationToken);
+        await base.OnGAgentActivateAsync(cancellationToken);
         
         Logger.LogInformation("Temperature sensor GAgent activated: {GrainId}", this.GetGrainId());
         

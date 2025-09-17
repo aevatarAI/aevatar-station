@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Aevatar.GAgents.Device.Abstractions;
 using Aevatar.GAgents.Device.State;
+using Aevatar.GAgents.Device.Virtual;
 using Aevatar.GAgents.TestBase;
 using Microsoft.Extensions.DependencyInjection;
 

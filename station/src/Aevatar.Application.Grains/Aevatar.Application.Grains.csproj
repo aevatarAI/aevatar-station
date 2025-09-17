@@ -24,6 +24,8 @@
         <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.PsiOmni.Plugins\Aevatar.GAgents.PsiOmni.Plugins.csproj" />
         <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.MCP\Aevatar.GAgents.MCP.csproj" />
         <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.InputGAgent\Aevatar.GAgents.InputGAgent.csproj" />
+        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Device.Http\Aevatar.GAgents.Device.Http.csproj" />
+        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.SmartHome\Aevatar.GAgents.SmartHome.csproj" />
         <PackageReference Include="MethodDecorator.Fody" />
         <PackageReference Include="Fody" />
     </ItemGroup>

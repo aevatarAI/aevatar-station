@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.Device.Abstractions;
-using Aevatar.GAgents.Device.Examples;
+using Aevatar.GAgents.Device.Virtual;
 using Aevatar.GAgents.TestBase;
 using Shouldly;
 using Xunit;

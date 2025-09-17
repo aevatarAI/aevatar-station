@@ -1,6 +1,8 @@
 using Aevatar.CQRS;
+using Aevatar.GAgents.Device.Http;
 using Aevatar.GAgents.Executor;
 using Aevatar.GAgents.MCP;
+using Aevatar.GAgents.SmartHome;
 using Aevatar.GAgents.Twitter;
 using Aevatar.Neo4JStore;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,7 +20,9 @@ namespace Aevatar.Application.Grains;
     typeof(AevatarCQRSModule),
     typeof(AevatarNeo4JStoreModule),
     typeof(AevatarGAgentsTwitterModule),
-    typeof(AevatarGAgentsMCPModule)
+    typeof(AevatarGAgentsMCPModule),
+    typeof(AevatarGAgentsHttpDeviceModule),
+    typeof(AevatarGAgentsSmartHomeModule)
 )]
 public class AIApplicationGrainsModule : AbpModule
  

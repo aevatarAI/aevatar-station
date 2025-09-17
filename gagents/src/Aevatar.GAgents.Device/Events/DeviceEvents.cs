@@ -36,7 +36,9 @@ public class ReadDevicePropertyEvent : DeviceEventBase
     /// <summary>
     /// Property name
     /// </summary>
-    [Id(3)] public string PropertyName { get; set; } = string.Empty;
+    [Id(3)]
+    [Description("Name of the property to read (e.g., 'Power', 'Brightness', 'Color', 'Temperature', 'Humidity')")]
+    public string PropertyName { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -49,12 +51,16 @@ public class WriteDevicePropertyEvent : DeviceEventBase
     /// <summary>
     /// 属性名称
     /// </summary>
-    [Id(3)] public string PropertyName { get; set; } = string.Empty;
+    [Id(3)]
+    [Description("Name of the property to write (e.g., 'Power', 'Brightness', 'Color', 'ColorTemperature')")]
+    public string PropertyName { get; set; } = string.Empty;
     
     /// <summary>
     /// Value to write (JSON serialized)
     /// </summary>
-    [Id(4)] public string ValueJson { get; set; } = string.Empty;
+    [Id(4)]
+    [Description("Value to write in JSON format (e.g., 'true' for boolean, '75' for numbers, '\"#FF0000\"' for strings)")]
+    public string ValueJson { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -67,12 +73,16 @@ public class ExecuteDeviceActionEvent : DeviceEventBase
     /// <summary>
     /// Action name
     /// </summary>
-    [Id(3)] public string ActionName { get; set; } = string.Empty;
+    [Id(3)]
+    [Description("Name of the action to execute (e.g., 'TurnOn', 'TurnOff', 'SetBrightness', 'SetColor', 'Calibrate')")]
+    public string ActionName { get; set; } = string.Empty;
     
     /// <summary>
     /// Action parameters (JSON serialized)
     /// </summary>
-    [Id(4)] public string ParametersJson { get; set; } = "{}";
+    [Id(4)]
+    [Description("Action parameters in JSON format (e.g., '{\"brightness\": 75}' for brightness, '{\"color\": \"#FF0000\"}' for color)")]
+    public string ParametersJson { get; set; } = "{}";
 }
 
 /// <summary>
