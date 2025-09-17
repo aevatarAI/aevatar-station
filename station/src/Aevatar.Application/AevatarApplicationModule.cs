@@ -145,5 +145,8 @@ public class AevatarApplicationModule : AbpModule
         
         // 注册DynamicDropDownProcessor（协调器）
         context.Services.AddTransient<DynamicDropDownProcessor>();
+        
+        // 注册DefaultValuesProcessor
+        context.Services.AddTransient<DefaultValuesProcessor>();
     }
 }
