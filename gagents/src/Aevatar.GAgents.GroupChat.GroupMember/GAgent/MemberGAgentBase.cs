@@ -42,15 +42,24 @@ public abstract partial class
             return;
         }
 
-        var talkResponse = await ChatAsync(@event.CoordinatorMessages);
-        await PublishAsync(new ChatResponseEvent()
+        try
         {
-            BlackboardId = BlackboardId,
-            MemberId = this.GetPrimaryKey(),
-            MemberName = State.MemberName,
-            ChatResponse = talkResponse,
-            Term = @event.Term
-        });
+            var talkResponse = await ChatAsync(@event.CoordinatorMessages);
+            await PublishAsync(new ChatResponseEvent()
+            {
+                BlackboardId = BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
+                ChatResponse = talkResponse, Term = @event.Term
+            });
+        }
+        catch (Exception e)
+        {
+            Logger.LogError($"[MemberGAgentBase] Handler ChatEvent fail: {e.Message}");
+            await PublishAsync(new ChatResponseEvent()
+            {
+                BlackboardId = BlackboardId, MemberId = this.GetPrimaryKey(), MemberName = State.MemberName,
+                FailureSummary = e.ToString(), Term = @event.Term
+            });
+        }
     }
 
     [EventHandler]

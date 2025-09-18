@@ -65,7 +65,7 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         var blackboard = GrainFactory.GetGrain<IBlackboardGAgent>(State.BlackboardId);
         await blackboard.SetMessageAsync(new CoordinatorConfirmChatResponse()
         {
-            BlackboardId = @event.BlackboardId, MemberId = @event.MemberId, MemberName = @event.MemberName,
+            BlackboardId = State.BlackboardId, MemberId = @event.MemberId, MemberName = @event.MemberName,
             ChatResponse = @event.ChatResponse
         });
 
