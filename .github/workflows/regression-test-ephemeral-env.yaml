@@ -231,6 +231,7 @@ jobs:
       auth_server_url: ${{ steps.extract.outputs.auth_server_url }}
       api_server_url: ${{ steps.extract.outputs.api_server_url }} 
       app_url: ${{ steps.extract.outputs.app_url }}
+      mcp_gateway_url: ${{ steps.extract.outputs.mcp_gateway_url }}
       client_id: ${{ steps.generate-uuid.outputs.client_id }}
       client_secret: ${{ steps.generate-uuid.outputs.client_secret }}
       project_name: ${{ steps.generate-uuid.outputs.project_name }}
@@ -382,7 +383,7 @@ jobs:
           echo "  \"sequentialthinking\": { \"url\": \"${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/sequentialthinking/mcp\" }" >> $GITHUB_STEP_SUMMARY
           echo "} }" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          
+
   run-regression-test:
     if: needs.approval-count.outputs.approved_enough == 'true' || github.event_name == 'workflow_dispatch'
     needs: setup-ephermeral-test-env 
