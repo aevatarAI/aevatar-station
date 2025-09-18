@@ -51,28 +51,25 @@
 
 ## 使用方法
 
-### 1. 配置和初始化
+### 1. 快速Demo启动 (推荐)
 
 ```csharp
-// 创建配置
-var config = new SmartHomeAIGAgentConfiguration
-{
-    DeviceHubApiUrl = "http://localhost:9001",
-    DeviceHubApiKey = "your-api-key",
-    LLMConfig = new LLMConfigDto
-    {
-        SystemLLM = "gpt-4"
-    },
-    PreConfiguredDevices = new List<SmartHomeDeviceInfo>
-    {
-        new() { DeviceId = "light001", Name = "客厅主灯", DeviceType = "smart-light" },
-        new() { DeviceId = "light002", Name = "卧室台灯", DeviceType = "smart-light" },
-        new() { DeviceId = "temp001", Name = "客厅温度传感器", DeviceType = "temperature-sensor" },
-        new() { DeviceId = "temp002", Name = "卧室温度传感器", DeviceType = "temperature-sensor" },
-        new() { DeviceId = "switch001", Name = "客厅总开关", DeviceType = "smart-switch" },
-        new() { DeviceId = "switch002", Name = "厨房插座", DeviceType = "smart-switch" }
-    }
-};
+// 🚀 最简单的Demo启动方式 - 设备已hardcoded
+var smartHomeAI = await gAgentFactory.CreateSmartHomeDemoAsync("OpenAI");
+
+// 或者使用Demo Helper
+var demoHelper = new SmartHomeDemoHelper(gAgentFactory, logger);
+var smartHomeAI = await demoHelper.InitializeSmartHomeAIAsync("OpenAI");
+
+// 运行完整Demo
+await demoHelper.RunCompleteDemo("OpenAI");
+```
+
+### 2. 手动配置 (高级用法)
+
+```csharp
+// 手动创建配置 (设备已hardcoded，无需重复配置)
+var config = SmartHomeAIGAgentConfiguration.CreateDemoConfig("OpenAI");
 
 // 获取GAgent实例
 var smartHomeAI = await gAgentFactory.GetGAgentAsync<ISmartHomeAIGAgent>(
@@ -81,7 +78,35 @@ var smartHomeAI = await gAgentFactory.GetGAgentAsync<ISmartHomeAIGAgent>(
 );
 ```
 
-### 2. 自然语言命令控制
+### 3. Hardcoded设备列表
+
+Demo模式自动包含以下设备 (无需手动配置):
+- `light001`: 客厅主灯
+- `light002`: 卧室台灯  
+- `temp001`: 客厅温度传感器
+- `temp002`: 卧室温度传感器
+- `switch001`: 客厅总开关
+- `switch002`: 厨房插座
+
+### 4. Demo命令示例
+
+```csharp
+// 🎯 快速执行命令 (使用扩展方法)
+var response1 = await smartHomeAI.ExecuteSmartHomeCommandAsync("打开客厅主灯");
+Console.WriteLine(response1); // ✅ 客厅主灯已打开
+
+var response2 = await smartHomeAI.ExecuteSmartHomeCommandAsync("把卧室台灯调到50%亮度");
+Console.WriteLine(response2); // ✅ 卧室台灯亮度已调至50%
+
+// 🎬 运行预设Demo场景
+var demoHelper = new SmartHomeDemoHelper(gAgentFactory, logger);
+await demoHelper.RunDemoScenariosAsync();
+
+// 📊 查看设备状态
+await demoHelper.ShowHomeStatusAsync();
+```
+
+### 5. 详细命令控制
 
 ```csharp
 // 执行自然语言命令

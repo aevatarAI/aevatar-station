@@ -155,14 +155,36 @@ public class SmartHomeAIGAgentConfiguration : AIGAgentConfigurationBase
     [Id(1)] public string? DeviceHubApiKey { get; set; }
 
     /// <summary>
-    /// Pre-configured devices
+    /// Pre-configured devices (hardcoded for demo)
     /// </summary>
-    [Id(2)] public List<SmartHomeDeviceInfo> PreConfiguredDevices { get; set; } = new();
+    [Id(2)] public List<SmartHomeDeviceInfo> PreConfiguredDevices { get; set; } = new()
+    {
+        new() { DeviceId = "light001", Name = "客厅主灯", DeviceType = "smart-light", RegisteredAt = DateTime.UtcNow, IsOnline = false },
+        new() { DeviceId = "light002", Name = "卧室台灯", DeviceType = "smart-light", RegisteredAt = DateTime.UtcNow, IsOnline = false },
+        new() { DeviceId = "temp001", Name = "客厅温度传感器", DeviceType = "temperature-sensor", RegisteredAt = DateTime.UtcNow, IsOnline = false },
+        new() { DeviceId = "temp002", Name = "卧室温度传感器", DeviceType = "temperature-sensor", RegisteredAt = DateTime.UtcNow, IsOnline = false },
+        new() { DeviceId = "switch001", Name = "客厅总开关", DeviceType = "smart-switch", RegisteredAt = DateTime.UtcNow, IsOnline = false },
+        new() { DeviceId = "switch002", Name = "厨房插座", DeviceType = "smart-switch", RegisteredAt = DateTime.UtcNow, IsOnline = false }
+    };
 
     /// <summary>
     /// LLM Configuration for AI functionality
     /// </summary>
     [Id(3)] public LLMConfigDto LLMConfig { get; set; } = new() { SystemLLM = "OpenAI" };
+
+    /// <summary>
+    /// Create default demo configuration
+    /// </summary>
+    public static SmartHomeAIGAgentConfiguration CreateDemoConfig(string? systemLLM = "OpenAI")
+    {
+        return new SmartHomeAIGAgentConfiguration
+        {
+            DeviceHubApiUrl = "http://localhost:9001",
+            DeviceHubApiKey = null, // No API key needed for demo
+            LLMConfig = new LLMConfigDto { SystemLLM = systemLLM }
+            // PreConfiguredDevices are already hardcoded above
+        };
+    }
 }
 
 /// <summary>
