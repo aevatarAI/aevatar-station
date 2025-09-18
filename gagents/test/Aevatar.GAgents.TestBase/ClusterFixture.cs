@@ -12,6 +12,8 @@ using Aevatar.GAgents.AI.BrainFactory;
 using Aevatar.GAgents.AI.Common;
 using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.Executor;
+using Aevatar.GAgents.PsiOmni.Interfaces;
+using Aevatar.GAgents.TestBase.Mocks;
 using Aevatar.GAgents.MCP.McpClient;
 using Aevatar.GAgents.MCP.Options;
 using Aevatar.GAgents.MCP.Test.Mocks;
@@ -180,6 +182,8 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     
                     services.AddSingleton<IKernelBuilderFactory, MockKernelBuilderFactory>();
                     services.AddSingleton<IBrainFactory, MockBrainFactory>();
+                    // PsiOmni dependencies for tests
+                    services.AddSingleton<IKernelFunctionRegistry, MockKernelFunctionRegistry>();
                     // Add IGAgentFactory registration for Orleans grain dependency injection
                     services.AddSingleton<IGAgentFactory, GAgentFactory>();
                     services.AddSingleton<IGAgentService, GAgentService>();

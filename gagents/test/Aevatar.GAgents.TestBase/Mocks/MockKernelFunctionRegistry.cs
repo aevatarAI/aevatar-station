@@ -1,24 +1,10 @@
-using System.Runtime.CompilerServices;
-using Aevatar.GAgents.TestBase;
-using Volo.Abp.Modularity;
-using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Generic;
 using Aevatar.GAgents.PsiOmni.Interfaces;
 using Microsoft.SemanticKernel;
 
-namespace Aevatar.GAgents.GroupChat.Test;
+namespace Aevatar.GAgents.TestBase.Mocks;
 
-[DependsOn(typeof(AevatarGAgentTestBaseModule))
-]
-public class AevatarGroupChatModule : AbpModule
-{
-    public override void ConfigureServices(ServiceConfigurationContext context)
-    {
-        var services = context.Services;
-        services.AddSingleton<IKernelFunctionRegistry, LocalKernelFunctionRegistry>();
-    }
-}
-
-internal sealed class LocalKernelFunctionRegistry : IKernelFunctionRegistry
+internal sealed class MockKernelFunctionRegistry : IKernelFunctionRegistry
 {
     private readonly Dictionary<string, KernelFunction> _functions = new();
     private readonly Dictionary<string, KernelPlugin> _plugins = new();
@@ -44,3 +30,5 @@ internal sealed class LocalKernelFunctionRegistry : IKernelFunctionRegistry
         return new List<string>(_functions.Keys);
     }
 }
+
+

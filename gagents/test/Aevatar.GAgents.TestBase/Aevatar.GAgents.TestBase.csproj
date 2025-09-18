@@ -32,6 +32,7 @@
     <ProjectReference Include="..\..\src\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
     <ProjectReference Include="..\..\src\Aevatar.GAgents.MCP\Aevatar.GAgents.MCP.csproj" />
     <ProjectReference Include="..\..\src\Aevatar.GAgents.SemanticKernel\Aevatar.GAgents.SemanticKernel.csproj" />
+    <ProjectReference Include="..\..\src\Aevatar.GAgents.PsiOmni\Aevatar.GAgents.PsiOmni.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="appsettings.json">

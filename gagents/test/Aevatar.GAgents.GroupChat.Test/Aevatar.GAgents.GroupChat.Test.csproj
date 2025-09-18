@@ -16,15 +16,15 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.NET.Test.Sdk"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
         <PackageReference Include="Volo.Abp.Core" />
-        <PackageReference Include="xunit"/>
+        <PackageReference Include="xunit" />
         <PackageReference Include="xunit.extensibility.core" />
-        <PackageReference Include="xunit.runner.visualstudio"/>
+        <PackageReference Include="xunit.runner.visualstudio" />
     </ItemGroup>
 
     <ItemGroup>
-        <Using Include="Xunit"/>
+        <Using Include="Xunit" />
     </ItemGroup>
 
     <ItemGroup>
@@ -32,6 +32,7 @@
       <ProjectReference Include="..\..\src\Aevatar.GAgents.GroupChat\Aevatar.GAgents.GroupChat.csproj" />
       <ProjectReference Include="..\..\src\Aevatar.GAgents.InputGAgent\Aevatar.GAgents.InputGAgent.csproj" />
       <ProjectReference Include="..\Aevatar.GAgents.TestBase\Aevatar.GAgents.TestBase.csproj" />
+      <ProjectReference Include="..\..\src\Aevatar.GAgents.PsiOmni\Aevatar.GAgents.PsiOmni.csproj" />
     </ItemGroup>
 
     <ItemGroup>
