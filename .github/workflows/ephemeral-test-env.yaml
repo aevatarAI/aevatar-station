@@ -277,6 +277,7 @@ jobs:
 
       - name: Deploy MCP Servers
         run: |
+          set -e
           bash mcp/server/deploy-official-mcp-servers.sh --gateway-url "${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}"
 
       - name: Set job summary
