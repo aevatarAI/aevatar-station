@@ -36,13 +36,13 @@ public class ChatAIGAgent :
     }
 
     // Implementation of GroupMemberGAgentBase abstract methods
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    protected override Task<int> GetInterestValueAsync()
     {
         // AI chat agent always shows high interest in conversations
         return Task.FromResult(80);
     }
 
-    protected override async Task<ChatResponse> ChatAsync(Guid blackboardId,
+    protected override async Task<ChatResponse> ChatAsync(
         List<WorkflowChatMessage>? coordinatorMessages)
     {
         var response = new ChatResponse();
@@ -94,9 +94,9 @@ public class ChatAIGAgent :
         return response;
     }
 
-    protected override Task GroupChatFinishAsync(Guid blackboardId)
+    protected override Task GroupChatFinishAsync()
     {
-        _logger.LogInformation($"{State.MemberName} workflow finished for blackboard {blackboardId}");
+        _logger.LogInformation($"{State.MemberName} workflow finished for blackboard {BlackboardId}");
         return Task.CompletedTask;
     }
 

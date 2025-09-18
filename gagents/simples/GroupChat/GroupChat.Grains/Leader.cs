@@ -16,9 +16,9 @@ public class Leader : GroupMemberGAgentBase<GroupMemberState, LeaderEventLog, Ev
     }
 
     [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
-    protected override async Task<int> GetInterestValueAsync(Guid blackboardId)
+    protected override async Task<int> GetInterestValueAsync()
     {
-        var messages = await GetMessageFromBlackboardAsync(blackboardId);
+        var messages = await GetMessageFromBlackboardAsync(BlackboardId);
         if (messages.Count > 10)
         {
             return 100;
@@ -28,7 +28,7 @@ public class Leader : GroupMemberGAgentBase<GroupMemberState, LeaderEventLog, Ev
     }
 
     [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? messages)
     {
         var response = new ChatResponse();
         Console.WriteLine($"{State.MemberName} Can Speak");
@@ -43,7 +43,7 @@ public class Leader : GroupMemberGAgentBase<GroupMemberState, LeaderEventLog, Ev
         return Task.FromResult(response);
     }
 
-    protected override Task GroupChatFinishAsync(Guid blackboardId)
+    protected override Task GroupChatFinishAsync()
     {
         Console.WriteLine($"{State.MemberName} receive finish message");
         return Task.CompletedTask;
