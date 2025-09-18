@@ -3,11 +3,17 @@ using System.Text.Json;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AI.Options;
-using Aevatar.GAgents.AI.Common;
+using AIChatMessage = Aevatar.GAgents.AI.Common.ChatMessage;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.Core;
 using Aevatar.GAgents.AIGAgent.State;
+using Aevatar.GAgents.GroupChat;
+using Aevatar.GAgents.GroupChat.Core.Dto;
+using GroupChat.GAgent;
+using GroupChatMessage = GroupChat.GAgent.Feature.Common.ChatMessage;
+using GroupChatResponse = GroupChat.GAgent.Feature.Common.ChatResponse;
+using GroupChat.GAgent.GEvent;
 using Aevatar.GAgents.Device.Abstractions;
 using Aevatar.GAgents.Device.Events;
 using Aevatar.GAgents.Device.GAgents;
@@ -19,7 +25,9 @@ using Aevatar.GAgents.Device.Http;
 using Aevatar.GAgents.SmartHome.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.SemanticKernel;
 using Orleans;
+using Orleans.Streams;
 
 namespace Aevatar.GAgents.SmartHome;
 
@@ -68,27 +76,27 @@ public interface ISmartHomeAIGAgent : IStateGAgent<SmartHomeAIGAgentState>, IAIG
 /// Smart Home AI GAgent State
 /// </summary>
 [GenerateSerializer]
-public class SmartHomeAIGAgentState : AIGAgentStateBase
+public class SmartHomeAIGAgentState : GroupMemberState
 {
     /// <summary>
     /// Registered smart home devices
     /// </summary>
-    [Id(0)] public Dictionary<string, SmartHomeDeviceInfo> RegisteredDevices { get; set; } = new();
+    [Id(1)] public Dictionary<string, SmartHomeDeviceInfo> RegisteredDevices { get; set; } = new();
 
     /// <summary>
     /// Command execution history
     /// </summary>
-    [Id(1)] public List<SmartHomeCommandRecord> CommandHistory { get; set; } = new();
+    [Id(2)] public List<SmartHomeCommandRecord> CommandHistory { get; set; } = new();
 
     /// <summary>
     /// Device connection configurations
     /// </summary>
-    [Id(2)] public Dictionary<string, DeviceConnectionConfig> DeviceConfigs { get; set; } = new();
+    [Id(3)] public Dictionary<string, DeviceConnectionConfig> DeviceConfigs { get; set; } = new();
 
     /// <summary>
     /// Pre-created device GAgent instances mapped by device ID
     /// </summary>
-    [Id(3)] public Dictionary<string, Guid> DeviceGAgentInstances { get; set; } = new();
+    [Id(4)] public Dictionary<string, Guid> DeviceGAgentInstances { get; set; } = new();
 }
 
 /// <summary>
@@ -142,22 +150,22 @@ public class DevicesInitializedLogEvent : SmartHomeAIGAgentStateLogEvent
 /// Smart Home AI GAgent Configuration
 /// </summary>
 [GenerateSerializer]
-public class SmartHomeAIGAgentConfiguration : AIGAgentConfigurationBase
+public class SmartHomeAIGAgentConfiguration : GroupMemberConfigDto
 {
     /// <summary>
     /// Device Hub API base URL
     /// </summary>
-    [Id(0)] public string DeviceHubApiUrl { get; set; } = "http://localhost:9001";
+    [Id(1)] public string DeviceHubApiUrl { get; set; } = "http://localhost:9001";
 
     /// <summary>
     /// Device Hub API key
     /// </summary>
-    [Id(1)] public string? DeviceHubApiKey { get; set; }
+    [Id(2)] public string? DeviceHubApiKey { get; set; }
 
     /// <summary>
     /// Pre-configured devices (hardcoded for demo)
     /// </summary>
-    [Id(2)] public List<SmartHomeDeviceInfo> PreConfiguredDevices { get; set; } = new()
+    [Id(3)] public List<SmartHomeDeviceInfo> PreConfiguredDevices { get; set; } = new()
     {
         new() { DeviceId = "light001", Name = "客厅主灯", DeviceType = "smart-light", RegisteredAt = DateTime.UtcNow, IsOnline = false },
         new() { DeviceId = "light002", Name = "卧室台灯", DeviceType = "smart-light", RegisteredAt = DateTime.UtcNow, IsOnline = false },
@@ -170,7 +178,7 @@ public class SmartHomeAIGAgentConfiguration : AIGAgentConfigurationBase
     /// <summary>
     /// LLM Configuration for AI functionality
     /// </summary>
-    [Id(3)] public LLMConfigDto LLMConfig { get; set; } = new() { SystemLLM = "OpenAI" };
+    [Id(4)] public LLMConfigDto LLMConfig { get; set; } = new() { SystemLLM = "OpenAI" };
 
     /// <summary>
     /// Create default demo configuration
@@ -179,6 +187,7 @@ public class SmartHomeAIGAgentConfiguration : AIGAgentConfigurationBase
     {
         return new SmartHomeAIGAgentConfiguration
         {
+            MemberName = "Smart Home AI Assistant",
             DeviceHubApiUrl = "http://localhost:9001",
             DeviceHubApiKey = null, // No API key needed for demo
             LLMConfig = new LLMConfigDto { SystemLLM = systemLLM }
@@ -192,7 +201,7 @@ public class SmartHomeAIGAgentConfiguration : AIGAgentConfigurationBase
 /// </summary>
 [Description("AI assistant for smart home device control with natural language understanding. Manages smart lights, switches, and sensors through HTTP API calls.")]
 [GAgent("smart-home-ai", "smart-home")]
-public class SmartHomeAIGAgent : AIGAgentBase<SmartHomeAIGAgentState, SmartHomeAIGAgentStateLogEvent, EventBase, SmartHomeAIGAgentConfiguration>, ISmartHomeAIGAgent
+public class SmartHomeAIGAgent : GroupMemberGAgentBase<SmartHomeAIGAgentState, SmartHomeAIGAgentStateLogEvent, EventBase, SmartHomeAIGAgentConfiguration>, ISmartHomeAIGAgent
 {
     private IGAgentFactory GAgentFactory => ServiceProvider.GetRequiredService<IGAgentFactory>();
 
@@ -259,24 +268,11 @@ public class SmartHomeAIGAgent : AIGAgentBase<SmartHomeAIGAgentState, SmartHomeA
 
     protected override async Task PerformConfigAsync(SmartHomeAIGAgentConfiguration configuration)
     {
-        // Initialize AI capabilities
-        var initDto = new InitializeDto
-        {
-            LLMConfig = configuration.LLMConfig,
-            Instructions = GetSmartHomeInstructions(),
-            ToolGAgentTypes = [
-                GrainType.Create("device.http-smart-light"),
-                GrainType.Create("device.http-smart-switch"),
-                GrainType.Create("device.http-temperature-sensor")
-            ]
-        };
-
-        await InitializeAsync(initDto);
-
         // Pre-create device GAgent instances for each configured device
         var deviceInstances = new Dictionary<string, Guid>();
         var deviceConfigs = new Dictionary<string, DeviceConnectionConfig>();
         var registeredDevices = new Dictionary<string, SmartHomeDeviceInfo>();
+        var toolGAgents = new List<GrainId>();
 
         foreach (var device in configuration.PreConfiguredDevices)
         {
@@ -309,6 +305,9 @@ public class SmartHomeAIGAgent : AIGAgentBase<SmartHomeAIGAgentState, SmartHomeA
                 // Register this device GAgent for event communication
                 await RegisterAsync(deviceAgent);
                 
+                // Add to tool GAgents list for AI
+                toolGAgents.Add(deviceAgent.GetGrainId());
+                
                 Logger.LogInformation("Pre-created and registered device GAgent: {DeviceId} ({DeviceName}) -> {GAgentId}", 
                     device.DeviceId, device.Name, deviceGAgentId);
             }
@@ -319,6 +318,18 @@ public class SmartHomeAIGAgent : AIGAgentBase<SmartHomeAIGAgentState, SmartHomeA
                     device.DeviceId, device.Name);
             }
         }
+
+        // Initialize AI capabilities with device GAgents as tools
+        var initDto = new InitializeDto
+        {
+            LLMConfig = configuration.LLMConfig,
+            Instructions = GetSmartHomeInstructions(),
+            StreamingModeEnabled = false,
+            StreamingConfig = new StreamingConfig(),
+            ToolGAgents = toolGAgents // Add device GAgent instances as AI tools
+        };
+
+        await InitializeAsync(initDto);
 
         // Batch update state
         RaiseEvent(new DevicesInitializedLogEvent
@@ -331,40 +342,6 @@ public class SmartHomeAIGAgent : AIGAgentBase<SmartHomeAIGAgentState, SmartHomeA
         await ConfirmEvents();
     }
 
-    protected override void AIGAgentTransitionState(SmartHomeAIGAgentState state, StateLogEventBase<SmartHomeAIGAgentStateLogEvent> @event)
-    {
-        switch (@event)
-        {
-            case DevicesInitializedLogEvent devicesInitialized:
-                state.DeviceGAgentInstances = devicesInitialized.DeviceInstances;
-                state.DeviceConfigs = devicesInitialized.DeviceConfigs;
-                state.RegisteredDevices = devicesInitialized.RegisteredDevices;
-                break;
-
-            case DeviceRegisteredLogEvent deviceRegistered:
-                state.RegisteredDevices[deviceRegistered.Device.DeviceId] = deviceRegistered.Device;
-                if (deviceRegistered.Config != null)
-                {
-                    state.DeviceConfigs[deviceRegistered.Device.DeviceId] = deviceRegistered.Config;
-                }
-                break;
-
-            case DeviceUnregisteredLogEvent deviceUnregistered:
-                state.RegisteredDevices.Remove(deviceUnregistered.DeviceId);
-                state.DeviceConfigs.Remove(deviceUnregistered.DeviceId);
-                state.DeviceGAgentInstances.Remove(deviceUnregistered.DeviceId);
-                break;
-
-            case CommandExecutedLogEvent commandExecuted:
-                state.CommandHistory.Add(commandExecuted.CommandRecord);
-                // Keep only last 100 commands
-                if (state.CommandHistory.Count > 100)
-                {
-                    state.CommandHistory.RemoveRange(0, state.CommandHistory.Count - 100);
-                }
-                break;
-        }
-    }
 
     public async Task<bool> RegisterDeviceAsync(string deviceId, string deviceName, string deviceType)
     {
@@ -880,4 +857,77 @@ Always be helpful, clear, and provide specific feedback about device operations.
 
         await ConfirmEvents();
     }
+
+
+    #region GroupMemberGAgentBase Required Methods
+
+    protected override async Task<int> GetInterestValueAsync(Guid blackboardId)
+    {
+        // Return interest score based on smart home capabilities
+        var onlineDevices = State.RegisteredDevices.Values.Count(d => d.IsOnline);
+        // Higher score if more devices are online and available
+        return onlineDevices * 10; // Score based on available devices
+    }
+
+    protected override async Task<GroupChatResponse> ChatAsync(Guid blackboardId, List<GroupChatMessage>? coordinatorMessages)
+    {
+        // Handle chat requests from workflow coordinator
+        var lastMessage = coordinatorMessages?.LastOrDefault()?.Content ?? "";
+        
+        if (string.IsNullOrEmpty(lastMessage))
+        {
+            return new GroupChatResponse
+            {
+                Content = "Smart Home AI ready. Please provide a command to control devices.",
+                Continue = true
+            };
+        }
+
+        // Execute the command using AI with tool calling
+        var result = await ExecuteNaturalLanguageCommandAsync(lastMessage);
+        
+        return new GroupChatResponse
+        {
+            Content = result.Response,
+            Continue = true
+        };
+    }
+
+    protected override void GroupMemberTransitionState(SmartHomeAIGAgentState state, StateLogEventBase<SmartHomeAIGAgentStateLogEvent> @event)
+    {
+        // Handle smart home specific state transitions
+        switch (@event)
+        {
+            case DevicesInitializedLogEvent devicesInitialized:
+                state.DeviceGAgentInstances = devicesInitialized.DeviceInstances;
+                state.DeviceConfigs = devicesInitialized.DeviceConfigs;
+                state.RegisteredDevices = devicesInitialized.RegisteredDevices;
+                break;
+
+            case DeviceRegisteredLogEvent deviceRegistered:
+                state.RegisteredDevices[deviceRegistered.Device.DeviceId] = deviceRegistered.Device;
+                if (deviceRegistered.Config != null)
+                {
+                    state.DeviceConfigs[deviceRegistered.Device.DeviceId] = deviceRegistered.Config;
+                }
+                break;
+
+            case DeviceUnregisteredLogEvent deviceUnregistered:
+                state.RegisteredDevices.Remove(deviceUnregistered.DeviceId);
+                state.DeviceConfigs.Remove(deviceUnregistered.DeviceId);
+                state.DeviceGAgentInstances.Remove(deviceUnregistered.DeviceId);
+                break;
+
+            case CommandExecutedLogEvent commandExecuted:
+                state.CommandHistory.Add(commandExecuted.CommandRecord);
+                // Keep only last 100 commands
+                if (state.CommandHistory.Count > 100)
+                {
+                    state.CommandHistory.RemoveRange(0, state.CommandHistory.Count - 100);
+                }
+                break;
+        }
+    }
+
+    #endregion
 }
