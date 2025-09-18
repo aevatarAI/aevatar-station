@@ -24,14 +24,14 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
     }
 
     [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    protected override Task<int> GetInterestValueAsync()
     {
         
         return Task.FromResult(100);
     }
 
     [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? messages)
     {
         var response = new ChatResponse
         {
@@ -43,7 +43,7 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.FromResult(response);
     }
 
-    protected override Task GroupChatFinishAsync(Guid blackboardId)
+    protected override Task GroupChatFinishAsync()
     {
         return Task.CompletedTask;
     }

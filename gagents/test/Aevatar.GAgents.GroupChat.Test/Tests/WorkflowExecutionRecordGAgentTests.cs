@@ -265,7 +265,13 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         await group.RegisterAsync(collector);
 
         var blackboardId = Guid.NewGuid();
-        await group.PublishEventAsync(new CoordinatorPingEvent { BlackboardId = blackboardId });
+        // Set workflow context on the member so BlackboardId is derived from context
+        var workflowId = blackboardId.ToString();
+        await member.PrepareResourceContextAsync(
+            ResourceContext.Create(new List<GrainId>(), workflowId)
+                .WithMetadata("WorkflowId", workflowId));
+
+        await group.PublishEventAsync(new CoordinatorPingEvent());
         await Task.Delay(500);
 
         var s = await collector.GetStateAsync();
@@ -286,7 +292,13 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         await group.RegisterAsync(collector);
 
         var blackboardId = Guid.NewGuid();
-        await group.PublishEventAsync(new EvaluationInterestEvent { BlackboardId = blackboardId, ChatTerm = 123 });
+        // Set workflow context on the member so BlackboardId is derived from context
+        var workflowId = blackboardId.ToString();
+        await member.PrepareResourceContextAsync(
+            ResourceContext.Create(new List<GrainId>(), workflowId)
+                .WithMetadata("WorkflowId", workflowId));
+
+        await group.PublishEventAsync(new EvaluationInterestEvent { ChatTerm = 123 });
         await Task.Delay(500);
 
         var s = await collector.GetStateAsync();
@@ -324,9 +336,14 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         await input.ConfigAsync(new InputConfigDto { MemberName = "Inny", Input = "Hello" });
 
         var blackboardId = Guid.NewGuid();
+        // Set workflow context on the input so BlackboardId is derived from context
+        var workflowId = blackboardId.ToString();
+        await input.PrepareResourceContextAsync(
+            ResourceContext.Create(new List<GrainId>(), workflowId)
+                .WithMetadata("WorkflowId", workflowId));
+
         await group.PublishEventAsync(new ChatEvent
         {
-            BlackboardId = blackboardId,
             Speaker = input.GetGrainId().GetGuidKey(),
             Term = 1,
             CoordinatorMessages = new List<ChatMessage> { new ChatMessage { Content = "start" } }
@@ -384,7 +401,13 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         await input.ConfigAsync(new InputConfigDto { MemberName = "Scorer", Input = "whatever" });
 
         var blackboardId = Guid.NewGuid();
-        await group.PublishEventAsync(new EvaluationInterestEvent { BlackboardId = blackboardId, ChatTerm = 9 });
+        // Set workflow context on the input so BlackboardId is derived from context
+        var workflowId = blackboardId.ToString();
+        await input.PrepareResourceContextAsync(
+            ResourceContext.Create(new List<GrainId>(), workflowId)
+                .WithMetadata("WorkflowId", workflowId));
+
+        await group.PublishEventAsync(new EvaluationInterestEvent { ChatTerm = 9 });
         await Task.Delay(500);
 
         var s = await collector.GetStateAsync();
@@ -433,9 +456,9 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
     {
         public override Task<string> GetDescriptionAsync() => Task.FromResult("collector");
 
-        protected override Task<int> GetInterestValueAsync(Guid blackboardId) => Task.FromResult(0);
+        protected override Task<int> GetInterestValueAsync() => Task.FromResult(0);
 
-        protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+        protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages)
         {
             return Task.FromResult(new ChatResponse { Content = "noop" });
         }
@@ -565,9 +588,9 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
     [GAgent(nameof(TestMemberHelperGAgent))]
     public class TestMemberHelperGAgent : GroupMemberGAgentBase<WorkerState, TestMemberEventLog, EventBase, GroupMemberConfigDto>, ITestMemberHelperGAgent
     {
-        protected override Task<int> GetInterestValueAsync(Guid blackboardId) => Task.FromResult(77);
+        protected override Task<int> GetInterestValueAsync() => Task.FromResult(77);
 
-        protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+        protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages)
         {
             return Task.FromResult(new ChatResponse { Content = "ok" });
         }
@@ -591,7 +614,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
     [GAgent(nameof(FailInputGAgent))]
     public class FailInputGAgent : InputGAgent.GAgent.InputGAgent, IFailInputGAgent
     {
-        protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
+        protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? messages)
         {
             throw new UserFriendlyException("InputGAgent fail");
         }

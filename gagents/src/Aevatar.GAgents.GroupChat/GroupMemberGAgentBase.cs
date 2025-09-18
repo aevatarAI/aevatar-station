@@ -31,7 +31,7 @@ public abstract class
     [EventHandler]
     public async Task HandleEventAsync(EvaluationInterestEvent @event)
     {
-        var score = await GetInterestValueAsync(BlackboardId);
+        var score = await GetInterestValueAsync();
 
         await PublishAsync(new EvaluationInterestResponseEvent()
         {
@@ -52,8 +52,7 @@ public abstract class
 
         try
         {
-            // var history = await GetCareChatMessagesFromBlackboardAsync(BlackboardId);
-            var talkResponse = await ChatAsync(BlackboardId, @event.CoordinatorMessages);
+            var talkResponse = await ChatAsync(@event.CoordinatorMessages);
             await PublishAsync(new ChatResponseEvent
             {
                 BlackboardId = BlackboardId,
@@ -80,13 +79,13 @@ public abstract class
     [EventHandler]
     public async Task HandleEventAsync(GroupChatFinishEvent @event)
     {
-        await GroupChatFinishAsync(BlackboardId);
+        await GroupChatFinishAsync();
     }
 
     [EventHandler]
     public async Task HandleEventAsync(CoordinatorPingEvent @event)
     {
-        if (await IgnoreBlackboardPingEvent(BlackboardId) == false)
+        if (await IgnoreBlackboardPingEvent() == false)
         {
             await PublishAsync(new CoordinatorPongEvent()
             {
@@ -97,16 +96,16 @@ public abstract class
         }
     }
 
-    protected abstract Task<int> GetInterestValueAsync(Guid blackboardId);
+    protected abstract Task<int> GetInterestValueAsync();
 
-    protected abstract Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages);
+    protected abstract Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages);
 
-    protected virtual Task GroupChatFinishAsync(Guid blackboardId)
+    protected virtual Task GroupChatFinishAsync()
     {
         return Task.CompletedTask;
     }
 
-    protected virtual Task<bool> IgnoreBlackboardPingEvent(Guid blackboardId)
+    protected virtual Task<bool> IgnoreBlackboardPingEvent()
     {
         return Task.FromResult(false);
     }

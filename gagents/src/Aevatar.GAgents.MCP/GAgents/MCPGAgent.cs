@@ -20,12 +20,12 @@ public class MCPGAgent : MCPGAgentBase<MCPGAgentState, MCPGAgentStateLogEvent, E
         return Task.FromResult("MCP GAgent for interacting with Model Context Protocol servers");
     }
 
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    protected override Task<int> GetInterestValueAsync()
     {
         return Task.FromResult(1);
     }
 
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages)
     {
         return Task.FromResult(new ChatResponse
         {

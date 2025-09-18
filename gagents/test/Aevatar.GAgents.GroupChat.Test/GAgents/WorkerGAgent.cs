@@ -39,7 +39,7 @@ public class WorkerGAgentGAgent : GroupMemberGAgentBase<WorkerState, WorkerEvent
     }
 
     [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    protected override Task<int> GetInterestValueAsync()
     {
         var random = new Random();
         
@@ -47,7 +47,7 @@ public class WorkerGAgentGAgent : GroupMemberGAgentBase<WorkerState, WorkerEvent
     }
 
     [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
-    protected override async Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+    protected override async Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages)
     {
         if (State.DelaySeconds > 0)
         {

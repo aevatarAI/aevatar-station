@@ -72,12 +72,12 @@ public class TwitterWebApiGAgent :
 
     #region GAgent Overrides
 
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    protected override Task<int> GetInterestValueAsync()
     {
         return Task.FromResult(1);
     }
 
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages)
     {
         return Task.FromResult(new ChatResponse
         {
