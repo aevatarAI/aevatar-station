@@ -278,3 +278,27 @@ jobs:
       - name: Deploy MCP Servers
         run: |
           bash mcp/server/deploy-official-mcp-servers.sh --gateway-url "${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}"
+
+      - name: Set job summary
+        run: |
+          echo "## ✅ All MCP Servers Deployed Successfully" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Access Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time Server**:             \`${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/time/mcp\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Fetch Server**:            \`${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/fetch/mcp\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Filesystem Server**:       \`${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/filesystem/mcp\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Git Server**:              \`${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/git/mcp\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Memory Server**:           \`${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/memory/mcp\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Sequential Thinking**:     \`${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/sequentialthinking/mcp\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Example VS Code \`mcp.json\` configuration" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          echo "{ \"servers\": {" >> $GITHUB_STEP_SUMMARY
+          echo "  \"time\": { \"url\": \"${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/time/mcp\" }," >> $GITHUB_STEP_SUMMARY
+          echo "  \"fetch\": { \"url\": \"${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/fetch/mcp\" }," >> $GITHUB_STEP_SUMMARY
+          echo "  \"filesystem\": { \"url\": \"${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/filesystem/mcp\" }," >> $GITHUB_STEP_SUMMARY
+          echo "  \"git\": { \"url\": \"${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/git/mcp\" }," >> $GITHUB_STEP_SUMMARY
+          echo "  \"memory\": { \"url\": \"${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/memory/mcp\" }," >> $GITHUB_STEP_SUMMARY
+          echo "  \"sequentialthinking\": { \"url\": \"${{ needs.setup-ephermeral-test-env.outputs.mcp_gateway_url }}/adapters/sequentialthinking/mcp\" }" >> $GITHUB_STEP_SUMMARY
+          echo "} }" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
