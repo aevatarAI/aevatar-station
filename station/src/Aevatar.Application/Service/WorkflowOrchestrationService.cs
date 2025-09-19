@@ -507,7 +507,23 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
 
             // Layout
+            _logger.LogInformation("[Layout] Starting layout for workflow: nodes={NodeCount}, edges={EdgeCount}",
+                workflow.Properties?.WorkflowNodeList?.Count ?? 0,
+                workflow.Properties?.WorkflowNodeUnitList?.Count ?? 0);
             ApplyIntelligentLayout(workflow.Properties);
+            try
+            {
+                var zeroPos = workflow.Properties?.WorkflowNodeList?
+                    .Count(n => n?.ExtendedData == null || n.ExtendedData.XPosition == "0" || n.ExtendedData.YPosition == "0") ?? 0;
+                _logger.LogInformation("[Layout] Completed layout: zeroPosNodes={ZeroPos}, firstNodes={FirstThree}",
+                    zeroPos,
+                    string.Join(" | ", (workflow.Properties?.WorkflowNodeList ?? new List<AiWorkflowNodeDto>()).Take(3)
+                        .Select(n => $"{n.NodeId}:{n?.ExtendedData?.XPosition},{n?.ExtendedData?.YPosition}")));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Layout] Post-layout logging failed");
+            }
             return workflow;
         }
         catch (JsonException ex)
@@ -552,9 +568,13 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
 
             // 构建节点连接关系图
             var nodeConnections = BuildNodeConnectionGraph(properties);
+            _logger.LogDebug("[Layout] Graph built: nodes={Nodes}, edges(total)={Edges}",
+                nodeConnections.Count, nodeConnections.Sum(kv => kv.Value?.Count ?? 0));
 
             // 计算节点层级
             var nodeLayers = CalculateNodeLayers(properties.WorkflowNodeList, nodeConnections);
+            _logger.LogInformation("[Layout] Layers calculated: count={LayerCount}; sizes=[{Sizes}]",
+                nodeLayers.Count, string.Join(",", nodeLayers.Select(l => l.Count)));
 
             // 应用高精度层次布局
             ApplyHighPrecisionLayerLayout(properties.WorkflowNodeList, nodeLayers, 
@@ -675,6 +695,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
         for (int layerIndex = 0; layerIndex < layers.Count; layerIndex++)
         {
             var layer = layers[layerIndex];
+            _logger.LogDebug("[Layout] Placing layer {LayerIndex} with {Count} nodes", layerIndex, layer.Count);
             
             // 计算基础Y坐标，加入高精度变化
             var baseLayerY = startY + layerIndex * verticalSpacing;
@@ -710,7 +731,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 
                 nodePositions[nodeId] = (finalNodeX, finalNodeY);
                 
-                _logger.LogDebug("Layer {LayerIndex}, Node {NodeId}: ({X}, {Y})", 
+                _logger.LogDebug("[Layout] Layer {LayerIndex}, Node {NodeId}: ({X}, {Y})", 
                     layerIndex, nodeId, finalNodeX, finalNodeY);
             }
         }
@@ -726,7 +747,7 @@ public class WorkflowOrchestrationService : IWorkflowOrchestrationService
                 node.ExtendedData.XPosition = x.ToString("F14"); // 14位小数精度
                 node.ExtendedData.YPosition = y.ToString("F14"); // 14位小数精度
                 
-                _logger.LogDebug("Applied high-precision position to node {NodeId} ({Name}): ({X}, {Y})",
+                _logger.LogDebug("[Layout] Applied position node {NodeId} ({Name}): ({X}, {Y})",
                     node.NodeId, node.Name, node.ExtendedData.XPosition, node.ExtendedData.YPosition);
             }
         }
