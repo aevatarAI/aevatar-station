@@ -27,7 +27,9 @@ public sealed class PsiOmniGroupMemberTests : AevatarGAgentTestBase<AevatarGAgen
     {
         var group = await _factory.GetGAgentAsync<IGroupGAgent>(Guid.NewGuid());
         var member = await _factory.GetGAgentAsync<IPsiOmniGAgent>(Guid.NewGuid());
-        await member.PrepareResourceContextAsync(ResourceContext.Create(new List<GrainId>(), Guid.NewGuid().ToString()).WithMetadata("WorkflowId", Guid.NewGuid().ToString()));
+        var blackboardId = Guid.NewGuid();
+        var workflowId = blackboardId.ToString();
+        await member.PrepareResourceContextAsync(ResourceContext.Create(new List<GrainId>(), workflowId).WithMetadata("WorkflowId", workflowId));
 
         var collector = await _factory.GetGAgentAsync<WorkflowExecutionRecordGAgentTests.IEventCollectorGAgent>(Guid.NewGuid());
 
@@ -70,7 +72,7 @@ public sealed class PsiOmniGroupMemberTests : AevatarGAgentTestBase<AevatarGAgen
         await group.RegisterAsync(member);
         await group.RegisterAsync(collector);
 
-        await group.PublishEventAsync(new CoordinatorPingEvent());
+        await group.PublishEventAsync(new CoordinatorPingEvent { BlackboardId = blackboardId });
         await Task.Delay(200);
 
         var state = await collector.GetStateAsync();
