@@ -1,5 +1,0 @@
-<Project>
-  <ItemGroup>
-    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-</Project>
