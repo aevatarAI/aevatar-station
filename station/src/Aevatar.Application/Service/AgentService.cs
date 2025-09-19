@@ -182,7 +182,9 @@ public class AgentService : ApplicationService, IAgentService
                 ? null
                 : JsonConvert.DeserializeObject<Dictionary<string, object>>(agentData.Properties),
             AgentGuid = businessAgent.GetPrimaryKey(),
-            BusinessAgentGrainId = businessAgent.GetGrainId().ToString()
+            BusinessAgentGrainId = businessAgent.GetGrainId().ToString(),
+            CreateTime = DateTime.UtcNow,
+            UpdateTime = DateTime.UtcNow
         };
 
         var configuration = await GetAgentConfigurationAsync(businessAgent);
@@ -217,7 +219,8 @@ public class AgentService : ApplicationService, IAgentService
                 QueryString = queryString,
                 StateName = nameof(CreatorGAgentState),
                 PageSize = queryDto.PageSize,
-                PageIndex = queryDto.PageIndex
+                PageIndex = queryDto.PageIndex,
+                SortFields = new List<string> { "updateTime:desc" }
             });
         }
         catch (UserFriendlyException e)
@@ -240,8 +243,9 @@ public class AgentService : ApplicationService, IAgentService
                 ? JsonConvert.DeserializeObject<Dictionary<string, object>>((string)properties)
                 : null,
             AgentType = (string)state["agentType"],
-            BusinessAgentGrainId =
-                state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null
+            BusinessAgentGrainId = state.TryGetValue("formattedBusinessAgentGrainId", out var value) ? (string)value : null,
+            CreateTime = state.TryGetValue("createTime", out var ct) && DateTime.TryParse(Convert.ToString(ct), out var ctd) ? ctd : (DateTime?)null,
+            UpdateTime = state.TryGetValue("updateTime", out var ut) && DateTime.TryParse(Convert.ToString(ut), out var utd) ? utd : (DateTime?)null
         }));
 
         return result;
@@ -294,7 +298,9 @@ public class AgentService : ApplicationService, IAgentService
             Properties = properties.IsNullOrWhiteSpace()
                 ? null
                 : JsonConvert.DeserializeObject<Dictionary<string, object>>(properties),
-            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString(),
+            CreateTime = agentState.CreateTime,
+            UpdateTime = DateTime.UtcNow
         };
 
         return resp;
@@ -318,7 +324,9 @@ public class AgentService : ApplicationService, IAgentService
                 ? null
                 : JsonConvert.DeserializeObject<Dictionary<string, object>>(agentState.Properties),
             AgentGuid = agentState.BusinessAgentGrainId.GetGuidKey(),
-            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString()
+            BusinessAgentGrainId = agentState.BusinessAgentGrainId.ToString(),
+            CreateTime = agentState.CreateTime,
+            UpdateTime = agentState.UpdateTime
         };
 
         var businessAgent = await _gAgentFactory.GetGAgentAsync(agentState.BusinessAgentGrainId);
@@ -914,4 +922,6 @@ public class AgentService : ApplicationService, IAgentService
 
         return context;
     }
+
+    // removed fallback helper; UpdateTime is authoritative
 }
