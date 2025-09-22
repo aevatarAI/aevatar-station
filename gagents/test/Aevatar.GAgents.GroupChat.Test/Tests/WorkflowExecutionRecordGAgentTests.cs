@@ -58,6 +58,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         state.RoundId.ShouldBe(startExecuteWorkflowEvent.RoundId);
         state.InitContent.ShouldBe(startExecuteWorkflowEvent.Content);
         state.Status.ShouldBe(WorkflowExecutionStatus.Running);
+        state.StartTime.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-5));
         state.WorkUnitInfos.Count.ShouldBe(1);
         state.WorkUnitInfos.ShouldContain(o => o.GrainId == workerGrainId.ToString());
         state.WorkUnitRecords.Count.ShouldBe(1);
@@ -83,6 +84,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
 
         var state = await recordAgent.GetStateAsync();
         state.Status.ShouldBe(WorkflowExecutionStatus.Completed);
+        state.EndTime.ShouldNotBe(default);
     }
 
     [Fact]
@@ -107,6 +109,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         var grainARecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGrainId.ToString());
         grainARecord.Status.ShouldBe(WorkflowExecutionStatus.Running);
         grainARecord.InputData.ShouldBe(JsonConvert.SerializeObject(startExecuteGrain.CoordinatorMessages));
+        grainARecord.StartTime.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-5));
     }
 
     [Fact]
@@ -147,6 +150,7 @@ public class WorkflowExecutionRecordGAgentTests : AevatarGroupChatTestBase
         grainARecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGrainId.ToString());
         grainARecord.Status.ShouldBe(WorkflowExecutionStatus.Completed);
         grainARecord.OutputData.ShouldBe(JsonConvert.SerializeObject(finishExecuteGrainA.ChatResponse.Content));
+        grainARecord.EndTime.ShouldNotBe(default);
     }
 
     [Fact]

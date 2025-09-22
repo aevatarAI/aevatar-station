@@ -28,12 +28,8 @@ public class WorkflowExecutionRecordGAgent :
     {
         try
         {
-            // Parse the GrainId
-            if (!GrainId.TryParse(targetAgentId, out var grainId))
-            {
-                Logger.LogWarning("❌ Failed to parse GrainId: {TargetAgentId}", targetAgentId);
-                return CreateFallbackSnapshot(targetAgentId, "Invalid GrainId format");
-            }
+            // Parse the GrainId (assumed valid)
+            var grainId = GrainId.Parse(targetAgentId);
 
             // Get the target GAgent using GAgentFactory
             var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
@@ -52,28 +48,14 @@ public class WorkflowExecutionRecordGAgent :
             else
             {
                 Logger.LogInformation("ℹ️ GAgent returned null state snapshot (likely not stateful)");
-                return CreateFallbackSnapshot(targetAgentId, "GAgent does not have state or GetStateSnapshotAsync returned null");
+                return null;
             }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "❌ Error during agent state capture for {TargetAgentId}", targetAgentId);
-            return CreateFallbackSnapshot(targetAgentId, $"Error: {ex.Message}");
+            return null;
         }
-    }
-
-    /// <summary>
-    /// Create a fallback snapshot when state retrieval fails
-    /// </summary>
-    private static string CreateFallbackSnapshot(string targetAgentId, string reason)
-    {
-        var basicSnapshot = new
-        {
-            targetAgentId = targetAgentId,
-            timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-            note = reason
-        };
-        return System.Text.Json.JsonSerializer.Serialize(basicSnapshot);
     }
 
     [EventHandler]
