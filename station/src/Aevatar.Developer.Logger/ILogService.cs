@@ -13,10 +13,12 @@ public interface ILogService
     /// </summary>
     /// <param name="indexName">ES index name</param>
     /// <param name="workflowId">Workflow ID to search for (required)</param>
+    /// <param name="roundId">Optional RoundId filter</param>
     /// <param name="grainId">Optional GrainId for precise filtering</param>
     /// <param name="level">Optional log level for filtering (Information, Warning, Error, etc.)</param>
     /// <param name="messagePattern">Optional message pattern for fuzzy matching in @m field</param>
-    /// <param name="pageSize">Number of logs to return</param>
+    /// <param name="from">ES offset for paging</param>
+    /// <param name="size">Page size</param>
     /// <returns>List of workflow logs</returns>
-    Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, string? grainId = null, string? level = null, string? messagePattern = null, int pageSize = 100);
+    Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, long? roundId = null, string? grainId = null, string? level = null, string? messagePattern = null, int from = 0, int size = 100);
 }

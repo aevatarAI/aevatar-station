@@ -6,23 +6,23 @@
 
 ## 参数
 
-- `appId` (必填): 应用ID
-- `hostType` (必填): 主机类型 (api/worker)
 - `workflowId` (必填): 工作流ID
+- `roundId` (可选): 轮次ID
 - `grainId` (可选): Grain实例ID
 - `level` (可选): 日志级别 (Information/Warning/Error)
 - `messagePattern` (可选): 消息匹配
-- `pageSize` (可选): 返回条数，默认100
+- `pageIndex` (可选): 页码，默认1
+- `pageSize` (可选): 每页条数，默认100
 
 ## 示例
 
 ```http
-GET /api/host/workflow-log?appId=test&hostType=api&workflowId=3898f980-8410-470e-af7d-ba3c679f9cbe
+GET /api/host/workflow-log?workflowId=3898f980-8410-470e-af7d-ba3c679f9cbe&pageIndex=1&pageSize=100
 ```
 
 查询错误日志：
 ```http
-GET /api/host/workflow-log?appId=test&hostType=api&workflowId=xxx&level=Error
+GET /api/host/workflow-log?workflowId=xxx&level=Error&pageIndex=1&pageSize=50
 ```
 
 **示例响应**:

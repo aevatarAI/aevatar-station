@@ -7,6 +7,6 @@ public class WorkflowLogQueryDto
     public string? GrainId { get; set; }
     public string? Level { get; set; }
     public string? MessagePattern { get; set; }
-    public int Page { get; set; } = 1;
+    public int PageIndex { get; set; } = 1;
     public int PageSize { get; set; } = 100;
 }

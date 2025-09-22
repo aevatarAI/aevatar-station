@@ -59,7 +59,7 @@ public class HostController : AevatarController
     [HttpGet("workflow-log")]
     public async Task<List<HostLogIndex>> GetWorkflowLogs([FromQuery] WorkflowLogQueryDto input)
     {
-        var page = input.Page < 1 ? 1 : input.Page;
+        var page = input.PageIndex < 1 ? 1 : input.PageIndex;
         var pageSize = input.PageSize <= 0 ? 100 : input.PageSize;
         var from = (page - 1) * pageSize;
 

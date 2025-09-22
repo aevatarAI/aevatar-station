@@ -67,7 +67,7 @@ public class LogElasticSearchService : ILogService
         return $"{nameSpace}-{appId}-{version}{LogIndexSuffix}".ToLower();
     }
 
-    public async Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, string? grainId = null, string? level = null, string? messagePattern = null, int pageSize = 100)
+    public async Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, long? roundId = null, string? grainId = null, string? level = null, string? messagePattern = null, int from = 0, int size = 100)
     {
         var mustQueries = new List<Query>();
 
@@ -82,6 +82,15 @@ public class LogElasticSearchService : ILogService
         {
             Value = workflowId
         }));
+
+        // Optional: RoundId exact match
+        if (roundId.HasValue)
+        {
+            mustQueries.Add(Query.Term(new TermQuery(new Field("app_log.RoundId"))
+            {
+                Value = roundId.Value
+            }));
+        }
 
         // Optional: GrainId exact match
         if (!string.IsNullOrEmpty(grainId))
@@ -119,7 +128,9 @@ public class LogElasticSearchService : ILogService
             var response = await _elasticClient.SearchAsync<HostLogIndex>(s => s
                 .Index($"{indexName}*")  // Use prefix matching for multiple indices
                 .Sort(sortOptions)
-                .Size(pageSize)
+                .From(from)
+                .Size(size)
+                .TrackTotalHits(new Elastic.Clients.Elasticsearch.Core.Search.TrackHits(false))
                 .Query(new BoolQuery { Must = mustQueries }));
 
             if (!response.IsValidResponse)
@@ -129,9 +140,8 @@ public class LogElasticSearchService : ILogService
             }
 
             var results = response.Hits
-                .Select(hit => hit.Source)
-                .Where(source => source != null)
-                .ToList()!;
+                .Select(hit => hit.Source!)
+                .ToList();
 
             _logger.LogInformation("Found {Count} workflow logs for WorkflowId: {WorkflowId}, GrainId: {GrainId}, Level: {Level}", 
                 results.Count, workflowId, grainId ?? "Any", level ?? "Any");
@@ -143,4 +153,6 @@ public class LogElasticSearchService : ILogService
             throw;
         }
     }
+
+    
 }
