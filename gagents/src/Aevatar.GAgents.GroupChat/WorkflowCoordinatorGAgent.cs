@@ -343,6 +343,8 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
                 $"workflow:{State.BlackboardId}"
             )
             .WithMetadata("WorkflowId", State.BlackboardId)
+            .WithMetadata("RoundId", State.RoundId)
+            
             .WithMetadata("InitContent", content ?? State.Content ?? string.Empty);
 
             // Call PrepareResourceContextAsync for automatic resource discovery (e.g., MCP tool registration)

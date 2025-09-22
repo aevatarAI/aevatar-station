@@ -116,6 +116,11 @@ public abstract class
     public virtual string? WorkflowId { get; protected set; }
 
     /// <summary>
+    /// Round identifier for current workflow execution cycle. Used by InterceptorAttribute as contextual field.
+    /// </summary>
+    public virtual long? RoundId { get; protected set; }
+
+    /// <summary>
     /// BlackboardId as Guid, computed from WorkflowId
     /// </summary>
     public virtual Guid BlackboardId 
@@ -127,16 +132,16 @@ public abstract class
         }
     }
 
-    // Workflow logging configuration constants
-    /// <summary>
-    /// Log category constant for workflow interceptor
-    /// </summary>
-    protected const string WorkflowLogCategory = "WORKFLOW";
-
     /// <summary>
     /// Workflow context property constants for interceptor
     /// </summary>
+    protected const string WorkflowLogCategory = "WORKFLOW";
     protected const string WorkflowIdProperty = "WorkflowId";
+
+    /// <summary>
+    /// Round context property constant for interceptor
+    /// </summary>
+    protected const string RoundIdProperty = "RoundId";
 
     /// <summary>
     /// Override to automatically extract WorkflowId from ResourceContext metadata
@@ -153,6 +158,17 @@ public abstract class
             
             Logger.LogInformation("[GroupMemberGAgentBase] Set WorkflowId property from ResourceContext: WorkflowId={WorkflowId}", 
                 WorkflowId);
+        }
+
+        // Extract RoundId from metadata if available and set as instance property
+        if (context.Metadata.TryGetValue("RoundId", out var roundIdObj))
+        {
+            if (long.TryParse(roundIdObj?.ToString(), out var parsedRoundId))
+            {
+                RoundId = parsedRoundId;
+                Logger.LogInformation("[GroupMemberGAgentBase] Set RoundId property from ResourceContext: RoundId={RoundId}", 
+                    RoundId);
+            }
         }
     }
 

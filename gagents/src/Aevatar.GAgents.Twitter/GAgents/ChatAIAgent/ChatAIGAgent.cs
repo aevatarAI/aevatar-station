@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Aevatar.Core.Interception;
 using Orleans.Providers;
 using Aevatar.Core.Abstractions;
 using GroupChat.GAgent;
@@ -36,12 +37,14 @@ public class ChatAIGAgent :
     }
 
     // Implementation of GroupMemberGAgentBase abstract methods
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty })]
     protected override Task<int> GetInterestValueAsync()
     {
         // AI chat agent always shows high interest in conversations
         return Task.FromResult(80);
     }
 
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty })]
     protected override async Task<ChatResponse> ChatAsync(
         List<WorkflowChatMessage>? coordinatorMessages)
     {
@@ -94,6 +97,7 @@ public class ChatAIGAgent :
         return response;
     }
 
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty })]
     protected override Task GroupChatFinishAsync()
     {
         _logger.LogInformation($"{State.MemberName} workflow finished for blackboard {BlackboardId}");
@@ -106,6 +110,7 @@ public class ChatAIGAgent :
         return Task.FromResult(State.LastResponse ?? "No response yet");
     }
 
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty })]
     protected override async Task PerformConfigAsync(ChatAIGAgentConfigDto configuration)
     {
         // Call the base implementation to set MemberName
