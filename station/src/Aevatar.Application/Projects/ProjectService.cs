@@ -100,8 +100,8 @@ public class ProjectService : OrganizationService, IProjectService
 
         var ownerRoleId = await AddOwnerRoleAsync(project.Id);
         var readerRoleId = await AddReaderRoleAsync(project.Id);
-        _logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}", 
-            ownerRoleId, readerRoleId);
+        _logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}, Email: {Email} ", 
+            ownerRoleId, readerRoleId, CurrentUser.Email);
 
         project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
         project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
@@ -117,6 +117,15 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("The same project name already exists");
         }
 
+        if (!CurrentUser.Email.IsNullOrEmpty())
+        {
+            await SetMemberAsync(projectId, new SetOrganizationMemberDto
+            {
+                Email = CurrentUser.Email,
+                Join = true,
+                RoleId = ownerRoleId
+            });
+        }
         await _developerService.CreateServiceAsync(domainName, project.Id);
         _logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
 
