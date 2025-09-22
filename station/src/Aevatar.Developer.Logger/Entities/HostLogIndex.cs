@@ -22,6 +22,8 @@ public class HostLogIndex
     
     [JsonPropertyName("app_log.WorkflowId")] public string? WorkflowId { get; set; }
     
+    [JsonPropertyName("app_log.RoundId")] public long? RoundId { get; set; }
+    
     [JsonPropertyName("app_log.GrainId")] public string? GrainId { get; set; }
     
     [JsonPropertyName("app_log.SourceContext")] public string? SourceContext { get; set; }

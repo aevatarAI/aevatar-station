@@ -8,7 +8,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using System.Linq;
 using Volo.Abp;
+using Microsoft.Extensions.Configuration;
 
 namespace Aevatar.Controllers;
 
@@ -16,18 +18,21 @@ namespace Aevatar.Controllers;
 [ControllerName("Host")]
 [Route("api/host")]
 [Authorize]
-public class HostController
+public class HostController : AevatarController
 {
     private readonly ILogService _logService;
     private readonly KubernetesOptions _kubernetesOptions;
+    private readonly IConfiguration _configuration;
 
     public HostController(
         ILogService logService, 
-        IOptionsSnapshot<KubernetesOptions> kubernetesOptions
+        IOptionsSnapshot<KubernetesOptions> kubernetesOptions,
+        IConfiguration configuration
       )
     {
         _logService = logService;
         _kubernetesOptions = kubernetesOptions.Value;
+        _configuration = configuration;
     }
     
     [HttpGet("log")]
@@ -41,9 +46,8 @@ public class HostController
     /// Get workflow logs using structured fields for precise filtering
     /// Requires LogCategory=WORKFLOW and WorkflowId. Supports optional GrainId, log level, and message pattern filtering.
     /// </summary>
-    /// <param name="appId">Application ID</param>
-    /// <param name="hostType">Host type (e.g., api, worker)</param>
     /// <param name="workflowId">Workflow ID to search for (required)</param>
+    /// <param name="roundId">Optional RoundId for filtering</param>
     /// <param name="grainId">Optional GrainId for precise filtering</param>
     /// <param name="level">Optional log level (Information, Warning, Error, etc.)</param>
     /// <param name="messagePattern">Optional message pattern for fuzzy matching in @m field</param>
@@ -51,14 +55,24 @@ public class HostController
     /// <returns>List of filtered workflow logs</returns>
     [HttpGet("workflow-log")]
     public async Task<List<HostLogIndex>> GetWorkflowLogs(
-        string appId, 
-        string workflowId, 
+        string workflowId,
+        long? roundId = null,
         string? grainId = null, 
         string? level = null,
         string? messagePattern = null,
         int pageSize = 100)
     {
-        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId + "-"+HostTypeEnum.Silo.ToString().ToLower(), "1");
-        return await _logService.GetWorkflowLogsAsync(indexName, workflowId, grainId, level, messagePattern, pageSize);
+        var hostId = _configuration.GetValue<string>("Host:HostId");
+        var indexName = _logService.GetHostLogIndexAliasName(
+            _kubernetesOptions.AppNameSpace, 
+            hostId + "-" + HostTypeEnum.Silo.ToString().ToLower(), 
+            "1");
+
+        var logs = await _logService.GetWorkflowLogsAsync(indexName, workflowId, grainId, level, messagePattern, pageSize);
+        if (roundId.HasValue)
+        {
+            logs = logs?.Where(l => l.RoundId == roundId.Value).ToList() ?? new List<HostLogIndex>();
+        }
+        return logs ?? new List<HostLogIndex>();
     }
 }
