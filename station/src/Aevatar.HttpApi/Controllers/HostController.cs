@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using System.Linq;
+using Volo.Abp.Application.Dtos;
 using Volo.Abp;
+using Aevatar.Application.Contracts.Query;
 using Microsoft.Extensions.Configuration;
 
 namespace Aevatar.Controllers;
@@ -51,28 +53,24 @@ public class HostController : AevatarController
     /// <param name="grainId">Optional GrainId for precise filtering</param>
     /// <param name="level">Optional log level (Information, Warning, Error, etc.)</param>
     /// <param name="messagePattern">Optional message pattern for fuzzy matching in @m field</param>
-    /// <param name="pageSize">Number of logs to return (default: 100)</param>
-    /// <returns>List of filtered workflow logs</returns>
+    /// <param name="page">Page number (1-based, default: 1)</param>
+    /// <param name="pageSize">Page size (default: 100)</param>
+    /// <returns>Paged workflow logs (no total for performance)</returns>
     [HttpGet("workflow-log")]
-    public async Task<List<HostLogIndex>> GetWorkflowLogs(
-        string workflowId,
-        long? roundId = null,
-        string? grainId = null, 
-        string? level = null,
-        string? messagePattern = null,
-        int pageSize = 100)
+    public async Task<List<HostLogIndex>> GetWorkflowLogs([FromQuery] WorkflowLogQueryDto input)
     {
+        var page = input.Page < 1 ? 1 : input.Page;
+        var pageSize = input.PageSize <= 0 ? 100 : input.PageSize;
+        var from = (page - 1) * pageSize;
+
         var hostId = _configuration.GetValue<string>("Host:HostId");
         var indexName = _logService.GetHostLogIndexAliasName(
             _kubernetesOptions.AppNameSpace, 
             hostId + "-" + HostTypeEnum.Silo.ToString().ToLower(), 
             "1");
 
-        var logs = await _logService.GetWorkflowLogsAsync(indexName, workflowId, grainId, level, messagePattern, pageSize);
-        if (roundId.HasValue)
-        {
-            logs = logs?.Where(l => l.RoundId == roundId.Value).ToList() ?? new List<HostLogIndex>();
-        }
+        // Query ES paged directly (no total for performance)
+        var logs = await _logService.GetWorkflowLogsAsync(indexName, input.WorkflowId, input.RoundId, input.GrainId, input.Level, input.MessagePattern, from, pageSize);
         return logs ?? new List<HostLogIndex>();
     }
 }
