@@ -68,83 +68,145 @@ public class LogElasticSearchService : ILogService
         return $"{nameSpace}-{appId}-{version}{LogIndexSuffix}".ToLower();
     }
 
-    public async Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, long? roundId = null, string? grainId = null, string? level = null, string? messagePattern = null, int from = 0, int size = 100)
-    {
-        var mustQueries = new List<Query>();
-
-        // Required: LogCategory must be WORKFLOW
-        mustQueries.Add(Query.Term(new TermQuery(new Field(LogCategoryField))
+        public async Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, long? roundId = null, string? grainId = null, string? level = null, string? messagePattern = null, int from = 0, int size = 100)
         {
-            Value = WorkflowLogCategory
-        }));
+            _logger.LogInformation("🔍 开始构建查询 - 索引: {IndexName}, WorkflowId: {WorkflowId}, RoundId: {RoundId}, GrainId: {GrainId}, Level: {Level}, MessagePattern: {MessagePattern}, From: {From}, Size: {Size}", 
+                indexName, workflowId, roundId, grainId ?? "Any", level ?? "Any", messagePattern ?? "None", from, size);
 
-        // Required: WorkflowId must match exactly
-        mustQueries.Add(Query.Term(new TermQuery(new Field(WorkflowIdField))
-        {
-            Value = workflowId
-        }));
+            var mustQueries = new List<Query>();
 
-        // Optional: RoundId exact match
-        if (roundId.HasValue)
-        {
-            mustQueries.Add(Query.Term(new TermQuery(new Field(RoundIdField))
+            // Required: LogCategory must be WORKFLOW - 使用Match查询处理text字段
+            var logCategoryQuery = Query.Match(new MatchQuery(new Field(LogCategoryField))
             {
-                Value = roundId.Value
-            }));
-        }
+                Query = WorkflowLogCategory
+            });
+            mustQueries.Add(logCategoryQuery);
+            _logger.LogInformation("📝 添加LogCategory查询(Match): {Field} = {Value}", LogCategoryField, WorkflowLogCategory);
 
-        // Optional: GrainId exact match
-        if (!string.IsNullOrEmpty(grainId))
-        {
-            mustQueries.Add(Query.Term(new TermQuery(new Field(GrainIdField))
+            // Required: WorkflowId must match exactly - 使用Match查询处理text字段
+            var workflowIdQuery = Query.Match(new MatchQuery(new Field(WorkflowIdField))
             {
-                Value = grainId
-            }));
-        }
+                Query = workflowId
+            });
+            mustQueries.Add(workflowIdQuery);
+            _logger.LogInformation("📝 添加WorkflowId查询(Match): {Field} = {Value}", WorkflowIdField, workflowId);
 
-        // Optional: Log level exact match
-        if (!string.IsNullOrEmpty(level))
-        {
-            mustQueries.Add(Query.Term(new TermQuery(new Field(LogLevelField))
+            // Optional: RoundId exact match
+            if (roundId.HasValue)
             {
-                Value = level
-            }));
-        }
+                var roundIdQuery = Query.Term(new TermQuery(new Field(RoundIdField))
+                {
+                    Value = roundId.Value
+                });
+                mustQueries.Add(roundIdQuery);
+                _logger.LogInformation("📝 添加RoundId查询: {Field} = {Value}", RoundIdField, roundId.Value);
+            }
 
-        // Optional: Message pattern match using query_string for text fields
-        if (!string.IsNullOrEmpty(messagePattern))
-        {
-            mustQueries.Add(Query.QueryString(new QueryStringQuery
+            // Optional: GrainId exact match
+            if (!string.IsNullOrEmpty(grainId))
             {
-                Query = $"*{messagePattern}*",
-                Fields = new[] { new Field(MessageField) }
-            }));
-        }
+                var grainIdQuery = Query.Term(new TermQuery(new Field(GrainIdField))
+                {
+                    Value = grainId
+                });
+                mustQueries.Add(grainIdQuery);
+                _logger.LogInformation("📝 添加GrainId查询: {Field} = {Value}", GrainIdField, grainId);
+            }
+
+            // Optional: Log level exact match
+            if (!string.IsNullOrEmpty(level))
+            {
+                var levelQuery = Query.Term(new TermQuery(new Field(LogLevelField))
+                {
+                    Value = level
+                });
+                mustQueries.Add(levelQuery);
+                _logger.LogInformation("📝 添加Level查询: {Field} = {Value}", LogLevelField, level);
+            }
+
+            // Optional: Message pattern match using query_string for text fields
+            if (!string.IsNullOrEmpty(messagePattern))
+            {
+                var messageQuery = Query.QueryString(new QueryStringQuery
+                {
+                    Query = $"*{messagePattern}*",
+                    Fields = new[] { new Field(MessageField) }
+                });
+                mustQueries.Add(messageQuery);
+                _logger.LogInformation("📝 添加MessagePattern查询: {Field} contains {Pattern}", MessageField, messagePattern);
+            }
 
         var sortOptions = new SortOptionsDescriptor<HostLogIndex>()
             .Field(new Field(TimestampField), d => d.Order(SortOrder.Asc)); // Sort by time ascending for workflow tracking
 
-        try
-        {
-            var response = await _elasticClient.SearchAsync<HostLogIndex>(s => s
-                .Index($"{indexName}*")  // Use prefix matching for multiple indices
-                .Sort(sortOptions)
-                .From(from)
-                .Size(size)
-                .TrackTotalHits(new Elastic.Clients.Elasticsearch.Core.Search.TrackHits(false))
-                .Query(new BoolQuery { Must = mustQueries }));
+            _logger.LogInformation("🎯 执行ES查询 - 索引模式: {IndexPattern}, 查询条件数: {QueryCount}", $"{indexName}*", mustQueries.Count);
+
+            try
+            {
+                // 先尝试简化查询 - 只查询WorkflowId
+                _logger.LogInformation("🧪 尝试简化查询 - 只查询WorkflowId");
+                var simpleResponse = await _elasticClient.SearchAsync<HostLogIndex>(s => s
+                    .Index($"{indexName}*")
+                    .From(0)
+                    .Size(5)
+                    .Query(q => q.Match(m => m.Field(WorkflowIdField).Query(workflowId))));
+                
+                _logger.LogInformation("📊 简化查询结果: IsValid={IsValid}, Hits={HitCount}", 
+                    simpleResponse.IsValidResponse, simpleResponse.Hits?.Count ?? 0);
+
+                if (simpleResponse.Hits?.Count > 0)
+                {
+                    _logger.LogInformation("✅ 简化查询成功！问题在于LogCategory条件");
+                    // 如果简化查询成功，就不加LogCategory条件
+                    mustQueries.RemoveAt(0); // 移除LogCategory查询
+                    _logger.LogInformation("🔧 移除LogCategory查询条件，只使用WorkflowId查询");
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ 连简化查询都失败，可能是字段映射问题");
+                }
+
+                var response = await _elasticClient.SearchAsync<HostLogIndex>(s => s
+                    .Index($"{indexName}*")  // Use prefix matching for multiple indices
+                    .Sort(sortOptions)
+                    .From(from)
+                    .Size(size)
+                    .Query(new BoolQuery { Must = mustQueries }));
+
+            _logger.LogInformation("📊 ES响应状态: IsValid={IsValid}, Took={Took}ms, Hits={HitCount}", 
+                response.IsValidResponse, response.Took, response.Hits?.Count ?? 0);
 
             if (!response.IsValidResponse)
             {
-                _logger.LogError("Failed to query workflow logs: {DebugInfo}", response.DebugInformation);
+                _logger.LogError("❌ ES查询失败: {DebugInfo}", response.DebugInformation);
                 throw new Exception($"{WorkflowQueryFailedMessage}: {response.DebugInformation}");
             }
 
-            var results = response.Hits
-                .Select(hit => hit.Source!)
-                .ToList();
+            if (response.Hits?.Count > 0)
+            {
+                _logger.LogInformation("📝 ES返回原始文档示例:");
+                var firstHit = response.Hits.First();
+                _logger.LogInformation("  - 文档ID: {DocId}", firstHit.Id);
+                _logger.LogInformation("  - 索引: {Index}", firstHit.Index);
+                _logger.LogInformation("  - Source对象: {SourceStatus}", firstHit.Source != null ? "有值" : "null");
+                
+                if (firstHit.Source?.AppLog != null)
+                {
+                    _logger.LogInformation("  - AppLog.WorkflowId: {WorkflowId}", firstHit.Source.AppLog.WorkflowId);
+                    _logger.LogInformation("  - AppLog.LogCategory: {LogCategory}", firstHit.Source.AppLog.LogCategory);
+                    _logger.LogInformation("  - AppLog.Message: {Message}", firstHit.Source.AppLog.Message?.Substring(0, Math.Min(50, firstHit.Source.AppLog.Message.Length)));
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ AppLog对象为null，可能是数据结构不匹配");
+                }
+            }
 
-            _logger.LogInformation("Found {Count} workflow logs for WorkflowId: {WorkflowId}, GrainId: {GrainId}, Level: {Level}", 
+            var results = response.Hits?
+                .Select(hit => hit.Source!)
+                .ToList() ?? new List<HostLogIndex>();
+
+            _logger.LogInformation("✅ 查询完成 - 找到 {Count} 条记录，WorkflowId: {WorkflowId}, GrainId: {GrainId}, Level: {Level}", 
                 results.Count, workflowId, grainId ?? "Any", level ?? "Any");
             return results;
         }
