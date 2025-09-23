@@ -25,11 +25,11 @@ public class AevatarDeveloperLoggerModule : AbpModule
             var nodes = options.Uris.Select(uri => new Uri(uri)).ToArray();
             var connectionPool = new StaticNodePool(nodes);
 
-                var settings = new ElasticsearchClientSettings(connectionPool)
-                    .EnableHttpCompression()
-                    .EnableDebugMode() // 启用调试模式，输出请求和响应详情
-                    .PrettyJson() // 格式化JSON输出
-                    .DisableDirectStreaming(); // 禁用直接流，确保可以捕获请求和响应内容
+            var settings = new ElasticsearchClientSettings(connectionPool)
+                .EnableHttpCompression()
+                .EnableDebugMode() // 启用调试模式，输出请求和响应详情
+                .PrettyJson(); // 格式化JSON输出
+                    
 
             if (!string.IsNullOrWhiteSpace(options.Username) && !string.IsNullOrWhiteSpace(options.Password))
             {
