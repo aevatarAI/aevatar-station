@@ -8,13 +8,14 @@ namespace Aevatar.Developer.Logger;
 
 public class LogElasticSearchService : ILogService
 {
-    // Field constants
+    // Field constants - using nested structure
     private static readonly string LogCategoryField = "app_log.LogCategory";
     private static readonly string WorkflowIdField = "app_log.WorkflowId";
     private static readonly string GrainIdField = "app_log.GrainId";
     private static readonly string LogLevelField = "app_log.@l";
     private static readonly string MessageField = "app_log.@m";
     private static readonly string TimestampField = "app_log.@t";
+    private static readonly string RoundIdField = "app_log.RoundId";
     
     // Value constants
     private static readonly string WorkflowLogCategory = "WORKFLOW";
@@ -86,7 +87,7 @@ public class LogElasticSearchService : ILogService
         // Optional: RoundId exact match
         if (roundId.HasValue)
         {
-            mustQueries.Add(Query.Term(new TermQuery(new Field("app_log.RoundId"))
+            mustQueries.Add(Query.Term(new TermQuery(new Field(RoundIdField))
             {
                 Value = roundId.Value
             }));
