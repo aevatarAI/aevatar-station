@@ -13,7 +13,8 @@ public class AevatarDeveloperLoggerModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         Configure<LogElasticSearchOptions>(configuration.GetSection("LogElasticSearch"));
 
-        context.Services.AddSingleton<ElasticsearchClient>(provider =>
+        // 为Logger使用命名服务，避免与CQRS模块的ElasticsearchClient冲突
+        context.Services.AddKeyedSingleton<ElasticsearchClient>("Logger", (provider, key) =>
         {
             var options = provider.GetRequiredService<IOptions<LogElasticSearchOptions>>().Value;
             if (options.Uris == null || !options.Uris.Any())

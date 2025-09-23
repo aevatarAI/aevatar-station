@@ -1,6 +1,7 @@
 using Aevatar.Developer.Logger.Entities;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -29,7 +30,8 @@ public class LogElasticSearchService : ILogService
     private readonly ILogger<LogElasticSearchService> _logger;
     private readonly LogElasticSearchOptions _logElasticSearchOptions;
 
-    public LogElasticSearchService(ILogger<LogElasticSearchService> logger, ElasticsearchClient elasticClient,
+    public LogElasticSearchService(ILogger<LogElasticSearchService> logger, 
+        [FromKeyedServices("Logger")] ElasticsearchClient elasticClient,
         IOptionsSnapshot<LogElasticSearchOptions> logElasticSearchOptions)
     {
         _logger = logger;
