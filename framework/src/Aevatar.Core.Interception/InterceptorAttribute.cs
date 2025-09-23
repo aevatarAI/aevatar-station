@@ -472,7 +472,7 @@ namespace Aevatar.Core.Interception
                     "{LogCategory}: ENTER {MethodName}({InputData})", 
                     LogCategory, methodName, inputData);
                 
-                _logger?.LogInformation(template, parameters);
+                _logger?.LogDebug(template, parameters);
             }
             else
             {
@@ -480,7 +480,7 @@ namespace Aevatar.Core.Interception
                     "{LogCategory}: ENTER {MethodName}()", 
                     LogCategory, methodName);
                 
-                _logger?.LogInformation(template, parameters);
+                _logger?.LogDebug(template, parameters);
             }
         }
         
@@ -501,7 +501,7 @@ namespace Aevatar.Core.Interception
                     "{LogCategory}: EXIT {MethodName} -> {OutputData}", 
                     LogCategory, methodName, outputData);
                 
-                _logger?.LogInformation(template, parameters);
+                _logger?.LogDebug(template, parameters);
             }
             else
             {
@@ -509,7 +509,7 @@ namespace Aevatar.Core.Interception
                     "{LogCategory}: EXIT {MethodName}", 
                     LogCategory, methodName);
                 
-                _logger?.LogInformation(template, parameters);
+                _logger?.LogDebug(template, parameters);
             }
         }
         
@@ -580,14 +580,14 @@ namespace Aevatar.Core.Interception
             if (_cachedContextValues.Count == 0)
                 return (baseTemplate, baseParams);
             
-            // Build context placeholders like "{WorkflowId} {GrainId}"
+            // Build context placeholders with clear labels like "WorkflowId={WorkflowId} RoundId={RoundId}"
             var validContexts = _cachedContextValues.Where(kvp => !string.IsNullOrEmpty(kvp.Value));
-            var contextPlaceholders = string.Join(" ", validContexts.Select(kvp => $"{{{kvp.Key}}}"));
+            var contextPlaceholders = string.Join(" ", validContexts.Select(kvp => $"{kvp.Key}={{{kvp.Key}}}"));
             
             if (string.IsNullOrEmpty(contextPlaceholders))
                 return (baseTemplate, baseParams);
             
-            var fullTemplate = $"{baseTemplate} {contextPlaceholders}";
+            var fullTemplate = $"{baseTemplate} [{contextPlaceholders}]";
             
             // Combine base parameters with context values
             var contextValues = validContexts.Select(kvp => (object)kvp.Value).ToArray();
