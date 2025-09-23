@@ -81,6 +81,7 @@ public class LogElasticSearchService : ILogService
                 .Index($"{indexName}*")
                 .From(from)
                 .Size(size)
+                .TrackTotalHits(new Elastic.Clients.Elasticsearch.Core.Search.TrackHits(true)) // 启用总数统计
                 .Query(q => q
                     .Bool(b => b
                         .Must(
@@ -99,8 +100,23 @@ public class LogElasticSearchService : ILogService
                 )
             );
 
-            _logger.LogInformation("📊 查询结果: IsValid={IsValid}, Took={Took}ms, Hits={HitCount}", 
-                response.IsValidResponse, response.Took, response.Hits?.Count ?? 0);
+            // 详细的调试信息
+            _logger.LogInformation("📊 ES查询响应详情:");
+            _logger.LogInformation("   - IsValidResponse: {IsValid}", response.IsValidResponse);
+            _logger.LogInformation("   - Took: {Took}ms", response.Took);
+            _logger.LogInformation("   - TimedOut: {TimedOut}", response.TimedOut);
+            _logger.LogInformation("   - Hits.Count: {HitCount}", response.Hits?.Count ?? 0);
+            _logger.LogInformation("   - Total.Value: {TotalValue}", response.Total.ToString()?? "未知");
+            _logger.LogInformation("   - Shards.Total: {ShardsTotal}", response.Shards?.Total);
+            _logger.LogInformation("   - Shards.Successful: {ShardsSuccessful}", response.Shards?.Successful);
+            _logger.LogInformation("   - Shards.Failed: {ShardsFailed}", response.Shards?.Failed);
+
+            // Debug模式：输出完整的ES调试信息
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("🔍 完整ES调试信息:");
+                _logger.LogDebug("{DebugInformation}", response.DebugInformation);
+            }
 
             if (!response.IsValidResponse)
             {
