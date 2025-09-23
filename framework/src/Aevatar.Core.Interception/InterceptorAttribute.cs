@@ -550,14 +550,15 @@ namespace Aevatar.Core.Interception
                             continue;
                             
                         var contextProperty = instanceType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
-                        if (contextProperty != null && contextProperty.PropertyType == typeof(string))
+                        if (contextProperty != null)
                         {
-                            var value = contextProperty.GetValue(_instance) as string;
-                            _cachedContextValues[propertyName] = value;
+                            // Get property value and convert to string representation for logging
+                            var value = contextProperty.GetValue(_instance);
+                            _cachedContextValues[propertyName] = value?.ToString();
                         }
                         else
                         {
-                            // Property not found or wrong type, cache null
+                            // Property not found, cache null
                             _cachedContextValues[propertyName] = null;
                         }
                     }
