@@ -9,9 +9,9 @@ namespace Aevatar.Developer.Logger;
 public class LogElasticSearchService : ILogService
 {
     // Field constants
-    private static readonly string LogCategoryField = "app_log.LogCategory.keyword";
-    private static readonly string WorkflowIdField = "app_log.WorkflowId.keyword";
-    private static readonly string GrainIdField = "app_log.GrainId.keyword";
+    private static readonly string LogCategoryField = "app_log.LogCategory";
+    private static readonly string WorkflowIdField = "app_log.WorkflowId";
+    private static readonly string GrainIdField = "app_log.GrainId";
     private static readonly string LogLevelField = "app_log.@l";
     private static readonly string MessageField = "app_log.@m";
     private static readonly string TimestampField = "app_log.@t";
