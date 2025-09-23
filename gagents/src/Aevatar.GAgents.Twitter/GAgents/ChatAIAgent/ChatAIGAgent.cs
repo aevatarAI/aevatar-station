@@ -13,7 +13,7 @@ using Newtonsoft.Json;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AI.Common;
 using WorkflowChatMessage = GroupChat.GAgent.Feature.Common.ChatMessage;
-
+[module: Interceptor]
 namespace Aevatar.GAgents.Twitter.GAgents.ChatAIAgent;
 
 [Description("General-purpose conversational AI agent for group chat contexts, handling messages with history, tool-calls, and configurable instructions.")]
