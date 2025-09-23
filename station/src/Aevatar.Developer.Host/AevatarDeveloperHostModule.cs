@@ -53,7 +53,7 @@ public class AevatarDeveloperHostModule : AbpModule
         ConfigureSwaggerServices(context, configuration);
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
-        Configure<KubernetesOptions>(configuration.GetSection("Kubernetes"));
+       
         Configure<AbpBlobStoringOptions>(options =>
         {
             options.Containers.ConfigureDefault(container =>
