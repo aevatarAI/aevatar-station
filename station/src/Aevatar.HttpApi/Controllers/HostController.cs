@@ -38,9 +38,9 @@ public class HostController : AevatarController
     }
     
     [HttpGet("log")]
-    public async Task<List<HostLogIndex>> GetLatestRealTimeLogs(string appId,HostTypeEnum hostType,int offset)
+    public async Task<List<HostLogIndex>> GetLatestRealTimeLogs(string appId,int offset)
     {
-        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId + "-"+hostType.ToString().ToLower(), "1");
+        var indexName = _logService.GetHostLogIndexAliasName(_kubernetesOptions.AppNameSpace, appId, "1");
         return await _logService.GetHostLatestLogAsync(indexName, offset);
     }
     
@@ -66,7 +66,7 @@ public class HostController : AevatarController
         var hostId = _configuration.GetValue<string>("Host:HostId");
         var indexName = _logService.GetHostLogIndexAliasName(
             _kubernetesOptions.AppNameSpace, 
-            hostId + "-" + HostTypeEnum.Silo.ToString().ToLower(), 
+            hostId, 
             "1");
 
         // Query ES paged directly (no total for performance)
