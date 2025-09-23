@@ -25,42 +25,75 @@ GET /api/host/workflow-log?workflowId=3898f980-8410-470e-af7d-ba3c679f9cbe&pageI
 GET /api/host/workflow-log?workflowId=xxx&level=Error&pageIndex=1&pageSize=50
 ```
 
+## 响应结构
+
+API返回包装在`data`数组中的日志记录列表，每条记录包含：
+
+- `timestamp`: ES索引时间戳
+- `appLog`: 应用日志详细信息
+  - `message`: 格式化的日志消息
+  - `logId`: 日志唯一标识符
+  - `time`: 应用内部时间戳
+  - `level`: 日志级别 (可能为null)
+  - `traceId`/`spanId`: 分布式追踪标识
+  - `logCategory`: 日志分类 (WORKFLOW)
+  - `workflowId`: 工作流ID
+  - `roundId`: 轮次ID (可能为null)
+  - `grainId`: Orleans Grain实例ID
+  - `sourceContext`: 日志来源类名
+  - `application`: 应用程序名称
+  - `environment`: 运行环境
+  - `methodName`: 方法名称
+
 **示例响应**:
 ```json
-[
-  {
-    "timestamp": "2025-09-16T11:09:36.2928358Z",
-    "app_log": {
-      "@m": "WORKFLOW: ENTER ChatAsync(blackboardId=3898f980-8410-470e-af7d-ba3c679f9cbe,messages=[...]) WorkflowId=3898f980-8410-470e-af7d-ba3c679f9cbe GrainId=18277c1f-0cd5-4503-8d0c-013bd69129a5",
-      "@i": "3c939a07",
-      "@t": "2025-09-16T11:09:36.2928358Z",
-      "@l": "Information", 
-      "@tr": "7fddc05231c60579a39ba955c1439817",
-      "@sp": "643439fe64eb4d83",
-      "logCategory": "WORKFLOW",
-      "methodName": "ChatAsync",
-      "workflowId": "3898f980-8410-470e-af7d-ba3c679f9cbe",
-      "grainId": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent/18277c1f0cd545038d0c013bd69129a5",
-      "sourceContext": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent",
-      "application": "Aevatar.defaultproject521796.Host",
-      "environment": "Staging"
+{
+  "data": [
+    {
+      "timestamp": "2025-09-23T07:32:41.446Z",
+      "appLog": {
+        "message": "\"WORKFLOW\": ENTER \"ChatAsync\"(\"{\\\"messages\\\":[]}\") \"3537305b-f922-413e-a4e2-21146079bce3\"",
+        "logId": "f87c5d6c",
+        "time": "2025-09-23T07:32:36.9759486Z",
+        "level": null,
+        "exception": null,
+        "traceId": "74b1868aa8c8a60f3d7a369f0260060d",
+        "spanId": "66a22eb39863e686",
+        "logCategory": "WORKFLOW",
+        "workflowId": "3537305b-f922-413e-a4e2-21146079bce3",
+        "roundId": null,
+        "grainId": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent/702452ef96f34b93a88efe81784d5ccb",
+        "sourceContext": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent",
+        "hostId": null,
+        "version": null,
+        "application": "Aevatar.defaultproject3d95fc.Host",
+        "environment": "Staging",
+        "methodName": "ChatAsync"
+      }
+    },
+    {
+      "timestamp": "2025-09-23T07:32:41.446Z",
+      "appLog": {
+        "message": "\"WORKFLOW\": EXIT \"ChatAsync\" \"3537305b-f922-413e-a4e2-21146079bce3\"",
+        "logId": "edce4f4b",
+        "time": "2025-09-23T07:32:36.9761951Z",
+        "level": null,
+        "exception": null,
+        "traceId": "74b1868aa8c8a60f3d7a369f0260060d",
+        "spanId": "66a22eb39863e686",
+        "logCategory": "WORKFLOW",
+        "workflowId": "3537305b-f922-413e-a4e2-21146079bce3",
+        "roundId": null,
+        "grainId": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent/702452ef96f34b93a88efe81784d5ccb",
+        "sourceContext": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent",
+        "hostId": null,
+        "version": null,
+        "application": "Aevatar.defaultproject3d95fc.Host",
+        "environment": "Staging",
+        "methodName": "ChatAsync"
+      }
     }
-  },
-  {
-    "timestamp": "2025-09-16T11:09:36.3128358Z", 
-    "app_log": {
-      "@m": "WORKFLOW: EXIT ChatAsync WorkflowId=3898f980-8410-470e-af7d-ba3c679f9cbe GrainId=18277c1f-0cd5-4503-8d0c-013bd69129a5",
-      "@i": "4d847b08",
-      "@t": "2025-09-16T11:09:36.3128358Z",
-      "@l": "Information",
-      "logCategory": "WORKFLOW",
-      "methodName": "ChatAsync", 
-      "workflowId": "3898f980-8410-470e-af7d-ba3c679f9cbe",
-      "grainId": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent/18277c1f0cd545038d0c013bd69129a5",
-      "sourceContext": "Aevatar.GAgents.InputGAgent.GAgent.InputGAgent",
-      "application": "Aevatar.defaultproject521796.Host",
-      "environment": "Staging"
-    }
-  }
-]
+  ],
+  "message": ""
+}
 ```
