@@ -103,6 +103,11 @@ public abstract partial class
     public virtual long? RoundId { get; protected set; }
 
     /// <summary>
+    /// Grain ID for this member instance, used by InterceptorAttribute for workflow logging
+    /// </summary>
+    public virtual string? GrainId { get; protected set; }
+
+    /// <summary>
     /// BlackboardId as Guid, computed from WorkflowId
     /// </summary>
     public virtual Guid BlackboardId 
@@ -131,6 +136,11 @@ public abstract partial class
     protected const string RoundIdProperty = "RoundId";
 
     /// <summary>
+    /// Grain context property constant for interceptor
+    /// </summary>
+    protected const string GrainIdProperty = "GrainId";
+
+    /// <summary>
     /// Override to automatically extract WorkflowId from ResourceContext metadata
     /// and set it as instance property for use by InterceptorAttribute
     /// </summary>
@@ -157,6 +167,10 @@ public abstract partial class
                     RoundId);
             }
         }
+
+        // Set GrainId for logging context
+        GrainId = this.GrainReference.GrainId.ToString();
+        Logger.LogInformation("[MemberGAgentBase] Set GrainId property: GrainId={GrainId}", GrainId);
     }
 
     [GenerateSerializer]

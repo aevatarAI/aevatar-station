@@ -8,6 +8,7 @@ using Aevatar.GAgents.InputGAgent.GAgent.SEvent;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
 using Orleans.Providers;
+using Orleans.Runtime;
 
 [module: Interceptor]
 
@@ -23,14 +24,14 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.FromResult("Input agent that returns configured input text");
     }
 
-    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty,RoundIdProperty})]
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty, RoundIdProperty, GrainIdProperty})]
     protected override Task<int> GetInterestValueAsync()
     {
         
         return Task.FromResult(100);
     }
 
-    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty,RoundIdProperty})]
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty, RoundIdProperty, GrainIdProperty})]
     protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? messages)
     {
         var response = new ChatResponse
@@ -48,7 +49,7 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.CompletedTask;
     }
 
-    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty,RoundIdProperty})]
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty, RoundIdProperty, GrainIdProperty})]
     protected override async Task PerformConfigAsync(InputConfigDto configuration)
     {
         await base.PerformConfigAsync(configuration);
