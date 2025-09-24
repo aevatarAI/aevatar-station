@@ -6,8 +6,6 @@ using Aevatar.GAgents.MCP.Core.State;
 using Aevatar.GAgents.MCP.Options;
 using GroupChat.GAgent.Feature.Common;
 
-[module: Interceptor]
-
 namespace Aevatar.GAgents.MCP.GAgents;
 
 /// <summary>
