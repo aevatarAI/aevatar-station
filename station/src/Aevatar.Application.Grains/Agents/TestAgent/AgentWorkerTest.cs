@@ -37,14 +37,14 @@ public class AgentWorkerTest: GroupMemberGAgentBase<AgentWorkerTestState, AgentW
         await base.PerformConfigAsync(configuration);
     }
 
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    protected override Task<int> GetInterestValueAsync()
     {
         var random = new Random();
 
         return Task.FromResult(random.Next(1, 90));
     }
 
-    protected override async Task<ChatResponse> ChatAsync(Guid blackboardId, List<GroupChat.GAgent.Feature.Common.ChatMessage>? coordinatorMessages)
+    protected override async Task<ChatResponse> ChatAsync(List<GroupChat.GAgent.Feature.Common.ChatMessage>? coordinatorMessages)
     {
         if (!State.FailureSummary.IsNullOrEmpty())
         {
