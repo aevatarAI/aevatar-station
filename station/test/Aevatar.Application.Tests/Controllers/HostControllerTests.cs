@@ -60,13 +60,12 @@ public class HostControllerTests
         var options = new KubernetesOptions { AppNameSpace = "test-ns" };
         var controller = CreateController(options);
 
-        // Host:HostId config
+        // Host:HostId config - Mock IConfiguration properly
+        var mockSection = new Mock<IConfigurationSection>();
+        mockSection.Setup(x => x.Value).Returns("my-host");
         _mockConfiguration
-            .Setup(x => x.GetSection("Host:HostId").Value)
-            .Returns((string?)null); // IConfiguration.GetValue is extension; we'll mock via GetValue below
-        _mockConfiguration
-            .Setup(x => x.GetValue<string>("Host:HostId"))
-            .Returns("my-host");
+            .Setup(x => x.GetSection("Host:HostId"))
+            .Returns(mockSection.Object);
 
         var input = new WorkflowLogQueryDto
         {
@@ -79,9 +78,9 @@ public class HostControllerTests
             PageSize = 20
         };
 
-        // Expect index alias build
+        // Expect index alias build - fix the hostId parameter to match actual implementation
         _mockLogService
-            .Setup(s => s.GetHostLogIndexAliasName("test-ns", "my-host-" + HostTypeEnum.Silo.ToString().ToLower(), "1"))
+            .Setup(s => s.GetHostLogIndexAliasName("test-ns", "my-host", "1"))
             .Returns("alias-test");
 
         // Capture paging and filters
@@ -116,10 +115,12 @@ public class HostControllerTests
         var options = new KubernetesOptions { AppNameSpace = "ns" };
         var controller = CreateController(options);
 
-        _mockConfiguration.Setup(x => x.GetValue<string>("Host:HostId")).Returns("hid");
+        var mockSection2 = new Mock<IConfigurationSection>();
+        mockSection2.Setup(x => x.Value).Returns("hid");
+        _mockConfiguration.Setup(x => x.GetSection("Host:HostId")).Returns(mockSection2.Object);
         var input = new WorkflowLogQueryDto { WorkflowId = "wf" }; // default PageIndex=1, PageSize=100
 
-        _mockLogService.Setup(s => s.GetHostLogIndexAliasName("ns", "hid-" + HostTypeEnum.Silo.ToString().ToLower(), "1"))
+        _mockLogService.Setup(s => s.GetHostLogIndexAliasName("ns", "hid", "1"))
             .Returns("alias");
         _mockLogService.Setup(s => s.GetWorkflowLogsAsync("alias", "wf", null, null, null, null, 0, 100))
             .ReturnsAsync((List<HostLogIndex>?)null);
