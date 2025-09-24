@@ -159,6 +159,7 @@ public class WorkflowExecutionRecordGAgent :
                     startUnit.Status = WorkflowExecutionStatus.Running;
                 }
                 startUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
+                startUnit.CurrentStateSnapshot = startExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                 break;
             case FinishExecuteWorkUnitLogEvent finishExecuteWorkUnitLogEvent:
                 var workUnit = state.WorkUnitRecords.First(o =>
@@ -166,6 +167,7 @@ public class WorkflowExecutionRecordGAgent :
                 workUnit.EndTime = DateTime.UtcNow;
                 workUnit.Status = WorkflowExecutionStatus.Completed;
                 workUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                workUnit.CurrentStateSnapshot = finishExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                 break;
             case FailExecuteWorkflowLogEvent failExecuteWorkflowLogEvent:
                 var failWorkUnit = state.WorkUnitRecords.First(o =>
