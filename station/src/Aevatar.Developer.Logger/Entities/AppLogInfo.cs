@@ -18,8 +18,6 @@ public class AppLogInfo
     [JsonPropertyName("GrainId")] public string? GrainId { get; set; }
     
     [JsonPropertyName("SourceContext")] public string? SourceContext { get; set; }
-    [JsonPropertyName("HostId")] public string? HostId { get; set; }
-    [JsonPropertyName("Version")] public string? Version { get; set; }
     [JsonPropertyName("Application")] public string? Application { get; set; }
     [JsonPropertyName("Environment")] public string? Environment { get; set; }
     [JsonPropertyName("MethodName")] public string? MethodName { get; set; }

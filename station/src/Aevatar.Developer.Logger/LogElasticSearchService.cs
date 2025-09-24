@@ -107,7 +107,7 @@ public class LogElasticSearchService : ILogService
                 .From(from)
                 .Size(size)
                 .Sort(sort => sort
-                    .Field(new Field(TimestampField), d => d.Order(SortOrder.Asc)) // Sort by time ascending for workflow tracking
+                    .Field(new Field(TimestampField), d => d.Order(SortOrder.Desc)) // Sort by time ascending for workflow tracking
                 )
                 .Query(q => BuildWorkflowLogsQuery(q, workflowId, roundId, grainId, level, messagePattern))
             );
