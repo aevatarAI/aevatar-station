@@ -9,22 +9,12 @@ namespace Aevatar.Developer.Logger;
 
 public class LogElasticSearchService : ILogService
 {
-    // Field constants - using nested structure
-    private static readonly string LogCategoryField = "app_log.LogCategory";
-    private static readonly string WorkflowIdField = "app_log.WorkflowId";
-    private static readonly string GrainIdField = "app_log.GrainId";
-    private static readonly string LogLevelField = "app_log.@l";
-    private static readonly string MessageField = "app_log.@m";
-    private static readonly string TimestampField = "app_log.@t";
-    private static readonly string RoundIdField = "app_log.RoundId";
-    
-    // Value constants
-    private static readonly string WorkflowLogCategory = "WORKFLOW";
-    private static readonly string LogIndexSuffix = "-log-index";
-    
-    // Error messages
-    private static readonly string QueryFailedMessage = "查询失败";
-    private static readonly string WorkflowQueryFailedMessage = "查询WorkflowId日志失败";
+    // Constants
+    private const string TimestampField = "app_log.@t";
+    private const string WorkflowLogCategory = "WORKFLOW";
+    private const string LogIndexSuffix = "-log-index";
+    private const string QueryFailedMessage = "查询失败";
+    private const string WorkflowQueryFailedMessage = "查询WorkflowId日志失败";
 
     private readonly ElasticsearchClient _elasticClient;
     private readonly ILogger<LogElasticSearchService> _logger;
@@ -70,64 +60,42 @@ public class LogElasticSearchService : ILogService
         return $"{nameSpace}-{appId}-{version}{LogIndexSuffix}".ToLower();
     }
 
-    private BoolQueryDescriptor<HostLogIndex> BuildChainedBoolQuery(BoolQueryDescriptor<HostLogIndex> b, string workflowId, long? roundId, string? grainId, string? level, string? messagePattern)
+    private QueryDescriptor<HostLogIndex> BuildWorkflowLogsQuery(QueryDescriptor<HostLogIndex> q, string workflowId, long? roundId, string? grainId, string? level, string? messagePattern)
     {
-        var boolQuery = b.Must(
-            // Required: LogCategory must be WORKFLOW
-            m => m.Term(t => t
-                .Field(f => f.AppLog.LogCategory)
-                .Value(WorkflowLogCategory)
-            ),
-            // Required: WorkflowId must match exactly  
-            m => m.Term(t => t
-                .Field(f => f.AppLog.WorkflowId)
-                .Value(workflowId)
-            )
-        );
+        // Build must clauses list
+        var mustClauses = new List<Action<QueryDescriptor<HostLogIndex>>>
+        {
+            // Required conditions
+            m => m.Term(t => t.Field(f => f.AppLog!.LogCategory).Value(WorkflowLogCategory)),
+            m => m.Term(t => t.Field(f => f.AppLog!.WorkflowId).Value(workflowId))
+        };
 
         // Add optional conditions
-        AddOptionalQueries(boolQuery, roundId, grainId, level, messagePattern);
-        
-        return boolQuery;
-    }
-
-    private void AddOptionalQueries(BoolQueryDescriptor<HostLogIndex> boolQuery, long? roundId, string? grainId, string? level, string? messagePattern)
-    {
-        // Optional: RoundId exact match
         if (roundId.HasValue)
         {
-            boolQuery.Must(m => m.Term(t => t
-                .Field(f => f.AppLog.RoundId)
-                .Value(roundId.Value)
-            ));
+            mustClauses.Add(m => m.Term(t => t.Field(f => f.AppLog!.RoundId).Value(roundId.Value)));
         }
 
-        // Optional: GrainId exact match
         if (!string.IsNullOrEmpty(grainId))
         {
-            boolQuery.Must(m => m.Term(t => t
-                .Field(f => f.AppLog.GrainId)
-                .Value(grainId)
-            ));
+            mustClauses.Add(m => m.Term(t => t.Field(f => f.AppLog!.GrainId).Value(grainId)));
         }
 
-        // Optional: Log level exact match
         if (!string.IsNullOrEmpty(level))
         {
-            boolQuery.Must(m => m.Term(t => t
-                .Field(f => f.AppLog.Level)
-                .Value(level)
+            mustClauses.Add(m => m.Term(t => t.Field(f => f.AppLog!.Level).Value(level)));
+        }
+
+        if (!string.IsNullOrEmpty(messagePattern))
+        {
+            mustClauses.Add(m => m.QueryString(qs => qs
+                .Query($"*{messagePattern}*")
+                .Fields(Fields.FromExpression((HostLogIndex f) => f.AppLog!.Message))
             ));
         }
 
-        // Optional: Message pattern fuzzy match
-        if (!string.IsNullOrEmpty(messagePattern))
-        {
-            boolQuery.Must(m => m.QueryString(qs => qs
-                .Query($"*{messagePattern}*")
-                .Fields(Fields.FromExpression((HostLogIndex f) => f.AppLog.Message))
-            ));
-        }
+        // Apply all conditions
+        return q.Bool(b => b.Must(mustClauses.ToArray()));
     }
 
     public async Task<List<HostLogIndex>> GetWorkflowLogsAsync(string indexName, string workflowId, long? roundId = null, string? grainId = null, string? level = null, string? messagePattern = null, int from = 0, int size = 100)
@@ -141,9 +109,7 @@ public class LogElasticSearchService : ILogService
                 .Sort(sort => sort
                     .Field(new Field(TimestampField), d => d.Order(SortOrder.Asc)) // Sort by time ascending for workflow tracking
                 )
-                .Query(q => q
-                    .Bool(b => BuildChainedBoolQuery(b, workflowId, roundId, grainId, level, messagePattern))
-                )
+                .Query(q => BuildWorkflowLogsQuery(q, workflowId, roundId, grainId, level, messagePattern))
             );
 
             if (!response.IsValidResponse)
@@ -155,10 +121,16 @@ public class LogElasticSearchService : ILogService
             var results = response.Hits
                 .Select(hit => hit.Source)
                 .Where(source => source != null)
-                .ToList()!;
+                .ToList();
 
-            _logger.LogInformation("Found {Count} workflow logs for WorkflowId: {WorkflowId}, RoundId: {RoundId}, GrainId: {GrainId}, Level: {Level}", 
-                results.Count, workflowId, roundId?.ToString() ?? "Any", grainId ?? "Any", level ?? "Any");
+            _logger.LogInformation(
+                "Found {Count} workflow logs for WorkflowId: {WorkflowId}, RoundId: {RoundId}, GrainId: {GrainId}, Level: {Level}", 
+                results.Count, 
+                workflowId,
+                roundId?.ToString() ?? "Any",
+                grainId ?? "Any",
+                level ?? "Any"
+            );
             
             return results;
         }
