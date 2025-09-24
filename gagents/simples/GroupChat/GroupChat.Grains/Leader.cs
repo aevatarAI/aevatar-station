@@ -1,4 +1,5 @@
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
 using Aevatar.GAgents.GroupChat.Core.Dto;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
@@ -6,6 +7,7 @@ using GroupChat.GAgent.GEvent;
 
 namespace GroupChat.Grain;
 
+[GAgent(nameof(Leader))]
 public class Leader : GroupMemberGAgentBase<GroupMemberState, LeaderEventLog, EventBase, GroupMemberConfigDto>, ILeader
 {
     public override Task<string> GetDescriptionAsync()
@@ -13,9 +15,10 @@ public class Leader : GroupMemberGAgentBase<GroupMemberState, LeaderEventLog, Ev
         return Task.FromResult("Leader");
     }
 
-    protected override async Task<int> GetInterestValueAsync(Guid blackboardId)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
+    protected override async Task<int> GetInterestValueAsync()
     {
-        var messages = await GetMessageFromBlackboardAsync(blackboardId);
+        var messages = await GetMessageFromBlackboardAsync(BlackboardId);
         if (messages.Count > 10)
         {
             return 100;
@@ -24,7 +27,8 @@ public class Leader : GroupMemberGAgentBase<GroupMemberState, LeaderEventLog, Ev
         return 0;
     }
 
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? messages)
     {
         var response = new ChatResponse();
         Console.WriteLine($"{State.MemberName} Can Speak");
@@ -39,7 +43,7 @@ public class Leader : GroupMemberGAgentBase<GroupMemberState, LeaderEventLog, Ev
         return Task.FromResult(response);
     }
 
-    protected override Task GroupChatFinishAsync(Guid blackboardId)
+    protected override Task GroupChatFinishAsync()
     {
         Console.WriteLine($"{State.MemberName} receive finish message");
         return Task.CompletedTask;

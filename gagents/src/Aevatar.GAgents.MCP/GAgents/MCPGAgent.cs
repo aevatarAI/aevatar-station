@@ -1,4 +1,5 @@
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
 using Aevatar.GAgents.Basic;
 using Aevatar.GAgents.MCP.Core;
 using Aevatar.GAgents.MCP.Core.State;
@@ -20,12 +21,14 @@ public class MCPGAgent : MCPGAgentBase<MCPGAgentState, MCPGAgentStateLogEvent, E
         return Task.FromResult("MCP GAgent for interacting with Model Context Protocol servers");
     }
 
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    protected override Task<int> GetInterestValueAsync()
     {
         return Task.FromResult(1);
     }
 
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages)
     {
         return Task.FromResult(new ChatResponse
         {

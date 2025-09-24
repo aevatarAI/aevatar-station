@@ -6,7 +6,7 @@ namespace Aevatar.GAgents.PsiOmni;
 
 public partial class PsiOmniGAgent
 {
-    protected async Task<int> GetInterestValueAsync(Guid blackboardId)
+    protected async Task<int> GetInterestValueAsync()
     {
         return await Task.FromResult(1);
     }
@@ -14,7 +14,7 @@ public partial class PsiOmniGAgent
     [EventHandler]
     public async Task HandleEventAsync(EvaluationInterestEvent @event)
     {
-        var score = await GetInterestValueAsync(@event.BlackboardId);
+        var score = await GetInterestValueAsync();
 
         await PublishAsync(new EvaluationInterestResponseEvent()
         {
@@ -34,7 +34,6 @@ public partial class PsiOmniGAgent
         }
 
         var coordinatorMessages = @event.CoordinatorMessages;
-        var blackboardId = @event.BlackboardId;
         foreach (var msg in coordinatorMessages ?? new())
         {
             RaiseEventWithTracing(new ReceiveUserMessageEvent
@@ -44,7 +43,7 @@ public partial class PsiOmniGAgent
                     TargetAgentId = this.GetGrainId().ToString(),
                     Content = msg.Content
                 },
-                BlackboardId = blackboardId
+                BlackboardId = @event.BlackboardId
             });
         }
 
@@ -54,13 +53,13 @@ public partial class PsiOmniGAgent
     [EventHandler]
     public async Task HandleEventAsync(GroupChatFinishEvent @event)
     {
-        await GroupChatFinishAsync(@event.BlackboardId);
+        await GroupChatFinishAsync();
     }
 
     [EventHandler]
     public async Task HandleEventAsync(CoordinatorPingEvent @event)
     {
-        if (await IgnoreBlackboardPingEvent(@event.BlackboardId) == false)
+        if (await IgnoreBlackboardPingEvent() == false)
         {
             await PublishAsync(new CoordinatorPongEvent()
             {
@@ -71,12 +70,12 @@ public partial class PsiOmniGAgent
         }
     }
 
-    protected Task GroupChatFinishAsync(Guid blackboardId)
+    protected Task GroupChatFinishAsync()
     {
         return Task.CompletedTask;
     }
 
-    protected virtual Task<bool> IgnoreBlackboardPingEvent(Guid blackboardId)
+    protected virtual Task<bool> IgnoreBlackboardPingEvent()
     {
         return Task.FromResult(false);
     }

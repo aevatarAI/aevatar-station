@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using AElf.OpenTelemetry;
 using Aevatar.MongoDB;
+using Aevatar.Options;
 using Aevatar.Permissions;
 using AutoResponseWrapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -52,7 +53,7 @@ public class AevatarDeveloperHostModule : AbpModule
         ConfigureSwaggerServices(context, configuration);
         context.Services.AddMvc(options => { options.Filters.Add(new IgnoreAntiforgeryTokenAttribute()); })
             .AddNewtonsoftJson();
-        
+       
         Configure<AbpBlobStoringOptions>(options =>
         {
             options.Containers.ConfigureDefault(container =>

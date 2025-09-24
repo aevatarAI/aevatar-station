@@ -1,18 +1,20 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Aevatar.Core.Interception.Context;
 using Aevatar.Core.Interception.Configurations;
 using Aevatar.Core.Interception.Models;
-using System.Diagnostics;
-using System.Collections.Generic;
-using System.Text.Json;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Aevatar.Core.Interception
 {
+
     /// <summary>
     /// Attribute that provides method tracing capabilities through Fody MethodDecorator
     /// </summary>
@@ -20,6 +22,19 @@ namespace Aevatar.Core.Interception
     public class InterceptorAttribute : Attribute
     {
         private static readonly ActivitySource _activitySource = new("Aevatar.Core.Interception");
+        
+        /// <summary>
+        /// 日志分类标签，如 "WORKFLOW", "PERFORMANCE", "BUSINESS" 等
+        /// 由使用方完全自定义
+        /// </summary>
+        public string? LogCategory { get; set; }
+        
+        /// <summary>
+        /// 要通过反射查找的上下文属性名数组，如 {"WorkflowId", "SessionId", "OrderId"} 等
+        /// 支持单个或多个属性，语法：ContextProperty = {"WorkflowId", "SessionId", "OrderId"}
+        /// 由使用方完全自定义，同时用作日志中的标签名
+        /// </summary>
+        public string[]? ContextProperty { get; set; }
         
         /// <summary>
         /// Static service provider for DI-based logger resolution
@@ -32,6 +47,9 @@ namespace Aevatar.Core.Interception
         private object[]? _args;
         private ILogger? _logger;
         private Activity? _activity;
+        
+        // Cached context property values to avoid repeated reflection
+        private Dictionary<string, string?> _cachedContextValues = new Dictionary<string, string?>();
 
         /// <summary>
         /// Called before the method execution to initialize the interceptor
@@ -86,6 +104,9 @@ namespace Aevatar.Core.Interception
             }
 
             Init();
+            
+            // Initialize context property value once during initialization
+            InitializeContextProperty();
 
             // Log initialization with appropriate level
             if (ShouldTrace())
@@ -232,7 +253,13 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Only log trace messages if tracing is enabled
+                // Check if this has custom log category (additional contextual logging)
+                if (!string.IsNullOrEmpty(LogCategory))
+                {
+                    LogContextualEntry();
+                }
+                
+                // Trace logging (independent of workflow)
                 if (ShouldTrace())
                 {
                     _logger?.LogDebug("TRACE: Entering {MethodName}", _method.Name);
@@ -257,6 +284,7 @@ namespace Aevatar.Core.Interception
                         }
                     }
                 }
+                
             }
         }
 
@@ -267,7 +295,13 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Only log trace messages if tracing is enabled
+                // Check if this has custom log category (additional contextual logging)
+                if (!string.IsNullOrEmpty(LogCategory))
+                {
+                    LogContextualExit();
+                }
+                
+                // Trace logging (independent of workflow)
                 if (ShouldTrace())
                 {
                     _logger?.LogDebug("TRACE: Exiting {MethodName}", _method.Name);
@@ -289,7 +323,13 @@ namespace Aevatar.Core.Interception
         {
             if (_method != null)
             {
-                // Only log trace messages if tracing is enabled
+                // Check if this has custom log category (additional contextual logging)
+                if (!string.IsNullOrEmpty(LogCategory))
+                {
+                    LogContextualException(exception);
+                }
+                
+                // Trace logging (independent of workflow)
                 if (ShouldTrace())
                 {
                     // Always include stack trace when logging exceptions
@@ -414,6 +454,192 @@ namespace Aevatar.Core.Interception
             // Check if tracing is enabled via TraceContext
             return TraceContext.IsTracingEnabled;
         }
+        
+        /// <summary>
+        /// Logs contextual entry with input parameters
+        /// </summary>
+        private void LogContextualEntry()
+        {
+            if (_method == null) return;
+            
+            var methodName = _method.Name;
+            
+            // Combine ENTER and INPUT into single log entry with dynamic structured context fields
+            if (_args != null && _args.Length > 0)
+            {
+                var inputData = BuildInputOutputData();
+                var (template, parameters) = BuildDynamicLogTemplate(
+                    "{LogCategory}: ENTER {MethodName}({InputData})", 
+                    LogCategory, methodName, inputData);
+                
+                _logger?.LogDebug(template, parameters);
+            }
+            else
+            {
+                var (template, parameters) = BuildDynamicLogTemplate(
+                    "{LogCategory}: ENTER {MethodName}()", 
+                    LogCategory, methodName);
+                
+                _logger?.LogDebug(template, parameters);
+            }
+        }
+        
+        /// <summary>
+        /// Logs contextual exit with return value
+        /// </summary>
+        private void LogContextualExit(object? returnValue = null)
+        {
+            if (_method == null) return;
+            
+            var methodName = _method.Name;
+            
+            // Combine EXIT and OUTPUT into single log entry with dynamic structured context fields
+            if (returnValue != null)
+            {
+                var outputData = SerializeParameterValue(returnValue);
+                var (template, parameters) = BuildDynamicLogTemplate(
+                    "{LogCategory}: EXIT {MethodName} -> {OutputData}", 
+                    LogCategory, methodName, outputData);
+                
+                _logger?.LogDebug(template, parameters);
+            }
+            else
+            {
+                var (template, parameters) = BuildDynamicLogTemplate(
+                    "{LogCategory}: EXIT {MethodName}", 
+                    LogCategory, methodName);
+                
+                _logger?.LogDebug(template, parameters);
+            }
+        }
+        
+        /// <summary>
+        /// Logs contextual exception
+        /// </summary>
+        private void LogContextualException(Exception exception)
+        {
+            if (_method == null) return;
+            
+            var methodName = _method.Name;
+            
+            // Log exception with dynamic structured context fields
+            var (template, parameters) = BuildDynamicLogTemplate(
+                "{LogCategory}: EXCEPTION {MethodName}: {ExceptionMessage}", 
+                LogCategory, methodName, exception.Message);
+            
+            _logger?.LogError(exception, template, parameters);
+        }
+        
+        /// <summary>
+        /// Initializes context property values once during attribute initialization to avoid repeated reflection
+        /// Supports multiple properties via array syntax
+        /// </summary>
+        private void InitializeContextProperty()
+        {
+            // Only initialize if ContextProperty array is specified and LogCategory is set
+            if (_instance != null && ContextProperty?.Length > 0 && !string.IsNullOrEmpty(LogCategory))
+            {
+                try
+                {
+                    var instanceType = _instance.GetType();
+                    
+                    // Directly iterate over the property names array
+                    foreach (var propertyName in ContextProperty)
+                    {
+                        if (string.IsNullOrWhiteSpace(propertyName))
+                            continue;
+                            
+                        var contextProperty = instanceType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
+                        if (contextProperty != null)
+                        {
+                            // Get property value and convert to string representation for logging
+                            var value = contextProperty.GetValue(_instance);
+                            _cachedContextValues[propertyName] = value?.ToString();
+                        }
+                        else
+                        {
+                            // Property not found, cache null
+                            _cachedContextValues[propertyName] = null;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Silently fallback if reflection fails
+                    System.Diagnostics.Debug.WriteLine($"Failed to get context properties via reflection: {ex.Message}");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Builds dynamic log template with context properties as separate structured fields
+        /// Returns (template, parameters) tuple for structured logging
+        /// </summary>
+        private (string template, object[] parameters) BuildDynamicLogTemplate(string baseTemplate, params object[] baseParams)
+        {
+            if (_cachedContextValues.Count == 0)
+                return (baseTemplate, baseParams);
+            
+            // Build context placeholders with clear labels like "WorkflowId={WorkflowId} RoundId={RoundId}"
+            var validContexts = _cachedContextValues.Where(kvp => !string.IsNullOrEmpty(kvp.Value));
+            var contextPlaceholders = string.Join(" ", validContexts.Select(kvp => $"{kvp.Key}={{{kvp.Key}}}"));
+            
+            if (string.IsNullOrEmpty(contextPlaceholders))
+                return (baseTemplate, baseParams);
+            
+            var fullTemplate = $"{baseTemplate} [{contextPlaceholders}]";
+            
+            // Combine base parameters with context values
+            var contextValues = validContexts.Select(kvp => (object)kvp.Value).ToArray();
+            var allParams = baseParams.Concat(contextValues).ToArray();
+            
+            return (fullTemplate, allParams);
+        }
+        
+        
+        
+        /// <summary>
+        /// Builds input data JSON for workflow logging
+        /// </summary>
+        private string BuildInputOutputData()
+        {
+            if (_args == null || _args.Length == 0) return "{}";
+            
+            var inputObject = new Dictionary<string, object?>();
+            var parameters = _method?.GetParameters();
+            
+            for (int i = 0; i < _args.Length && parameters != null && i < parameters.Length; i++)
+            {
+                var paramName = parameters[i].Name ?? $"param{i}";
+                inputObject[paramName] = _args[i];
+            }
+            
+            try
+            {
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    MaxDepth = 5, // Deeper for workflow debugging
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+                    ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles
+                };
+                
+                var json = JsonSerializer.Serialize(inputObject, options);
+                
+                // Truncate if too long for logs (larger limit for workflow)
+                if (json.Length > 2000)
+                {
+                    json = json.Substring(0, 2000) + "...";
+                }
+                
+                return json;
+            }
+            catch (Exception)
+            {
+                // Fallback to simple representation
+                return $"{{\"parameterCount\":{_args.Length}}}";
+            }
+        }
 
 
 
@@ -443,6 +669,7 @@ namespace Aevatar.Core.Interception
                 }
             }
         }
+        
 
         /// <summary>
         /// Creates an OpenTelemetry activity for async method completion states

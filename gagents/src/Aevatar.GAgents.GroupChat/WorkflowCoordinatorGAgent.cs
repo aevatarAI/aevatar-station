@@ -65,7 +65,7 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         var blackboard = GrainFactory.GetGrain<IBlackboardGAgent>(State.BlackboardId);
         await blackboard.SetMessageAsync(new CoordinatorConfirmChatResponse()
         {
-            BlackboardId = @event.BlackboardId, MemberId = @event.MemberId, MemberName = @event.MemberName,
+            BlackboardId = State.BlackboardId, MemberId = @event.MemberId, MemberName = @event.MemberName,
             ChatResponse = @event.ChatResponse
         });
 
@@ -346,6 +346,8 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
                 $"workflow:{State.BlackboardId}"
             )
             .WithMetadata("WorkflowId", State.BlackboardId)
+            .WithMetadata("RoundId", State.RoundId)
+            
             .WithMetadata("InitContent", content ?? State.Content ?? string.Empty);
 
             // Call PrepareResourceContextAsync for automatic resource discovery (e.g., MCP tool registration)
