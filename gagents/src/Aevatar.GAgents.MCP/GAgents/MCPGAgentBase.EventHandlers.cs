@@ -49,7 +49,7 @@ public abstract partial class MCPGAgentBase<TState, TStateLogEvent, TEvent, TCon
                 Success = !result.IsError!.Value,
                 ServerName = toolCallEvent.ServerName,
                 ToolName = toolCallEvent.ToolName,
-                ErrorMessage = result.IsError!.Value ? "Tool exection failed." : null,
+                ErrorMessage = result.IsError!.Value ? "Tool execution failed." : null,
                 Result = ExtractContentFromMcpResult(result)
             };
 
