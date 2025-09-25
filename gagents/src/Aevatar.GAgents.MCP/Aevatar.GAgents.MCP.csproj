@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol.Core" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.EventSourcing.Core\Aevatar.EventSourcing.Core.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.GroupChat.GroupMember\Aevatar.GAgents.GroupChat.GroupMember.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.GroupChat\Aevatar.GAgents.GroupChat.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.MCP.Core\Aevatar.GAgents.MCP.Core.csproj" />
+    </ItemGroup>
+</Project>
