@@ -119,17 +119,6 @@ public class GodGPTPaymentController : AevatarController
         return responseDto;
     }
 
-    [HttpGet("list")]
-    public async Task<List<PaymentSummary>> GetPaymentHistoryAsync(GetPaymentHistoryInput input)
-    {
-        var stopwatch = Stopwatch.StartNew();
-        var currentUserId = (Guid)CurrentUser.Id!;
-        var paymentHistories = await _godGptService.GetPaymentHistoryAsync(currentUserId, input);
-        _logger.LogDebug("[GodGPTPaymentController][GetPaymentHistoryAsync] userId: {0}, duration: {1}ms",
-            currentUserId.ToString(), stopwatch.ElapsedMilliseconds);
-        return paymentHistories;
-    }
-
     [HttpPost("customer")]
     public async Task<GetCustomerResponseDto> GetStripeCustomerAsync()
     {

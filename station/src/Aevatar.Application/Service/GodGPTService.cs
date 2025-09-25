@@ -73,7 +73,6 @@ public interface IGodGPTService
     Task UpdateShowToastAsync(Guid currentUserId);
     Task<List<StripeProductDto>> GetStripeProductsAsync(Guid currentUserId);
     Task<string> CreateCheckoutSessionAsync(Guid currentUserId, CreateCheckoutSessionInput createCheckoutSessionInput);
-    Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input);
     Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId);
     Task<SubscriptionResponseDto> CreateSubscriptionAsync(Guid currentUserId, CreateSubscriptionInput input);
     Task<CancelSubscriptionResponseDto> CancelSubscriptionAsync(Guid currentUserId, CancelSubscriptionInput input);
@@ -384,14 +383,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
         });
         return result;
     }
-
-    public async Task<List<PaymentSummary>> GetPaymentHistoryAsync(Guid currentUserId, GetPaymentHistoryInput input)
-    {
-        var userBillingGAgent =
-            _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
-        return await userBillingGAgent.GetPaymentHistoryAsync(input.Page, input.PageSize);
-    }
-
+    
     public async Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId)
     {
         var userBillingGAgent =
