@@ -12,6 +12,7 @@ using Aevatar.CQRS.Provider;
 using Aevatar.Mock;
 using Aevatar.Options;
 using Aevatar.Service;
+using Aevatar.Core.Placement;
 using AutoMapper;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Ingest;
@@ -21,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver.Core.Configuration;
 using Moq;
+using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.TestingHost;
 using Volo.Abp.AutoMapper;
@@ -113,6 +115,9 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddSingleton(typeof(ICQRSProvider), typeof(CQRSProvider));
                     services.AddSingleton(typeof(ICqrsService), typeof(CqrsService));
                     
+                    // Register SiloNamePatternPlacement strategy for grain placement
+                    services.AddPlacementDirector<SiloNamePatternPlacement, SiloNamePatternPlacementDirector>();
+                    
                     // Add mock IBrainFactory for AIGAgent testing
                     try
                     {
@@ -142,7 +147,8 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage")
-                .Configure<NameContestOptions>(configuration.GetSection("NameContest"));
+                .Configure<NameContestOptions>(configuration.GetSection("NameContest"))
+                .Configure<SiloOptions>(options => options.SiloName = "Projector");
         }
     }
 
