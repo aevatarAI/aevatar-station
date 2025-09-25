@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.AI.Abstractions.Configuration;
 using Aevatar.GAgents.Basic;
 using Aevatar.GAgents.Twitter.GEvents;
 using GroupChat.GAgent;
@@ -28,6 +29,12 @@ public class TwitterWebApiGAgent :
     // Lazy-loaded services
     private Client.ITwitterApiClient ApiClient => _apiClient ??= CreateApiClient();
     private Authentication.ITwitterAuthenticationHandler AuthHandler => _authHandler ??= CreateAuthHandler();
+    
+    // Dynamic configuration services
+    private IConfigurationProvider ConfigurationProvider => 
+        ServiceProvider.GetRequiredService<IConfigurationProvider>();
+    private IApiKeyManager ApiKeyManager => 
+        ServiceProvider.GetRequiredService<IApiKeyManager>();
     private RateLimiting.ITwitterRateLimiter RateLimiter => _rateLimiter ??= CreateRateLimiter();
 
     #region Service Creation
@@ -88,19 +95,81 @@ public class TwitterWebApiGAgent :
 
     protected override async Task PerformConfigAsync(TwitterWebApiGAgentConfiguration configuration)
     {
+        // Step 1: Apply traditional configuration first (backward compatibility)
         RaiseEvent(new ConfigurationSetLogEvent
         {
             ConfigurationJson = JsonSerializer.Serialize(configuration),
             ConfiguredAt = DateTime.UtcNow
         });
-
         await ConfirmEvents();
+
+        // Step 2: Get dynamic configuration and API keys
+        var workflowId = Guid.NewGuid().ToString(); // Use temporary workflow ID
+        var projectId = "default-project"; // TODO: Get from context
+        var userId = "default-user"; // TODO: Get from context
+
+        try
+        {
+            // Get dynamic API keys with cascade resolution
+            var dynamicBearerToken = await ApiKeyManager.GetKeyWithCascadeAsync(
+                "TWITTER_BEARER_TOKEN", workflowId, projectId, userId);
+            var dynamicConsumerKey = await ApiKeyManager.GetKeyWithCascadeAsync(
+                "TWITTER_CONSUMER_KEY", workflowId, projectId, userId);
+            var dynamicConsumerSecret = await ApiKeyManager.GetKeyWithCascadeAsync(
+                "TWITTER_CONSUMER_SECRET", workflowId, projectId, userId);
+            var dynamicOAuthToken = await ApiKeyManager.GetKeyWithCascadeAsync(
+                "TWITTER_OAUTH_TOKEN", workflowId, projectId, userId);
+            var dynamicOAuthTokenSecret = await ApiKeyManager.GetKeyWithCascadeAsync(
+                "TWITTER_OAUTH_TOKEN_SECRET", workflowId, projectId, userId);
+
+            // Dynamic LLM configuration support can be added here if needed in the future
+
+            // Step 3: Merge configurations (dynamic takes precedence)
+            var finalConfig = new TwitterWebApiGAgentConfiguration
+            {
+                BaseApiUrl = configuration.BaseApiUrl,
+                RequestTimeoutSeconds = configuration.RequestTimeoutSeconds,
+                BearerToken = dynamicBearerToken ?? configuration.BearerToken,
+                ConsumerKey = dynamicConsumerKey ?? configuration.ConsumerKey,
+                ConsumerSecret = dynamicConsumerSecret ?? configuration.ConsumerSecret,
+                OAuthToken = dynamicOAuthToken ?? configuration.OAuthToken,
+                OAuthTokenSecret = dynamicOAuthTokenSecret ?? configuration.OAuthTokenSecret
+            };
+
+            // Update state with final merged configuration
+            if (HasConfigurationChanged(configuration, finalConfig))
+            {
+                RaiseEvent(new ConfigurationSetLogEvent
+                {
+                    ConfigurationJson = JsonSerializer.Serialize(finalConfig),
+                    ConfiguredAt = DateTime.UtcNow
+                });
+                await ConfirmEvents();
+
+                Logger.LogInformation("TwitterGAgent configuration updated with dynamic values. Workflow: {WorkflowId}", workflowId);
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to load dynamic configuration, using static configuration only");
+        }
 
         // Re-create services with new configuration
         _apiClient = null;
         _authHandler = null;
         _rateLimiter = null;
     }
+
+    private bool HasConfigurationChanged(TwitterWebApiGAgentConfiguration original, TwitterWebApiGAgentConfiguration updated)
+    {
+        return original.BearerToken != updated.BearerToken ||
+               original.ConsumerKey != updated.ConsumerKey ||
+               original.ConsumerSecret != updated.ConsumerSecret ||
+               original.OAuthToken != updated.OAuthToken ||
+               original.OAuthTokenSecret != updated.OAuthTokenSecret;
+    }
+
 
     protected override void GAgentTransitionState(TwitterWebApiGAgentState state,
         StateLogEventBase<TwitterWebApiStateLogEvent> @event)

@@ -1,68 +1,81 @@
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel;
+using System.Threading.Tasks;
+using Aevatar.GAgents.AI.Abstractions.Configuration;
 using Aevatar.GAgents.AI.Options;
-using Newtonsoft.Json;
 using Orleans;
 
 namespace Aevatar.GAgents.AIGAgent.Dtos;
 
+/// <summary>
+/// Simplified LLM configuration DTO with direct Provider + Model separation support.
+/// This is the new recommended approach for AI configuration.
+/// </summary>
 [GenerateSerializer]
 public class LLMConfigDto
 {
+    // ===== NEW SEPARATED CONFIGURATION (RECOMMENDED) =====
+    
     [Id(0)]
-    [StringLength(100, MinimumLength = 1, ErrorMessage = "System LLM must be between 1 and 100 characters")]
-    [Description("The system-level LLM configuration name to use, references a pre-configured LLM setup")]
-    public string? SystemLLM { get; set; } = "OpenAI";
+    [Description("LLM Provider type (Azure, OpenAI, DeepSeek, Google, BytePlus)")]
+    public LLMProviderEnum? ProviderType { get; set; } = null;
     
     [Id(1)]
-    [Description("Self-contained LLM configuration with provider, model, and API settings")]
-    public SelfLLMConfig? SelfLLMConfig { get; set; } = null;
-}
-
-[GenerateSerializer]
-public class SelfLLMConfig
-{
-    [Required] 
-    [Id(0)] 
-    [Description("The LLM provider to use (e.g., OpenAI, Azure, Anthropic)")]
-    public LLMProviderEnum ProviderEnum { get; set; }
+    [Description("LLM Model type (OpenAI, DeepSeek, Gemini, etc.)")]  
+    public ModelIdEnum? ModelType { get; set; } = null;
     
-    [Required] 
-    [Id(1)] 
-    [Description("The specific model ID to use from the selected provider")]
-    public ModelIdEnum ModelId { get; set; }
+    // ===== BACKWARD COMPATIBILITY FIELDS =====
     
-    [Id(2)] 
-    [StringLength(200, ErrorMessage = "Model Name must not exceed 200 characters")]
-    [Description("Custom model name, used when the standard ModelId doesn't match the actual model name")]
-    public string ModelName { get; set; }
+    [Id(2)]
+    [StringLength(100, MinimumLength = 1, ErrorMessage = "System LLM must be between 1 and 100 characters")]
+    [Description("Legacy system-level LLM name (for backward compatibility)")]
+    public string? SystemLLM { get; set; } = null;
     
-    [Id(4)] 
-    [StringLength(500, ErrorMessage = "API Key must not exceed 500 characters")]
-    [Description("The API key for authenticating with the LLM provider")]
-    public string ApiKey { get; set; }
-    
-    [Id(3)] 
-    [StringLength(500, ErrorMessage = "Endpoint must not exceed 500 characters")]
-    [Url(ErrorMessage = "Endpoint must be a valid URL")]
-    [Description("The API endpoint URL for the LLM provider service")]
-    public string Endpoint { get; set; }
-    
-    [Id(5)] 
-    [Description("Additional configuration parameters and metadata for the LLM setup")]
-    public Dictionary<string, object>? Memo { get; set; } = null;
-
-    public LLMConfig ConvertToLLMConfig()
+    /// <summary>
+    /// Resolves LLM service using the configuration service (dynamic configuration)
+    /// This method delegates to ILLMConfigurationService for intelligent resolution
+    /// Uses ConfigurationContext to abstract business-level identifiers
+    /// </summary>
+    public async Task<LLMService> ResolveLLMServiceAsync(
+        ILLMConfigurationService configurationService,
+        ConfigurationContext? context = null)
     {
-        return new LLMConfig()
+        // Priority 1: Use new separated Provider + Model types (RECOMMENDED)
+        if (ProviderType.HasValue && ModelType.HasValue)
         {
-            ProviderEnum = ProviderEnum,
-            ModelIdEnum = ModelId,
-            ModelName = ModelName,
-            ApiKey = ApiKey,
-            Endpoint = Endpoint,
-            Memo = Memo
-        };
+            return await configurationService.ResolveLLMServiceAsync(
+                ProviderType.Value, ModelType.Value, context);
+        }
+        
+        // Priority 2: Use SystemLLM for backward compatibility
+        if (!string.IsNullOrWhiteSpace(SystemLLM))
+        {
+            return await configurationService.ResolveLLMServiceFromSystemLLMAsync(
+                SystemLLM, context);
+        }
+        
+        // Fallback: Default to OpenAI
+        return await configurationService.ResolveLLMServiceAsync(
+            LLMProviderEnum.OpenAI, ModelIdEnum.OpenAI, context);
+    }
+    
+    /// <summary>
+    /// Validates that the configuration has either ProviderType+ModelType or SystemLLM
+    /// </summary>
+    public bool IsValid()
+    {
+        // Valid if we have both ProviderType and ModelType
+        if (ProviderType.HasValue && ModelType.HasValue)
+        {
+            return true;
+        }
+        
+        // Valid if we have SystemLLM for backward compatibility
+        if (!string.IsNullOrEmpty(SystemLLM))
+        {
+            return true;
+        }
+        
+        return false;
     }
 }

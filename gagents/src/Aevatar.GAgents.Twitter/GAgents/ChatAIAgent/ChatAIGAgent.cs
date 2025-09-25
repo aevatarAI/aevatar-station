@@ -11,6 +11,8 @@ using GroupChat.GAgent.Feature.Common;
 using Newtonsoft.Json;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AI.Common;
+using Aevatar.GAgents.AI.Options;
+using Azure.AI.Inference;
 using WorkflowChatMessage = GroupChat.GAgent.Feature.Common.ChatMessage;
 
 namespace Aevatar.GAgents.Twitter.GAgents.ChatAIAgent;
@@ -111,11 +113,18 @@ public class ChatAIGAgent :
         // Call the base implementation to set MemberName
         await base.PerformConfigAsync(configuration);
 
-        // Initialize the AI agent with the provided configuration
+        // Initialize the AI agent with simplified configuration
+        var llmConfig = new LLMConfigDto
+        {
+            SystemLLM = configuration.SystemLLM.ToString(),
+            ProviderType = LLMProviderEnum.DeepSeek,
+            ModelType = ModelIdEnum.OpenAI
+        };
+
         await InitializeAsync(new InitializeDto
         {
             Instructions = configuration.Instructions,
-            LLMConfig = new LLMConfigDto { SystemLLM = configuration.SystemLLM.ToString() },
+            LLMConfig = llmConfig,
             MCPServers = configuration.MCPServers,
             ToolGAgentTypes = configuration.ToolGAgentTypes,
             ToolGAgents = configuration.ToolGAgents,
@@ -123,6 +132,7 @@ public class ChatAIGAgent :
 
         _logger.LogDebug("PerformConfigAsync ChatAIGAgent configuration and initialization completed");
     }
+
 
     protected override void GroupMemberTransitionState(ChatAIGAgentState state,
         StateLogEventBase<ChatAIGAgentEvent> @event)

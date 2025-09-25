@@ -63,23 +63,18 @@ public class AIGAgentBaseUnitTest : AevatarAIGAgentTestBase
     //[Fact]
     public async Task GetLLMConfigAsync_Should_FallbackToResolvedLLM_When_BothKeysAreNull()
     {
-        // Arrange - Use self-provided LLM config to test fallback
-        var selfConfig = new SelfLLMConfig
-        {
-            ProviderEnum = LLMProviderEnum.Google,
-            ModelId = ModelIdEnum.Gemini,
-            ModelName = "gemini-pro",
-            Endpoint = "https://ai.google.dev",
-            ApiKey = "google-key"
-        };
-
+        // Arrange - Use Provider+Model configuration system
         var agent = await _agentFactory.GetGAgentAsync<IChatAIGAgent>(Guid.NewGuid());
 
-        // Act - Initialize with self-provided config (sets LLM property directly)
+        // Act - Initialize with Provider+Model configuration
         await agent.InitializeAsync(new InitializeDto
         {
             Instructions = "Test instructions",
-            LLMConfig = new LLMConfigDto { SelfLLMConfig = selfConfig }
+            LLMConfig = new LLMConfigDto 
+            { 
+                ProviderType = LLMProviderEnum.Google,
+                ModelType = ModelIdEnum.Gemini
+            }
         });
 
         var resolvedConfig = await agent.GetLLMConfigAsync();

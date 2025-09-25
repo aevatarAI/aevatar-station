@@ -22,6 +22,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
+        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.AI.Abstractions\Aevatar.GAgents.AI.Abstractions.csproj" />
     </ItemGroup>
 
     <ItemGroup>

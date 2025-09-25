@@ -42,25 +42,20 @@ public class LLMConfigurationCentralizationTest : AevatarAIGAgentTestBase
     }
 
     //[Fact]
-    public async Task Should_StoreSelfLLMConfig_When_SelfLLMConfigIsProvided()
+    public async Task Should_StoreProviderModelConfig_When_ProviderModelConfigIsProvided()
     {
-        // Arrange
-        var selfConfig = new SelfLLMConfig
-        {
-            ProviderEnum = LLMProviderEnum.OpenAI,
-            ModelId = ModelIdEnum.OpenAI,
-            ModelName = "gpt-3.5-turbo",
-            Endpoint = "https://api.openai.com",
-            ApiKey = "user-provided-key"
-        };
-
+        // Arrange - Use new Provider+Model configuration system
         var chatAgent = await _agentFactory.GetGAgentAsync<IChatAIGAgent>(Guid.NewGuid());
 
         // Act
         await chatAgent.InitializeAsync(new InitializeDto
         {
             Instructions = "Test instructions",
-            LLMConfig = new LLMConfigDto { SelfLLMConfig = selfConfig }
+            LLMConfig = new LLMConfigDto 
+            { 
+                ProviderType = LLMProviderEnum.OpenAI,
+                ModelType = ModelIdEnum.OpenAI
+            }
         });
 
         // Assert

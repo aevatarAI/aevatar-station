@@ -187,41 +187,29 @@ public partial class PsiOmniGAgent
 
             var agent = await _gAgentFactory.GetGAgentAsync<IPsiOmniGAgent>(agentId);
 
-            // Use the same priority system as AIGAgentBase.GetCurrentLLMConfigAsync()
-            string? configKeyToPass = null;
-            SelfLLMConfig? selfLlmConfig = null;
+            // Use the new Provider+Model system for LLM configuration
+            var llmConfig = new LLMConfigDto();
 
-            // Priority 1: LLMConfigKey (if PsiOmni supported it)
-            if (!State.LLMConfigKey.IsNullOrEmpty())
+            // Priority 1: Use resolved LLM configuration (Provider + Model)
+            if (State.LLM != null)
             {
-                configKeyToPass = State.LLMConfigKey;
+                llmConfig.ProviderType = State.LLM.ProviderEnum;
+                llmConfig.ModelType = State.LLM.ModelIdEnum;
             }
-            // Priority 2: SystemLLM 
+            // Priority 2: SystemLLM fallback
             else if (!State.SystemLLM.IsNullOrEmpty())
             {
-                configKeyToPass = State.SystemLLM;
+                llmConfig.SystemLLM = State.SystemLLM;
             }
-            // Priority 3: Fallback to resolved LLM
-            else if (State.LLM != null)
+            // Priority 3: LLMConfigKey fallback (if PsiOmni supported it)
+            else if (!State.LLMConfigKey.IsNullOrEmpty())
             {
-                selfLlmConfig = new SelfLLMConfig
-                {
-                    ProviderEnum = State.LLM.ProviderEnum,
-                    ModelId = State.LLM.ModelIdEnum,
-                    ModelName = State.LLM.ModelName,
-                    ApiKey = State.LLM.ApiKey,
-                    Endpoint = State.LLM.Endpoint,
-                    Memo = State.LLM.Memo
-                };
+                llmConfig.SystemLLM = State.LLMConfigKey;
             }
 
             await agent.InitializeAsync(new InitializeDto()
             {
-                LLMConfig = new LLMConfigDto()
-                {
-                    SystemLLM = configKeyToPass, // Pass the key, not just State.SystemLLM
-                    SelfLLMConfig = selfLlmConfig
-                }
+                LLMConfig = llmConfig
             });
 
             var configEvent = new AgentConfigEvent

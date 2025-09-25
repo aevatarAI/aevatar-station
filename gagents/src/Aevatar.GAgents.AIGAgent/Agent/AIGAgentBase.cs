@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Aevatar.AI;
 using Aevatar.AI.Exceptions;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.AI.Abstractions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Aevatar.GAgents.AI.Brain;
 using Aevatar.GAgents.AI.BrainFactory;
 using Aevatar.GAgents.AI.Common;
@@ -63,28 +65,48 @@ public abstract partial class
 
     public async Task<bool> InitializeAsync(InitializeDto initializeDto)
     {
-        var llmConfig = await GetLLMConfigAsync(initializeDto.LLMConfig);
-        if (llmConfig == null)
+        return await InitializeAsync(initializeDto, null);
+    }
+
+    /// <summary>
+    /// Initialize AI Agent with business context for dynamic configuration
+    /// </summary>
+    public async Task<bool> InitializeAsync(InitializeDto initializeDto, ConfigurationContext? businessContext)
+    {
+        // Validate LLM configuration
+        if (!initializeDto.LLMConfig.IsValid())
         {
+            Logger.LogError("Invalid LLM configuration provided");
             return false;
         }
 
-        // Use centralized configuration approach for system LLMs
-        if (!initializeDto.LLMConfig.SystemLLM.IsNullOrWhiteSpace())
+        // Get configuration service from DI container
+        var configurationService = ServiceProvider.GetRequiredService<ILLMConfigurationService>();
+        
+        // Create configuration context - prefer business context, fallback to grain context
+        var context = businessContext ?? ConfigurationContext.FromGrainContext(this.GetPrimaryKeyString());
+
+        // Resolve LLM service using dynamic configuration with abstracted context
+        var llmService = await initializeDto.LLMConfig.ResolveLLMServiceAsync(
+            configurationService, context);
+        
+        // Store Provider and Model configurations separately
+        var setProviderEvent = new SetProviderConfigurationStateLogEvent
         {
-            // Store reference only, don't persist resolved config
-            var centralizedConfigEvent = CreateCentralizedLLMConfigEvent(initializeDto.LLMConfig);
-            RaiseEvent(centralizedConfigEvent);
-        }
-        else
+            Provider = llmService.Provider,
+            ConfiguredAt = DateTime.UtcNow
+        };
+        
+        var setModelEvent = new SetModelConfigurationStateLogEvent
         {
-            // For self-provided configs, use the existing approach
-            var addLlmEventLog = await AddLLMAsync(llmConfig!, initializeDto.LLMConfig.SystemLLM);
-            if (addLlmEventLog != null)
-            {
-                RaiseEvent(addLlmEventLog);
-            }
-        }
+            Model = llmService.Model,
+            ConfiguredAt = DateTime.UtcNow
+        };
+        
+        RaiseEvent(setProviderEvent);
+        RaiseEvent(setModelEvent);
+        
+        Logger.LogInformation("LLM Service configured: {ServiceName}", llmService.Description);
 
         var addPromptTemplateEventLog = await AddPromptTemplateAsync(initializeDto.Instructions);
         var streamingConfigEventLog =
@@ -116,7 +138,7 @@ public abstract partial class
 
         try
         {
-            var result = await InitializeBrainAsync(llmConfig, initializeDto.Instructions);
+            var result = await InitializeBrainAsync(llmService, initializeDto.Instructions);
 
             // Register selected GAgent tools if any were specified
             if (result && (initializeDto.ToolGAgentTypes.Count != 0 || initializeDto.ToolGAgents.Count != 0))
@@ -165,21 +187,25 @@ public abstract partial class
         return await _brain.UpsertKnowledgeAsync(fileList);
     }
 
-    private async Task<bool> InitializeBrainAsync(LLMConfig llmConfig, string systemMessage)
+    private async Task<bool> InitializeBrainAsync(LLMService llmService, string systemMessage)
     {
-        _brain = _brainFactory.CreateBrain(llmConfig);
+        // Convert LLMService to LLMConfig for backward compatibility with brain factory
+        // TODO: Update brain factory to accept LLMService directly
+        var legacyLLMConfig = await ConvertLLMServiceToLegacyConfigAsync(llmService);
+        
+        _brain = _brainFactory.CreateBrain(legacyLLMConfig);
 
         if (_brain == null)
         {
-            Logger.LogError("Failed to initialize brain. llmprovider:{@provider}, llmModel:{@model}",
-                llmConfig.ProviderEnum.ToString(), llmConfig.ModelIdEnum.ToString());
+            Logger.LogError("Failed to initialize brain. Provider:{@provider}, Model:{@model}",
+                llmService.Provider.Provider.ToString(), llmService.Model.Model.ToString());
             return false;
         }
 
         // remove slash from this.GetGrainId().ToString() so that it can be used as the collection name pertaining to the grain
         var grainId = this.GetGrainId().ToString().Replace("/", "");
 
-        await _brain.InitializeAsync(llmConfig, grainId, systemMessage);
+        await _brain.InitializeAsync(legacyLLMConfig, grainId, systemMessage);
 
         return true;
     }
@@ -223,6 +249,22 @@ public abstract partial class
     {
         [Id(0)] public string? LLMConfigKey { get; set; }
         [Id(1)] public string? SystemLLM { get; set; }
+    }
+    
+    // ===== NEW SEPARATED CONFIGURATION EVENTS =====
+    
+    [GenerateSerializer]
+    public class SetProviderConfigurationStateLogEvent : StateLogEventBase<TStateLogEvent>
+    {
+        [Id(0)] public required ILLMProviderConfig Provider { get; set; }
+        [Id(1)] public DateTime ConfiguredAt { get; set; }
+    }
+    
+    [GenerateSerializer]
+    public class SetModelConfigurationStateLogEvent : StateLogEventBase<TStateLogEvent>
+    {
+        [Id(0)] public required ILLMModelConfig Model { get; set; }
+        [Id(1)] public DateTime ConfiguredAt { get; set; }
     }
 
     [GenerateSerializer]
@@ -498,7 +540,10 @@ public abstract partial class
             {
                 try
                 {
-                    await InitializeBrainAsync(config, State.PromptTemplate);
+                    // Convert LLMConfig to LLMService for initialization
+                    // This is a temporary solution until the entire system is updated
+                    var llmService = await ConvertLLMConfigToLLMServiceAsync(config);
+                    await InitializeBrainAsync(llmService, State.PromptTemplate);
 
                     // Register tools after brain initialization if enabled
                     if (State.EnableGAgentTools || State.EnableMCPTools)
@@ -742,31 +787,57 @@ public abstract partial class
         return null;
     }
 
-    protected virtual Task<LLMConfig?> GetLLMConfigAsync(LLMConfigDto llmConfigDto)
+    protected virtual Task<LLMService?> GetLLMServiceAsync(LLMConfigDto llmConfigDto)
     {
-        if (llmConfigDto.SystemLLM.IsNullOrWhiteSpace() &&
-            llmConfigDto.SelfLLMConfig == null)
+        if (!llmConfigDto.IsValid())
         {
-            return null;
+            return Task.FromResult<LLMService?>(null);
         }
 
-        if (llmConfigDto.SystemLLM.IsNullOrEmpty() == false)
+        var configurationService = _serviceProvider.GetRequiredService<ILLMConfigurationService>();
+        var context = ConfigurationContext.FromGrainContext(this.GetPrimaryKeyString());
+        return llmConfigDto.ResolveLLMServiceAsync(configurationService, context);
+    }
+    
+    /// <summary>
+    /// Converts legacy LLMConfig to LLMService for new configuration system
+    /// TODO: Remove this when the entire system is updated to use LLMService
+    /// </summary>
+    private async Task<LLMService> ConvertLLMConfigToLLMServiceAsync(LLMConfig config)
+    {
+        var configurationService = _serviceProvider.GetRequiredService<ILLMConfigurationService>();
+        var context = ConfigurationContext.FromGrainContext(this.GetPrimaryKeyString());
+        
+        // Use the configuration service to resolve the LLMService based on the existing config
+        return await configurationService.ResolveLLMServiceAsync(
+            config.ProviderEnum, 
+            config.ModelIdEnum,
+            context);
+    }
+    
+    /// <summary>
+    /// Converts LLMService to legacy LLMConfig for backward compatibility with brain factory
+    /// TODO: Remove this when brain factory is updated to use LLMService directly
+    /// </summary>
+    private async Task<LLMConfig> ConvertLLMServiceToLegacyConfigAsync(LLMService llmService)
+    {
+        // This is a temporary conversion for backward compatibility
+        // In the future, the brain factory should accept LLMService directly
+        return new LLMConfig
         {
-            var systemConfigs = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
-
-            if (systemConfigs.Value.SystemLLMConfigs == null ||
-                !systemConfigs.Value.SystemLLMConfigs.TryGetValue(llmConfigDto.SystemLLM, out var config))
-            {
-                Logger.LogError("SystemLLMConfigs is null or does not contain key: {SystemLLM}. Available keys: {Keys}",
-                    llmConfigDto.SystemLLM,
-                    systemConfigs.Value.SystemLLMConfigs?.Keys.ToArray() ?? Array.Empty<string>());
-                return null;
-            }
-
-            return Task.FromResult(config)!;
-        }
-
-        return Task.FromResult(llmConfigDto.SelfLLMConfig!.ConvertToLLMConfig())!;
+            // Map Provider to legacy enum
+            ProviderEnum = llmService.Provider.Provider,
+            
+            // Map Model to legacy enum
+            ModelIdEnum = llmService.Model.Model,
+            
+            // Copy endpoint and other settings
+            Endpoint = await llmService.Provider.GetEndpointAsync(),
+            ApiKey = null, // API Key is now managed by IApiKeyManager, not directly in LLMConfig
+            
+            // Copy additional settings
+            Memo = new Dictionary<string, object>()
+        };
     }
 
     private T ConvertBrain<T>() where T : class, IBrain
