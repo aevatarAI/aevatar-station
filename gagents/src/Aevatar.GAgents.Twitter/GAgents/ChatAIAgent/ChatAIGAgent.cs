@@ -12,9 +12,11 @@ using Newtonsoft.Json;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AI.Common;
 using WorkflowChatMessage = GroupChat.GAgent.Feature.Common.ChatMessage;
+using Aevatar.Core.Placement;
 
 namespace Aevatar.GAgents.Twitter.GAgents.ChatAIAgent;
 
+[SiloNamePatternPlacement("Projector")]
 [Description("General-purpose conversational AI agent for group chat contexts, handling messages with history, tool-calls, and configurable instructions.")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]

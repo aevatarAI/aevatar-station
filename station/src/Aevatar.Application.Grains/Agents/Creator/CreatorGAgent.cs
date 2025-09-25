@@ -10,12 +10,14 @@ using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Aevatar.Core.Interception;
+using Aevatar.Core.Placement;
 
 [module: Interceptor]
 
 namespace Aevatar.Application.Grains.Agents.Creator;
 
 [GAgent]
+[SiloNamePatternPlacement("Projector")]
 public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>, ICreatorGAgent
 {
     private readonly ILogger<CreatorGAgent> _logger;
