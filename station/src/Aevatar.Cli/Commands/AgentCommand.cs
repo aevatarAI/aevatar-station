@@ -47,6 +47,9 @@ public class AgentCommand : BaseHttpCommand
                 case "delete":
                     await DeleteAgentAsync(commandLineArgs);
                     break;
+                case "execute":
+                    await ExecuteAgentEventAsync(commandLineArgs);
+                    break;
                 default:
                     Logger.LogWarning("Unknown agent subcommand: {SubCommand}", subCommand);
                     Logger.LogInformation(GetUsageInfo());
@@ -360,6 +363,344 @@ public class AgentCommand : BaseHttpCommand
         Logger.LogInformation("✅ Agent {AgentId} deleted successfully.", agentId);
     }
 
+    private async Task ExecuteAgentEventAsync(CommandLineArgs args)
+    {
+        // Check if non-interactive mode (with explicit parameters)
+        var agentId = GetOption(args, "agent-id");
+        var eventType = GetOption(args, "event-type");
+        var eventJson = GetOption(args, "event-data");
+
+        if (!string.IsNullOrEmpty(agentId) && !string.IsNullOrEmpty(eventType) && !HasOption(args, "interactive"))
+        {
+            await ExecuteAgentEventNonInteractiveAsync(agentId, eventType, eventJson);
+            return;
+        }
+
+        // Interactive mode
+        await ExecuteAgentEventInteractiveAsync(args);
+    }
+
+    private async Task ExecuteAgentEventNonInteractiveAsync(string agentId, string eventType, string? eventJson)
+    {
+        if (!Guid.TryParse(agentId, out var agentGuid))
+        {
+            throw new CliUsageException($"Invalid agent ID format: {agentId}");
+        }
+
+        var eventProperties = new Dictionary<string, object>();
+        if (!string.IsNullOrEmpty(eventJson))
+        {
+            try
+            {
+                eventProperties = JsonSerializer.Deserialize<Dictionary<string, object>>(eventJson) ?? new Dictionary<string, object>();
+            }
+            catch (JsonException ex)
+            {
+                throw new CliUsageException($"Invalid event JSON: {ex.Message}", ex);
+            }
+        }
+
+        await PublishEventToAgentAsync(agentGuid, eventType, eventProperties);
+    }
+
+    private async Task ExecuteAgentEventInteractiveAsync(CommandLineArgs args)
+    {
+        Logger.LogInformation("🎯 交互式 Agent 事件执行向导");
+        Logger.LogInformation("─────────────────────────────");
+        Logger.LogInformation("");
+
+        // Step 1: Get available agents
+        Logger.LogInformation("📥 获取可用的 Agent 实例...");
+        var agentResponse = await GetAsync<AbpApiResponse<List<AgentInstanceDto>>>("/api/agent/agent-list", new Dictionary<string, string>());
+        var agents = agentResponse.Data ?? new List<AgentInstanceDto>();
+
+        if (!agents.Any())
+        {
+            Logger.LogError("❌ 没有找到可用的 Agent 实例");
+            Logger.LogInformation("💡 请先使用 'aevatar agent create' 创建 Agent");
+            return;
+        }
+
+        // Step 2: Select agent
+        var selectedAgent = await SelectAgentInteractiveAsync(agents);
+        if (selectedAgent == null)
+        {
+            Logger.LogInformation("❌ Agent 事件执行已取消");
+            return;
+        }
+
+        if (!Guid.TryParse(selectedAgent.Id, out var agentGuid))
+        {
+            Logger.LogError("❌ 无效的 Agent ID: {Id}", selectedAgent.Id);
+            return;
+        }
+
+        // Step 3: Get available events for the selected agent
+        Logger.LogInformation("");
+        Logger.LogInformation("📋 获取 Agent 支持的事件类型...");
+        
+        List<EventDescriptionDto> availableEvents;
+        try
+        {
+            var eventResponse = await GetAsync<AbpApiResponse<List<EventDescriptionDto>>>($"/api/subscription/events/{agentGuid}");
+            availableEvents = eventResponse?.Data ?? new List<EventDescriptionDto>();
+            
+            // If no events found, it might be because the agent hasn't been activated yet
+            if (!availableEvents.Any())
+            {
+                Logger.LogInformation("🔄 Agent 事件列表为空，正在激活 Agent...");
+                await ActivateAgentAsync(selectedAgent);
+                
+                // Try again after activation
+                Logger.LogInformation("🔄 重新获取事件类型...");
+                eventResponse = await GetAsync<AbpApiResponse<List<EventDescriptionDto>>>($"/api/subscription/events/{agentGuid}");
+                availableEvents = eventResponse?.Data ?? new List<EventDescriptionDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("❌ 获取事件列表失败: {Message}", ex.Message);
+            Logger.LogInformation("💡 尝试使用推荐的事件类型...");
+            availableEvents = GetRecommendedEventTypesForAgent(selectedAgent.AgentType);
+        }
+
+        if (!availableEvents.Any())
+        {
+            Logger.LogWarning("❌ Agent 没有支持的事件类型");
+            Logger.LogInformation("💡 尝试手动输入事件类型:");
+            
+            var manualEventType = await PromptForInputAsync("事件类型全名 (如: FrontTestCreateEvent)", "");
+            if (!string.IsNullOrEmpty(manualEventType))
+            {
+                availableEvents = new List<EventDescriptionDto>
+                {
+                    new EventDescriptionDto { EventType = manualEventType, Description = "手动输入的事件类型" }
+                };
+            }
+            else
+            {
+                Logger.LogInformation("❌ 无法继续，退出事件执行");
+                return;
+            }
+        }
+
+        // Step 4: Select event type
+        var selectedEvent = await SelectEventTypeInteractiveAsync(availableEvents);
+        if (selectedEvent == null)
+        {
+            Logger.LogInformation("❌ Agent 事件执行已取消");
+            return;
+        }
+
+        // Step 5: Configure event properties
+        var eventProperties = await ConfigureEventPropertiesInteractiveAsync(selectedEvent);
+
+        // Step 6: Show summary and confirm
+        Logger.LogInformation("");
+        Logger.LogInformation("📋 事件执行摘要:");
+        Logger.LogInformation("─────────────────");
+        Logger.LogInformation("Agent: {Name} ({Id})", selectedAgent.Name, selectedAgent.Id);
+        Logger.LogInformation("事件类型: {EventType}", selectedEvent.EventType.Split('.').LastOrDefault() ?? selectedEvent.EventType);
+        Logger.LogInformation("参数数量: {Count}", eventProperties?.Count ?? 0);
+        Logger.LogInformation("");
+
+        var confirmed = await PromptForConfirmationAsync("确认发送此事件到 Agent?");
+        if (!confirmed)
+        {
+            Logger.LogInformation("❌ 事件执行已取消");
+            return;
+        }
+
+        // Step 7: Execute the event
+        await PublishEventToAgentAsync(agentGuid, selectedEvent.EventType, eventProperties);
+    }
+
+    private async Task<AgentInstanceDto?> SelectAgentInteractiveAsync(List<AgentInstanceDto> agents)
+    {
+        Logger.LogInformation("📋 可用的 Agent 实例:");
+        Logger.LogInformation("");
+
+        for (int i = 0; i < agents.Count; i++)
+        {
+            var agent = agents[i];
+            Logger.LogInformation("{Index}. {Name} ({Type})", i + 1, agent.Name, agent.AgentType);
+            Logger.LogInformation("   🆔 ID: {Id}", agent.Id);
+            Logger.LogInformation("   🔗 Grain: {GrainId}", agent.BusinessAgentGrainId ?? "N/A");
+            Logger.LogInformation("");
+        }
+
+        while (true)
+        {
+            var input = await PromptForInputAsync($"请选择 Agent (1-{agents.Count}, 或 'q' 退出)", "");
+            
+            if (input.ToLowerInvariant() == "q")
+            {
+                return null;
+            }
+
+            if (int.TryParse(input, out var index) && index >= 1 && index <= agents.Count)
+            {
+                var selected = agents[index - 1];
+                Logger.LogInformation("✅ 已选择: {Name}", selected.Name);
+                return selected;
+            }
+
+            Logger.LogWarning("❌ 无效选择，请输入 1-{Count} 之间的数字", agents.Count);
+        }
+    }
+
+    private async Task<EventDescriptionDto?> SelectEventTypeInteractiveAsync(List<EventDescriptionDto> events)
+    {
+        Logger.LogInformation("📋 支持的事件类型:");
+        Logger.LogInformation("");
+
+        for (int i = 0; i < events.Count; i++)
+        {
+            var evt = events[i];
+            var eventTypeName = evt.EventType.Split('.').LastOrDefault() ?? evt.EventType;
+            Logger.LogInformation("{Index}. {EventType}", i + 1, eventTypeName);
+            Logger.LogInformation("   📄 {FullName}", evt.EventType);
+            if (!string.IsNullOrEmpty(evt.Description))
+            {
+                Logger.LogInformation("   💬 {Description}", evt.Description);
+            }
+            Logger.LogInformation("");
+        }
+
+        while (true)
+        {
+            var input = await PromptForInputAsync($"请选择事件类型 (1-{events.Count}, 或 'q' 退出)", "");
+            
+            if (input.ToLowerInvariant() == "q")
+            {
+                return null;
+            }
+
+            if (int.TryParse(input, out var index) && index >= 1 && index <= events.Count)
+            {
+                var selected = events[index - 1];
+                var eventTypeName = selected.EventType.Split('.').LastOrDefault() ?? selected.EventType;
+                Logger.LogInformation("✅ 已选择: {EventType}", eventTypeName);
+                return selected;
+            }
+
+            Logger.LogWarning("❌ 无效选择，请输入 1-{Count} 之间的数字", events.Count);
+        }
+    }
+
+    private async Task<Dictionary<string, object>?> ConfigureEventPropertiesInteractiveAsync(EventDescriptionDto eventDesc)
+    {
+        Logger.LogInformation("");
+        Logger.LogInformation("⚙️  配置事件参数:");
+        Logger.LogInformation("─────────────────");
+
+        var configuration = new Dictionary<string, object>();
+
+        // For now, use simple JSON input approach
+        // TODO: Could be enhanced with property-by-property configuration based on event type reflection
+        var useAdvanced = await PromptForConfirmationAsync("是否使用高级模式逐个配置参数? (y=高级模式, N=JSON模式)");
+
+        if (useAdvanced)
+        {
+            Logger.LogInformation("💡 高级参数配置模式暂未实现，使用JSON模式");
+        }
+
+        Logger.LogInformation("");
+        Logger.LogInformation("请输入事件参数 (JSON格式)，留空使用默认值:");
+        Logger.LogInformation("示例: {\"propertyName\": \"value\", \"number\": 123}");
+        
+        var eventJson = await PromptForInputAsync("事件参数 JSON", "{}");
+        
+        if (!string.IsNullOrEmpty(eventJson) && eventJson != "{}")
+        {
+            try
+            {
+                configuration = JsonSerializer.Deserialize<Dictionary<string, object>>(eventJson) ?? new Dictionary<string, object>();
+            }
+            catch (JsonException ex)
+            {
+                Logger.LogWarning("❌ JSON 格式无效: {Error}", ex.Message);
+                Logger.LogInformation("使用空参数继续...");
+            }
+        }
+
+        return configuration;
+    }
+
+    private async Task PublishEventToAgentAsync(Guid agentId, string eventType, Dictionary<string, object>? eventProperties)
+    {
+        try
+        {
+            Logger.LogInformation("🚀 向 Agent 发送事件...");
+
+            var request = new PublishEventDto
+            {
+                AgentId = agentId,
+                EventType = eventType,
+                EventProperties = eventProperties ?? new Dictionary<string, object>()
+            };
+
+            await PostAsync<object>("/api/agent/publishEvent", request);
+
+            Logger.LogInformation("");
+            Logger.LogInformation("✅ 事件发送成功!");
+            Logger.LogInformation("─────────────────");
+            Logger.LogInformation("🎯 Agent ID: {AgentId}", agentId);
+            Logger.LogInformation("📨 事件类型: {EventType}", eventType);
+            Logger.LogInformation("📦 参数数量: {Count}", eventProperties?.Count ?? 0);
+            Logger.LogInformation("");
+            Logger.LogInformation("💡 事件已发送到 Agent，查看 Agent 日志了解执行结果");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("❌ 事件发送失败: {Message}", ex.Message);
+            throw;
+        }
+    }
+
+    private async Task ActivateAgentAsync(AgentInstanceDto agent)
+    {
+        try
+        {
+            Logger.LogInformation("🔄 正在激活 Agent: {Name}...", agent.Name);
+            
+            // Try to get the agent details which should trigger activation and event list population
+            var agentDetails = await GetAsync<AbpApiResponse<AgentDto>>($"/api/agent/{agent.Id}");
+            
+            Logger.LogInformation("✅ Agent 激活完成");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("⚠️  Agent 激活失败，但将继续尝试: {Error}", ex.Message);
+        }
+    }
+
+    private List<EventDescriptionDto> GetRecommendedEventTypesForAgent(string agentType)
+    {
+        // Return recommended event types based on agent type
+        return agentType.ToLowerInvariant() switch
+        {
+            "agenttest" => new List<EventDescriptionDto>
+            {
+                new EventDescriptionDto { EventType = "Aevatar.Application.Grains.Agents.TestAgent.FrontTestCreateEvent", Description = "Front test create event" }
+            },
+            "agentchildtest" => new List<EventDescriptionDto>
+            {
+                new EventDescriptionDto { EventType = "Aevatar.Application.Grains.Agents.TestAgent.FrontChildTestCreateEvent", Description = "Front child test create event" }
+            },
+            "agentparenttest" => new List<EventDescriptionDto>
+            {
+                new EventDescriptionDto { EventType = "Aevatar.Application.Grains.Agents.TestAgent.FrontParentTestCreateEvent", Description = "Front parent test create event" }
+            },
+            _ => new List<EventDescriptionDto>
+            {
+                new EventDescriptionDto { EventType = "TestEvent", Description = "Test event for debugging" },
+                new EventDescriptionDto { EventType = "ConfigurationUpdatedEvent", Description = "Configuration updated event" },
+                new EventDescriptionDto { EventType = "InitializationEvent", Description = "Agent initialization event" }
+            }
+        };
+    }
+
     public override string GetUsageInfo()
     {
         return @"
@@ -368,9 +709,10 @@ Usage: aevatar agent <subcommand> [options] [arguments]
 Subcommands:
   types                             List all available agent types
   list                             List agent instances
-  create <agent-type>              Create a new agent
+  create [agent-type]              Create a new agent (interactive by default)
   get <agent-id>                   Get agent details
   delete <agent-id>                Delete an agent
+  execute                          Execute event on agent (interactive)
 
 List Options:
   --project-id <id>                Filter by project ID
@@ -387,6 +729,12 @@ Create Options:
 Delete Options:
   --confirm                        Confirm deletion
 
+Execute Options:
+  --agent-id <id>                  Agent ID (non-interactive mode)
+  --event-type <type>              Event type name (non-interactive mode)
+  --event-data <json>              Event data JSON (non-interactive mode)
+  --interactive                    Force interactive mode
+
 Global Options:
   --json                           Output in JSON format
 
@@ -400,6 +748,10 @@ Examples:
   
   # Non-interactive mode
   aevatar agent create ChatAgent --name MyBot --description ""Chat assistant""
+  
+  # Execute events
+  aevatar agent execute                                      # Interactive mode
+  aevatar agent execute --agent-id abc-123 --event-type TestEvent --event-data '{}'
   
   aevatar agent get agent-id-123
   aevatar agent delete agent-id-123 --confirm
@@ -650,5 +1002,26 @@ Examples:
         public DateTime? CreatedAt { get; set; }
         public DateTime? LastModified { get; set; }
         public Dictionary<string, object>? Configuration { get; set; }
+    }
+
+    private class PublishEventDto
+    {
+        public Guid AgentId { get; set; }
+        public string EventType { get; set; } = string.Empty;
+        public Dictionary<string, object> EventProperties { get; set; } = new();
+    }
+
+    private class EventDescriptionDto
+    {
+        public string EventType { get; set; } = string.Empty;  // This is the full name string
+        public string? Description { get; set; }
+        public List<EventProperty>? EventProperties { get; set; }
+    }
+
+    private class EventProperty
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string? Description { get; set; }
     }
 }
