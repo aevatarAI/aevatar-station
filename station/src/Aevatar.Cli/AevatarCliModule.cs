@@ -31,6 +31,10 @@ public override void ConfigureServices(ServiceConfigurationContext context)
         Configure<AevatarCliOptions>(options =>
         {
             options.Commands[HelpCommand.Name] = typeof(HelpCommand);
+            options.Commands[AgentCommand.Name] = typeof(AgentCommand);
+            options.Commands[WorkflowCommand.Name] = typeof(WorkflowCommand);
+            options.Commands[UtilCommand.Name] = typeof(UtilCommand);
+            options.Commands[ConfigCommand.Name] = typeof(ConfigCommand);
         });
     }
 }

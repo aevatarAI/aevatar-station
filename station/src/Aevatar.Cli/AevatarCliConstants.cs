@@ -8,10 +8,10 @@ public static class AevatarCliConstants
 
     public static class Paths
     {
-        private static readonly string AbpRootPath =
+        private static readonly string AevatarRootPath =
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".aevatar");
 
-        public static string Log => Path.Combine(AbpRootPath, "cli", "logs");
+        public static string Log => Path.Combine(AevatarRootPath, "cli", "logs");
 
         public static string Memory =>
             Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location)!,

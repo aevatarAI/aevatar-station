@@ -159,12 +159,28 @@ public class AevatarCliService : ITransientDependency
 
     private async Task RunInternalAsync(CommandLineArgs commandLineArgs)
     {
+        Logger.LogInformation("🔧 Debug: RunInternalAsync called with Command='{Command}', Target='{Target}'", 
+            commandLineArgs.Command, commandLineArgs.Target);
+            
         var commandType = CommandSelector.Select(commandLineArgs);
+        Logger.LogInformation("🔧 Debug: Selected command type: {CommandType}", commandType.Name);
 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
-            var command = (IConsoleCommand)scope.ServiceProvider.GetRequiredService(commandType);
-            await command.ExecuteAsync(commandLineArgs);
+            Logger.LogInformation("🔧 Debug: Creating command instance...");
+            try
+            {
+                var command = (IConsoleCommand)scope.ServiceProvider.GetRequiredService(commandType);
+                Logger.LogInformation("🔧 Debug: Command instance created successfully: {CommandType}", command.GetType().Name);
+                Logger.LogInformation("🔧 Debug: Executing command...");
+                await command.ExecuteAsync(commandLineArgs);
+                Logger.LogInformation("🔧 Debug: Command execution completed");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "🔧 Debug: Error in command execution: {Message}", ex.Message);
+                throw;
+            }
         }
     }
 

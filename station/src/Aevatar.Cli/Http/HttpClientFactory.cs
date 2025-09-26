@@ -22,7 +22,7 @@ public class HttpClientFactory : ISingletonDependency
         var httpClient = _clientFactory.CreateClient(clientName ?? AevatarCliConstants.HttpClientName);
         httpClient.Timeout = timeout ?? DefaultTimeout;
 
-        // TODO: Deal with authentication
+        // Authentication is handled in BaseHttpCommand.CreateAuthenticatedClientAsync()
 
         return httpClient;
     }
