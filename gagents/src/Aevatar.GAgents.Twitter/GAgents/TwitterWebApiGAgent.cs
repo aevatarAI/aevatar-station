@@ -89,7 +89,6 @@ public class TwitterWebApiGAgent :
         });
     }
 
-    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
     protected override async Task PerformConfigAsync(TwitterWebApiGAgentConfiguration configuration)
     {
         RaiseEvent(new ConfigurationSetLogEvent

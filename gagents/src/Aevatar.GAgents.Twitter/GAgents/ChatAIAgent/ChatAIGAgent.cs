@@ -111,7 +111,6 @@ public class ChatAIGAgent :
         return Task.FromResult(State.LastResponse ?? "No response yet");
     }
 
-    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
     protected override async Task PerformConfigAsync(ChatAIGAgentConfigDto configuration)
     {
         // Call the base implementation to set MemberName

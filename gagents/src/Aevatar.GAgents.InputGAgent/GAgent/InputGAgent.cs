@@ -49,7 +49,6 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.CompletedTask;
     }
 
-    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty, RoundIdProperty, GrainIdProperty})]
     protected override async Task PerformConfigAsync(InputConfigDto configuration)
     {
         await base.PerformConfigAsync(configuration);
