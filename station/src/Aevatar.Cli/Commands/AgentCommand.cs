@@ -164,12 +164,20 @@ public class AgentCommand : BaseHttpCommand
 
     private async Task CreateAgentAsync(CommandLineArgs args)
     {
+        // Check if non-interactive mode (with explicit agent type)
         var agentType = GetArgument(args, 1);
-        if (string.IsNullOrEmpty(agentType))
+        if (!string.IsNullOrEmpty(agentType) && !HasOption(args, "interactive"))
         {
-            throw new CliUsageException("Agent type is required. Usage: aevatar agent create <agent-type> [options]");
+            await CreateAgentNonInteractiveAsync(args, agentType);
+            return;
         }
 
+        // Interactive mode
+        await CreateAgentInteractiveAsync(args);
+    }
+
+    private async Task CreateAgentNonInteractiveAsync(CommandLineArgs args, string agentType)
+    {
         var request = new CreateAgentDto
         {
             AgentType = agentType,
@@ -204,8 +212,93 @@ public class AgentCommand : BaseHttpCommand
         Logger.LogInformation("✅ Agent created successfully!");
         Logger.LogInformation("   ID: {Id}", agent.Id);
         Logger.LogInformation("   Name: {Name}", agent.Name);
-        Logger.LogInformation("   Type: {Type}", agent.Type);
-        Logger.LogInformation("   Status: {Status}", agent.Status);
+        Logger.LogInformation("   Type: {Type}", agent.AgentType);
+        Logger.LogInformation("   Business Grain ID: {BusinessGrainId}", agent.BusinessGrainId);
+    }
+
+    private async Task CreateAgentInteractiveAsync(CommandLineArgs args)
+    {
+        Logger.LogInformation("🎯 交互式 Agent 创建向导");
+        Logger.LogInformation("─────────────────────────");
+        Logger.LogInformation("");
+
+        // Step 1: Get available agent types
+        Logger.LogInformation("📥 获取可用的 Agent 类型...");
+        var response = await GetAsync<AbpApiResponse<List<AgentTypeDto>>>("/api/agent/agent-type-info-list");
+        var agentTypes = response.Data ?? new List<AgentTypeDto>();
+
+        if (!agentTypes.Any())
+        {
+            Logger.LogError("❌ 没有找到可用的 Agent 类型");
+            return;
+        }
+
+        // Step 2: Let user select agent type
+        var selectedAgentType = await SelectAgentTypeInteractiveAsync(agentTypes);
+        if (selectedAgentType == null)
+        {
+            Logger.LogInformation("❌ Agent 创建已取消");
+            return;
+        }
+
+        // Step 3: Collect basic information
+        var agentName = await PromptForInputAsync("Agent 名称", $"{selectedAgentType.AgentType}-{DateTime.Now:MMdd-HHmm}");
+        var agentDescription = await PromptForInputAsync("Agent 描述 (可选)", selectedAgentType.Description ?? "");
+        var projectId = await PromptForInputAsync("项目 ID (可选)", "");
+
+        // Step 4: Configure agent properties
+        var configuration = await ConfigureAgentPropertiesInteractiveAsync(selectedAgentType);
+
+        // Step 5: Show summary and confirm
+        Logger.LogInformation("");
+        Logger.LogInformation("📋 Agent 创建摘要:");
+        Logger.LogInformation("─────────────────");
+        Logger.LogInformation("类型: {Type}", selectedAgentType.AgentType);
+        Logger.LogInformation("名称: {Name}", agentName);
+        Logger.LogInformation("描述: {Description}", string.IsNullOrEmpty(agentDescription) ? "无" : agentDescription);
+        Logger.LogInformation("项目: {ProjectId}", string.IsNullOrEmpty(projectId) ? "无" : projectId);
+        Logger.LogInformation("配置参数: {Count} 个", configuration?.Count ?? 0);
+        Logger.LogInformation("");
+
+        var confirmed = await PromptForConfirmationAsync("确认创建这个 Agent?");
+        if (!confirmed)
+        {
+            Logger.LogInformation("❌ Agent 创建已取消");
+            return;
+        }
+
+        // Step 6: Create the agent
+        var request = new CreateAgentDto
+        {
+            AgentType = selectedAgentType.AgentType,
+            Name = agentName,
+            Description = string.IsNullOrEmpty(agentDescription) ? null : agentDescription,
+            ProjectId = string.IsNullOrEmpty(projectId) ? null : projectId,
+            Configuration = configuration
+        };
+
+        try
+        {
+            Logger.LogInformation("🚀 正在创建 Agent...");
+            var agent = await PostAsync<AgentDto>("/api/agent", request);
+
+            Logger.LogInformation("");
+            Logger.LogInformation("✅ Agent 创建成功!");
+            Logger.LogInformation("─────────────────");
+            Logger.LogInformation("🆔 Agent ID: {Id}", agent.Id);
+            Logger.LogInformation("📛 名称: {Name}", agent.Name);
+            Logger.LogInformation("🏷️  类型: {Type}", agent.AgentType);
+            Logger.LogInformation("🔗 Business Grain ID: {BusinessGrainId}", agent.BusinessGrainId);
+            Logger.LogInformation("");
+            Logger.LogInformation("💡 你现在可以使用以下命令管理这个 Agent:");
+            Logger.LogInformation("   aevatar agent get {Id}", agent.Id);
+            Logger.LogInformation("   aevatar agent delete {Id} --confirm", agent.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError("❌ Agent 创建失败: {Message}", ex.Message);
+            throw;
+        }
     }
 
     private async Task GetAgentAsync(CommandLineArgs args)
@@ -231,7 +324,7 @@ public class AgentCommand : BaseHttpCommand
         Logger.LogInformation("─────────────────");
         Logger.LogInformation("ID:          {Id}", agent.Id);
         Logger.LogInformation("Name:        {Name}", agent.Name);
-        Logger.LogInformation("Type:        {Type}", agent.Type);
+        Logger.LogInformation("Type:        {Type}", agent.AgentType);
         Logger.LogInformation("Status:      {Status}", agent.Status);
         Logger.LogInformation("Description: {Description}", agent.Description ?? "N/A");
         Logger.LogInformation("Created:     {Created}", agent.CreatedAt?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A");
@@ -285,10 +378,11 @@ List Options:
   --status <status>                Filter by status
 
 Create Options:
-  --name <name>                    Agent name (default: auto-generated)
-  --description <desc>             Agent description
-  --project-id <id>                Project ID
-  --config <json>                  Configuration JSON
+  --name <name>                    Agent name (non-interactive mode only)
+  --description <desc>             Agent description (non-interactive mode only)
+  --project-id <id>                Project ID (non-interactive mode only)
+  --config <json>                  Configuration JSON (non-interactive mode only)
+  --interactive                    Force interactive mode even with agent type specified
 
 Delete Options:
   --confirm                        Confirm deletion
@@ -299,7 +393,14 @@ Global Options:
 Examples:
   aevatar agent types
   aevatar agent list --project-id abc123
+  
+  # Interactive mode (recommended)
+  aevatar agent create
+  aevatar agent create --interactive
+  
+  # Non-interactive mode
   aevatar agent create ChatAgent --name MyBot --description ""Chat assistant""
+  
   aevatar agent get agent-id-123
   aevatar agent delete agent-id-123 --confirm
 ";
@@ -334,6 +435,190 @@ Examples:
         public string Type { get; set; } = string.Empty;
     }
 
+    // Interactive helper methods
+    private async Task<AgentTypeDto?> SelectAgentTypeInteractiveAsync(List<AgentTypeDto> agentTypes)
+    {
+        Logger.LogInformation("📋 可用的 Agent 类型:");
+        Logger.LogInformation("");
+
+        // Show simplified list for selection
+        for (int i = 0; i < agentTypes.Count; i++)
+        {
+            var type = agentTypes[i];
+            var paramCount = type.AgentParams?.Count ?? 0;
+            var shortDescription = TruncateString(type.Description ?? "", 80);
+            
+            Logger.LogInformation("{Index}. {Type}", i + 1, type.AgentType);
+            Logger.LogInformation("   📄 {Description}", shortDescription);
+            Logger.LogInformation("   ⚙️  参数数量: {Count}", paramCount);
+            Logger.LogInformation("");
+        }
+
+        while (true)
+        {
+            var input = await PromptForInputAsync($"请选择 Agent 类型 (1-{agentTypes.Count}, 或 'q' 退出)", "");
+            
+            if (input.ToLowerInvariant() == "q")
+            {
+                return null;
+            }
+
+            if (int.TryParse(input, out var index) && index >= 1 && index <= agentTypes.Count)
+            {
+                var selected = agentTypes[index - 1];
+                Logger.LogInformation("✅ 已选择: {Type}", selected.AgentType);
+                return selected;
+            }
+
+            Logger.LogWarning("❌ 无效选择，请输入 1-{Count} 之间的数字", agentTypes.Count);
+        }
+    }
+
+    private async Task<Dictionary<string, object>?> ConfigureAgentPropertiesInteractiveAsync(AgentTypeDto agentType)
+    {
+        if (agentType.AgentParams == null || !agentType.AgentParams.Any())
+        {
+            Logger.LogInformation("ℹ️  此 Agent 类型无需配置参数");
+            return null;
+        }
+
+        Logger.LogInformation("");
+        Logger.LogInformation("⚙️  配置 Agent 参数:");
+        Logger.LogInformation("─────────────────");
+
+        var configuration = new Dictionary<string, object>();
+
+        // Parse default values if available
+        var defaultValues = new Dictionary<string, object>();
+        if (agentType.DefaultValues != null)
+        {
+            try
+            {
+                var defaultJson = JsonSerializer.Serialize(agentType.DefaultValues);
+                var parsed = JsonSerializer.Deserialize<Dictionary<string, object>>(defaultJson);
+                if (parsed != null)
+                {
+                    defaultValues = parsed;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug("Failed to parse default values: {Error}", ex.Message);
+            }
+        }
+
+        foreach (var param in agentType.AgentParams)
+        {
+            var defaultValue = GetDefaultValueForParameter(param, defaultValues);
+            var userInput = await PromptForParameterAsync(param, defaultValue);
+            
+            if (!string.IsNullOrEmpty(userInput))
+            {
+                configuration[param.Name] = ConvertValueToType(userInput, param.Type);
+            }
+        }
+
+        return configuration.Any() ? configuration : null;
+    }
+
+    private string? GetDefaultValueForParameter(AgentParamDto param, Dictionary<string, object> defaultValues)
+    {
+        if (defaultValues.TryGetValue(param.Name, out var value))
+        {
+            return value?.ToString();
+        }
+        
+        // Common default values based on type
+        return param.Type switch
+        {
+            var t when t.Contains("String") => "",
+            var t when t.Contains("Int") => "0",
+            var t when t.Contains("Boolean") => "false",
+            var t when t.Contains("List") => "[]",
+            _ => ""
+        };
+    }
+
+    private async Task<string> PromptForParameterAsync(AgentParamDto param, string? defaultValue)
+    {
+        var typeDescription = GetTypeDescription(param.Type);
+        var prompt = $"{param.Name} ({typeDescription})";
+        
+        if (!string.IsNullOrEmpty(defaultValue))
+        {
+            prompt += $" [默认: {defaultValue}]";
+        }
+
+        return await PromptForInputAsync(prompt, defaultValue ?? "");
+    }
+
+    private string GetTypeDescription(string type)
+    {
+        return type switch
+        {
+            var t when t.Contains("String") => "文本",
+            var t when t.Contains("Int32") => "整数",
+            var t when t.Contains("Boolean") => "true/false",
+            var t when t.Contains("List") => "列表",
+            var t when t.Contains("Guid") => "GUID",
+            var t when t.Contains("TimeSpan") => "时间跨度 (如: 00:30:00)",
+            _ => "对象"
+        };
+    }
+
+    private object ConvertValueToType(string value, string type)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        try
+        {
+            return type switch
+            {
+                var t when t.Contains("Int32") => int.Parse(value),
+                var t when t.Contains("Boolean") => bool.Parse(value),
+                var t when t.Contains("Guid") => Guid.Parse(value),
+                var t when t.Contains("TimeSpan") => TimeSpan.Parse(value),
+                var t when t.Contains("List") && value.StartsWith('[') => JsonSerializer.Deserialize<object>(value) ?? value,
+                _ => value
+            };
+        }
+        catch
+        {
+            return value; // Fallback to string
+        }
+    }
+
+    private Task<string> PromptForInputAsync(string prompt, string defaultValue)
+    {
+        Logger.LogInformation($"💬 {prompt}:");
+        Console.Write("   > ");
+        
+        var input = Console.ReadLine();
+        return Task.FromResult(string.IsNullOrEmpty(input) ? defaultValue : input);
+    }
+
+    private Task<bool> PromptForConfirmationAsync(string message)
+    {
+        Logger.LogInformation($"❓ {message} (y/N):");
+        Console.Write("   > ");
+        
+        var input = Console.ReadLine();
+        return Task.FromResult(!string.IsNullOrEmpty(input) && input.ToLowerInvariant().StartsWith('y'));
+    }
+
+    private string TruncateString(string text, int maxLength)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxLength)
+        {
+            return text;
+        }
+        
+        return text.Substring(0, maxLength - 3) + "...";
+    }
+
     private class AgentInstanceDto
     {
         public string Id { get; set; } = string.Empty;
@@ -358,9 +643,10 @@ Examples:
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
-        public string Type { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
+        public string AgentType { get; set; } = string.Empty;
+        public string? Status { get; set; }
         public string? Description { get; set; }
+        public string? BusinessGrainId { get; set; }
         public DateTime? CreatedAt { get; set; }
         public DateTime? LastModified { get; set; }
         public Dictionary<string, object>? Configuration { get; set; }
