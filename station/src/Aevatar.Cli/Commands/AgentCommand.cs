@@ -74,19 +74,51 @@ public class AgentCommand : BaseHttpCommand
         
         var agentTypes = response.Data ?? new List<AgentTypeDto>();
         
+        // Generate timestamped filename
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var fileName = $"aevatar_agent_types_{timestamp}.json";
+        var currentDirectory = Directory.GetCurrentDirectory();
+        var filePath = Path.Combine(currentDirectory, fileName);
+        
+        // Always save to file with complete information
+        var fileData = new
+        {
+            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            Count = agentTypes.Count,
+            AgentTypes = agentTypes
+        };
+        
+        try
+        {
+            var json = JsonSerializer.Serialize(fileData, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+            });
+            
+            await File.WriteAllTextAsync(filePath, json);
+            
+            Logger.LogInformation("💾 Agent types 信息已保存到文件:");
+            Logger.LogInformation("📁 文件路径: {FilePath}", filePath);
+            Logger.LogInformation("📊 包含 {Count} 个 Agent 类型", agentTypes.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning("保存文件失败: {Error}", ex.Message);
+        }
+        
+        // Display output based on format option
         if (HasOption(args, "json"))
         {
             OutputJson(agentTypes);
             return;
         }
-
-        OutputTable(agentTypes,
-            ("Type Name", t => t.Name),
-            ("Assembly", t => t.AssemblyName),
-            ("Full Name", t => t.FullName),
-            ("Description", t => t.Description ?? "")
-        );
+        
+        Logger.LogInformation("");
+        Logger.LogInformation("💡 完整的 Agent 类型信息(包括参数和配置模式)已保存到: {FileName}", fileName);
     }
+    
 
     private async Task ListAgentInstancesAsync(CommandLineArgs args)
     {
@@ -288,10 +320,18 @@ Examples:
 
     private class AgentTypeDto
     {
-        public string Name { get; set; } = string.Empty;
+        public string AgentType { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
-        public string AssemblyName { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public List<AgentParamDto>? AgentParams { get; set; }
+        public string? PropertyJsonSchema { get; set; }
+        public object? DefaultValues { get; set; }
+    }
+    
+    private class AgentParamDto
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
     }
 
     private class AgentInstanceDto
