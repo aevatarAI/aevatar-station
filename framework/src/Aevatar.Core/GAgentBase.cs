@@ -397,7 +397,7 @@ public abstract partial class
         }
 
 
-        InternalOnStateChangedAsync().ContinueWith(task =>
+        InternalOnStateChangedAsync(Version).ContinueWith(task =>
         {
             if (task.Exception != null)
             {
@@ -409,18 +409,18 @@ public abstract partial class
         _lastProcessedVersion = Version;       
     }
 
-    private async Task InternalOnStateChangedAsync()
+    private async Task InternalOnStateChangedAsync(int version)
     {
         await HandleStateChangedAsync();
         if (StateDispatcher != null)
         {
             var snapshot = _copier!.Copy(State);
             
-            var singleStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
+            var singleStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, version);
             singleStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
             await StateDispatcher.PublishSingleAsync(this.GetGrainId(), singleStateWrapper);
             
-            var batchStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
+            var batchStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, version);
             batchStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
             await StateDispatcher.PublishAsync(this.GetGrainId(), batchStateWrapper);
         }
