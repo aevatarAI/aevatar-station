@@ -3,9 +3,11 @@ using GroupChat.GAgent.Feature.Blackboard.LogEvent;
 using GroupChat.GAgent.Feature.Common;
 using Aevatar.Core.Abstractions;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
+using Aevatar.Core.Placement;
 
 namespace GroupChat.GAgent.Feature.Blackboard;
 
+[SiloNamePatternPlacement("Projector")]
 public class BlackboardGAgent : GAgentBase<BlackboardState, BlackboardLogEvent>,
     IBlackboardGAgent
 {
