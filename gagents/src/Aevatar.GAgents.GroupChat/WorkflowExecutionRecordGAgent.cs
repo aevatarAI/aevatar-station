@@ -138,8 +138,9 @@ public class WorkflowExecutionRecordGAgent :
                 state.InitContent = startExecuteWorkflowLogEvent.Content;
                 state.StartTime = DateTime.UtcNow;
                 state.Status = WorkflowExecutionStatus.Running;
-                state.WorkUnitRecords = startExecuteWorkflowLogEvent.WorkUnitInfos.Select(o =>
-                    new WorkUnitExecutionRecord
+                state.WorkUnitRecords = startExecuteWorkflowLogEvent.WorkUnitInfos
+                    .DistinctBy(o => o.GrainId)
+                    .Select(o => new WorkUnitExecutionRecord
                     {
                         WorkUnitGrainId = o.GrainId,
                         Status = WorkflowExecutionStatus.Pending
