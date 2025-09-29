@@ -118,7 +118,8 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
                 {
                     ExtendedData = node.ExtendedData,
                     GrainId = GrainId.Create(node.AgentType, GuidUtil.GuidToGrainKey(node.AgentId)).ToString(),
-                    NextGrainId = ""
+                    NextGrainId = "",
+                    AgentName = node.Name
                 });
                 continue;
             }
@@ -129,7 +130,8 @@ public class WorkflowViewService : ApplicationService, IWorkflowViewService
                 {
                     ExtendedData = node.ExtendedData,
                     GrainId = GrainId.Create(node.AgentType, GuidUtil.GuidToGrainKey(node.AgentId)).ToString(),
-                    NextGrainId = GrainId.Create(nextNode.AgentType, GuidUtil.GuidToGrainKey(nextNode.AgentId)).ToString()
+                    NextGrainId = GrainId.Create(nextNode.AgentType, GuidUtil.GuidToGrainKey(nextNode.AgentId)).ToString(),
+                    AgentName = node.Name
                 });
             }
         }

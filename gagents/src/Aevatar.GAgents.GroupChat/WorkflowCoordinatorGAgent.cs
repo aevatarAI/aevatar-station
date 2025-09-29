@@ -189,7 +189,8 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
                     GrainId = s.GrainId,
                     NextGrainId = s.NextGrainId,
                     UnitStatusEnum = WorkerUnitStatusEnum.Pending,
-                    ExtendedData = s.ExtendedData
+                    ExtendedData = s.ExtendedData,
+                    AgentName = s.AgentName
                 }).ToList();
 
                 if (state.WorkflowStatus is WorkflowCoordinatorStatus.Pending or WorkflowCoordinatorStatus.Failed)

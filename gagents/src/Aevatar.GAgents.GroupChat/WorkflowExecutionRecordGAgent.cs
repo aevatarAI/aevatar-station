@@ -143,7 +143,8 @@ public class WorkflowExecutionRecordGAgent :
                     .Select(o => new WorkUnitExecutionRecord
                     {
                         WorkUnitGrainId = o.GrainId,
-                        Status = WorkflowExecutionStatus.Pending
+                        Status = WorkflowExecutionStatus.Pending,
+                        AgentName = o.AgentName
                     }).ToList();
                 break;
             case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
