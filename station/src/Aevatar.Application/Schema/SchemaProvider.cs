@@ -12,21 +12,38 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
 {
     private readonly object _lockObj = new object();
     private readonly Dictionary<Type, JsonSchema> _schemaDic = new Dictionary<Type, JsonSchema>();
+    private readonly DynamicDropDownProcessor _dynamicDropDownProcessor;
+    private readonly DefaultValuesProcessor _defaultValuesProcessor;
 
-    public JsonSchema GetTypeSchema(Type type)
+    public SchemaProvider(DynamicDropDownProcessor dynamicDropDownProcessor, DefaultValuesProcessor defaultValuesProcessor)
+    {
+        _dynamicDropDownProcessor = dynamicDropDownProcessor;
+        _defaultValuesProcessor = defaultValuesProcessor;
+    }
+
+    public JsonSchema GetTypeSchema(Type type, DynamicDropDownContext? context = null)
     {
         lock (_lockObj)
         {
-            if (_schemaDic.TryGetValue(type, out var queryData))
+            // Skip caching when context is provided to allow dynamic processing
+            if (context == null && _schemaDic.TryGetValue(type, out var queryData))
             {
                 return queryData;
             }
+
+            // 设置context到processor中
+            _dynamicDropDownProcessor.SetContext(context);
 
             var settings = new SystemTextJsonSchemaGeneratorSettings
             {
                 FlattenInheritanceHierarchy = true,
                 GenerateEnumMappingDescription = true,
-                SchemaProcessors = { new IgnoreSpecificBaseProcessor() }
+                SchemaProcessors = { 
+                    new IgnoreSpecificBaseProcessor(),
+                    // new DynamicDropDownProcessor(context) 
+                    _defaultValuesProcessor,    // 添加DefaultValues处理器
+                    _dynamicDropDownProcessor  // 使用注入的实例
+                }
             };
             settings.SerializerOptions = new JsonSerializerOptions
             {
@@ -34,7 +51,11 @@ public class SchemaProvider : ISchemaProvider, ISingletonDependency
             };
 
             var schemaData = JsonSchema.FromType(type, settings);
-            _schemaDic.Add(type, schemaData);
+            // Only cache when no context is provided
+            if (context == null)
+            {
+                _schemaDic.Add(type, schemaData);
+            }
             return schemaData;
         }
     }

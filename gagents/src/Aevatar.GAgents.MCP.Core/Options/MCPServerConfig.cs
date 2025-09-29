@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel;
+using Aevatar.GAgents.AI.Common;
+
 namespace Aevatar.GAgents.MCP.Options;
 
 // ReSharper disable InconsistentNaming
@@ -25,27 +27,36 @@ public class MCPServerConfig
     [StringLength(1000, ErrorMessage = "URL must not exceed 1000 characters")]
     [RegularExpression(@"^https?://[^\s/$.?#].[^\s]*$", ErrorMessage = "URL must start with http:// or https://")]
     public string? Url { get; set; }
-    [Id(6)] public MCPServerType Type { get; set; }
+
+    [Id(6)]
+    [DefaultValues(
+        new object[] { "Stdio", "StreamableHttp" },
+        new string[]
+        {
+            "Standard I/O communication for local MCP servers", "HTTP streaming communication for remote MCP servers"
+        }
+    )]
+    public string Type { get; set; } = "Stdio";
 }
 
-/// <summary>
-/// https://modelcontextprotocol.io/specification/2025-06-18/basic/transports
-/// </summary>
-[GenerateSerializer]
-public enum MCPServerType
-{
-    /// <summary>
-    /// Standard I/O communication
-    /// </summary>
-    [Description("Standard I/O communication for local MCP servers")]
-    Stdio,
-    
-    /// <summary>
-    /// HTTP streaming communication
-    /// </summary>
-    [Description("HTTP streaming communication for remote MCP servers")]
-    StreamableHttp
-}
+// /// <summary>
+// /// https://modelcontextprotocol.io/specification/2025-06-18/basic/transports
+// /// </summary>
+// [GenerateSerializer]
+// public enum MCPServerType
+// {
+//     /// <summary>
+//     /// Standard I/O communication
+//     /// </summary>
+//     [Description("Standard I/O communication for local MCP servers")]
+//     Stdio,
+//     
+//     /// <summary>
+//     /// HTTP streaming communication
+//     /// </summary>
+//     [Description("HTTP streaming communication for remote MCP servers")]
+//     StreamableHttp
+// }
 
 /// <summary>
 /// Tool definition for predefined tools in configuration

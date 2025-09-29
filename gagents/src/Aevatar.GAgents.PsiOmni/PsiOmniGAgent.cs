@@ -281,7 +281,12 @@ public partial class
         InitializeTracing();
 
         // Initialize the AI agent with the provided configuration
-        if (!configuration.SystemLLM.IsNullOrEmpty() || !configuration.SelfLlmConfig.ApiKey.IsNullOrEmpty())
+        if (!configuration.SystemLLM.IsNullOrEmpty()
+#if ENABLE_SELF_LLM_CONFIG
+            || !configuration.SelfLlmConfig.ApiKey.IsNullOrEmpty()
+#endif
+
+           )
         {
             await InitializeAsync(new InitializeDto
             {
@@ -289,9 +294,11 @@ public partial class
                 LLMConfig = new LLMConfigDto
                 {
                     SystemLLM = configuration.SystemLLM,
+#if ENABLE_SELF_LLM_CONFIG
                     SelfLLMConfig = configuration.SelfLlmConfig.ApiKey.IsNullOrEmpty()
                         ? null
-                        : configuration.SelfLlmConfig
+                        : configuration.SelfLlmConfig,
+#endif
                 }
             });
         }
@@ -307,6 +314,7 @@ public partial class
             Description = configuration.Description,
             Examples = configuration.Examples
         });
+        RaiseEvent(new SetMemberNameLogEvent { MemberName = configuration.MemberName });
         await ConfirmEventsWithTracing();
 
         // Note: We don't initialize Brain here to maintain backward compatibility.
@@ -521,11 +529,11 @@ public partial class
             return false;
         }
 
-        if (State.Configuration == null)
-        {
-            LogEventInfo("Configuration is empty.");
-            return false;
-        }
+        // if (State.Configuration == null)
+        // {
+        //     LogEventInfo("Configuration is empty.");
+        //     return false;
+        // }
 
         return true;
     }
@@ -744,6 +752,9 @@ public partial class
 
         switch (@event)
         {
+            case SetMemberNameLogEvent payload:
+                State.MemberName = payload.MemberName;
+                break;
             case InitializeEvent payload:
                 LogEventDebug("Setting depth: {Depth}", payload.Depth);
                 state.Name = payload.Name;

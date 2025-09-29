@@ -2,6 +2,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.Threading.Tasks;
+using Aevatar.Background;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,7 @@ public class Program
                 .UseAutofac()
                 .UseSerilog();
             builder.Services.AddSignalR(options => { options.EnableDetailedErrors = true; }).AddOrleans();
+            builder.Services.AddHostedService<DocumentLinkScheduledTask>();
             builder.Services
                 .AddSingleton<IAuthorizationMiddlewareResultHandler, AevatarAuthorizationMiddlewareResultHandler>();
             await builder.AddApplicationAsync<AevatarHttpApiHostModule>();

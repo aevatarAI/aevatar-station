@@ -43,6 +43,12 @@ public class PsiOmniGAgentStateLogEvent : StateLogEventBase<PsiOmniGAgentStateLo
 }
 
 [GenerateSerializer]
+public class SetMemberNameLogEvent : StateLogEventBase<PsiOmniGAgentStateLogEvent>
+{
+    [Id(0)] public string MemberName { get; set; }
+}
+
+[GenerateSerializer]
 public class InitializeEvent : PsiOmniGAgentStateLogEvent
 {
     [Id(0)] public string ParentId { get; set; } = string.Empty;
