@@ -33,4 +33,8 @@ public class WorkflowUnitDto
     [Id(2)] 
     [Description("Additional configuration data and parameters specific to this workflow unit")]
     public Dictionary<string,string> ExtendedData { get; set; } = new();
+    
+    [Id(3)] 
+    [Description("Name of the agent associated with this workflow unit")]
+    public string AgentName { get; set; } = string.Empty;
 }

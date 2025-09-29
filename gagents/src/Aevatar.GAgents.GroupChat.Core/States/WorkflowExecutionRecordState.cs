@@ -43,4 +43,6 @@ public class WorkUnitExecutionRecord
     public string FailureSummary { get; set; }
     [Id(7)]
     public string? CurrentStateSnapshot { get; set; }
+    [Id(8)]
+    public string AgentName { get; set; } = string.Empty;
 }

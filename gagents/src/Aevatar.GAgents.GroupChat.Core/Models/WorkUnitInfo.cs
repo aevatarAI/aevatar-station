@@ -7,4 +7,5 @@ public class WorkUnitInfo
     [Id(1)] public string NextGrainId { get; set; }
     [Id(2)] public WorkerUnitStatusEnum UnitStatusEnum { get; set; }
     [Id(3)] public Dictionary<string,string> ExtendedData { get; set; } = new();
+    [Id(4)] public string AgentName { get; set; } = string.Empty;
 }
