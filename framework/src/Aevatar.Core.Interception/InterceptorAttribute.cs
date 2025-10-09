@@ -380,6 +380,13 @@ namespace Aevatar.Core.Interception
         /// </summary>
         private void LogTaskCompletion(Task completedTask)
         {
+            // Check if this has custom log category for faulted tasks (completely independent)
+            if (!string.IsNullOrEmpty(LogCategory) && completedTask.IsFaulted && completedTask.Exception != null)
+            {
+                var exception = completedTask.Exception.InnerException ?? completedTask.Exception;
+                LogContextualException(exception);
+            }
+            
             // Only log trace messages if tracing is enabled
             if (ShouldTrace())
             {
