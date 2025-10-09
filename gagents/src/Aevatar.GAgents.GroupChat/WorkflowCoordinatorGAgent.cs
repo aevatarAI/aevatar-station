@@ -57,9 +57,9 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         {
             Logger.LogError(
                 $"[WorkflowCoordinatorGAgent] ChatResponseEvent workUnit execute fail:{@event.FailureSummary}");
+            await UnregisterExecutionRecordAsync();
             RaiseEvent(new WorkflowStartFailedLogEvent());
             await ConfirmEvents();
-            await UnregisterExecutionRecordAsync();
             return;
         }
 
