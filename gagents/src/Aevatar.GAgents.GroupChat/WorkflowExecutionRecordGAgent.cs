@@ -152,7 +152,10 @@ public class WorkflowExecutionRecordGAgent :
                 break;
             case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
                 state.EndTime = DateTime.UtcNow;
-                state.Status = WorkflowExecutionStatus.Completed;
+                if (state.Status != WorkflowExecutionStatus.Failed)
+                {
+                    state.Status = WorkflowExecutionStatus.Completed;
+                }
                 break;
             case StartExecuteWorkUnitLogEvent startExecuteWorkUnitLogEvent:
                 var startUnit = state.WorkUnitRecords.First(o =>
