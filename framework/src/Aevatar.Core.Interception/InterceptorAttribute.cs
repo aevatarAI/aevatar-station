@@ -7,10 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using Aevatar.Core.Interception.Context;
-using Aevatar.Core.Interception.Configurations;
-using Aevatar.Core.Interception.Models;
 
 namespace Aevatar.Core.Interception
 {

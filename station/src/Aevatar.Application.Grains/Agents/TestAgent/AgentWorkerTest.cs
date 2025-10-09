@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
 using Aevatar.GAgents.GroupChat.Core.Dto;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
@@ -43,7 +44,7 @@ public class AgentWorkerTest: GroupMemberGAgentBase<AgentWorkerTestState, AgentW
 
         return Task.FromResult(random.Next(1, 90));
     }
-
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty, RoundIdProperty, GrainIdProperty})]
     protected override async Task<ChatResponse> ChatAsync(List<GroupChat.GAgent.Feature.Common.ChatMessage>? coordinatorMessages)
     {
         if (!State.FailureSummary.IsNullOrEmpty())

@@ -403,7 +403,7 @@ public class ProjectService : OrganizationService, IProjectService
         // Format: {project-slug}-{org-identifier}-{unique-suffix}
         // Max length: 20 + 1 + 8 + 1 + 4 = 34 characters
         // With Kubernetes prefixes/suffixes (deployment- + -silo-1 = 18 chars), total ≤ 52 chars (well under 63 limit)
-        var domainName = $"{projectSlug}-{orgIdentifier}-{uniqueSuffix}";
+        var domainName = $"{projectSlug}-{orgIdentifier}";
         
         // Additional safety check: ensure domain name doesn't exceed 45 characters
         if (domainName.Length > 45)
