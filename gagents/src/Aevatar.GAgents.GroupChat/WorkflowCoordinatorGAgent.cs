@@ -542,8 +542,12 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
     
     private async Task UnregisterExecutionRecordAsync()
     {
+        Logger.LogInformation("🔄 [WorkflowCoordinatorGAgent] UnregisterExecutionRecordAsync ENTRY - CurrentExecutionRecordId: {ExecutionRecordId}, BlackboardId: {BlackboardId}", 
+            State.CurrentExecutionRecordId, State.BlackboardId);
+        
         if (State.CurrentExecutionRecordId == Guid.Empty)
         {
+            Logger.LogInformation("⚠️ [WorkflowCoordinatorGAgent] UnregisterExecutionRecordAsync EXIT - No execution record to unregister (CurrentExecutionRecordId is empty)");
             return;
         }
         
@@ -555,6 +559,9 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         });
         
         await UnregisterAsync(executionRecordAgent);
+        
+        Logger.LogInformation("✅ [WorkflowCoordinatorGAgent] UnregisterExecutionRecordAsync EXIT - Successfully unregistered execution record: {ExecutionRecordId}", 
+            State.CurrentExecutionRecordId);
     }
 
     #endregion

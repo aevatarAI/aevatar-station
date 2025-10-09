@@ -91,6 +91,9 @@ public class WorkflowExecutionRecordGAgent :
     [EventHandler]
     public async Task HandleEventAsync(ChatResponseEvent @event)
     {
+        Logger.LogInformation("🎯 [WorkflowExecutionRecordGAgent] HandleEventAsync(ChatResponseEvent) ENTRY - PublisherGrainId: {PublisherGrainId}, FailureSummary: {FailureSummary}", 
+            @event.PublisherGrainId, @event.FailureSummary ?? "<null>");
+        
         var targetAgentId = @event.PublisherGrainId.ToString();
         
         // Capture current state snapshot
