@@ -126,10 +126,12 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
                 State.BusinessAgentGrainId = createAgentGEvent.BusinessAgentGrainId;
                 State.CreateTime = DateTime.Now;
                 State.FormattedBusinessAgentGrainId = createAgentGEvent.FormattedBusinessAgentGrainId;
+                State.UpdateTime = DateTime.UtcNow;
                 break;
             case UpdateAgentGEvent updateAgentGEvent:
                 State.Properties = updateAgentGEvent.Properties;
                 State.Name = updateAgentGEvent.Name;
+                State.UpdateTime = DateTime.UtcNow;
                 break;
             case DeleteAgentGEvent deleteAgentGEvent:
                 State.UserId = Guid.Empty;
@@ -137,9 +139,11 @@ public class CreatorGAgent : GAgentBase<CreatorGAgentState, CreatorAgentGEvent>,
                 State.Name = "";
                 State.Properties = null;
                 State.BusinessAgentGrainId = default;
+                State.UpdateTime = DateTime.UtcNow;
                 break;
             case UpdateAvailableEventsGEvent updateSubscribedEventInfoGEvent:
                 State.EventInfoList = updateSubscribedEventInfoGEvent.EventInfoList;
+                State.UpdateTime = DateTime.UtcNow;
                 break;
         }
     }
