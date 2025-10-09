@@ -57,9 +57,17 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         {
             Logger.LogError(
                 $"[WorkflowCoordinatorGAgent] ChatResponseEvent workUnit execute fail:{@event.FailureSummary}");
-            await UnregisterExecutionRecordAsync();
-            RaiseEvent(new WorkflowStartFailedLogEvent());
+            
+            // Mark this work unit as failed
+            RaiseEvent(new FailedWorkUnitLogEvent() 
+            { 
+                Term = @event.Term, 
+                WorkUnitGrainId = workUnitInfo.GrainId
+            });
             await ConfirmEvents();
+
+            // Check if workflow should finish (all work units are either finished or failed)
+            await TryFinishWorkflowAsync();
             return;
         }
 
@@ -70,7 +78,7 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
             ChatResponse = @event.ChatResponse
         });
 
-        // maker sure this work unit has done
+        // Mark this work unit as successfully finished
         RaiseEvent(new FinishedWorkUnitLogEvent() { Term = @event.Term, WorkUnitGrainId = workUnitInfo.GrainId });
         await ConfirmEvents();
 
@@ -223,6 +231,24 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
                 state.TermToWorkUnitGrainId.Remove(finishedWorkUnitLogEvent.Term);
                 break;
 
+            case FailedWorkUnitLogEvent failedWorkUnitLogEvent:
+                // Handle actual failures - mark as Failed and remove term
+                var failedWorkUnitInfoList =
+                    state.CurrentWorkUnitInfos.FindAll(f => f.GrainId == failedWorkUnitLogEvent.WorkUnitGrainId);
+                foreach (var workUnit in failedWorkUnitInfoList)
+                {
+                    workUnit.UnitStatusEnum = WorkerUnitStatusEnum.Failed;
+                }
+
+                // Remove term if provided
+                if (failedWorkUnitLogEvent.Term.HasValue)
+                {
+                    state.TermToWorkUnitGrainId.Remove(failedWorkUnitLogEvent.Term.Value);
+                }
+                
+                SetWorkUnitSkipped(state, failedWorkUnitLogEvent);
+                break;
+
             case WorkflowFinishLogEvent:
                 state.WorkflowStatus = WorkflowCoordinatorStatus.Pending;
                 state.TermToWorkUnitGrainId = new Dictionary<long, string>();
@@ -276,6 +302,41 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
         }
     }
 
+    private static void SetWorkUnitSkipped(WorkflowCoordinatorState state, FailedWorkUnitLogEvent failedWorkUnitLogEvent)
+    {
+        // Find and mark downstream units as skipped (BFS traversal)
+        var workUnitsToSkip = new List<string>();
+        var queue = new Queue<string>();
+        queue.Enqueue(failedWorkUnitLogEvent.WorkUnitGrainId);
+                
+        while (queue.Count > 0)
+        {
+            var currentGrainId = queue.Dequeue();
+                    
+            // Find all work units that have this as their NextGrainId (downstream dependencies)
+            var downstreamUnits = state.GetDownStreamGrainIds(currentGrainId);
+                    
+            foreach (var unit in downstreamUnits)
+            {
+                if (!workUnitsToSkip.Contains(unit))
+                {
+                    workUnitsToSkip.Add(unit);
+                    queue.Enqueue(unit); // Continue traversal
+                }
+            }
+        }
+                
+        // Mark all downstream work units as skipped
+        foreach (var workUnitId in workUnitsToSkip)
+        {
+            var workUnitsToSkipList = state.CurrentWorkUnitInfos.FindAll(f => f.GrainId == workUnitId);
+            foreach (var workUnit in workUnitsToSkipList)
+            {
+                workUnit.UnitStatusEnum = WorkerUnitStatusEnum.Skipped;
+            }
+        }
+    }
+
     #endregion
 
     #region private method
@@ -289,15 +350,9 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
     private async Task TryFinishWorkflowAsync()
     {
         Logger.LogDebug("[WorkflowCoordinatorGAgent] TryFinishWorkflowAsync start");
-        if (State.WorkflowStatus != WorkflowCoordinatorStatus.InProgress)
+        if (State.CheckAllWorkUnitFinished()) // Check if all work units are finished, failed, or skipped
         {
-            Logger.LogDebug("[WorkflowCoordinatorGAgent] TryFinishWorkflowAsync: WorkflowStatus not InProgress");
-            return;
-        }
-
-        if (State.CheckAllWorkUnitFinished())
-        {
-            Logger.LogDebug("[WorkflowCoordinatorGAgent] All work units finished, finishing workflow");
+            Logger.LogDebug("[WorkflowCoordinatorGAgent] All work units completed (finished or failed), finishing workflow");
             var grainIdList = TentativeState.GetAllWorkerUnitGrainIds();
             foreach (var grainId in grainIdList)
             {
@@ -600,6 +655,13 @@ public class FinishedWorkUnitLogEvent : WorkflowCoordinatorLogEvent
 {
     [Id(0)] public string WorkUnitGrainId { get; set; }
     [Id(1)] public long Term { get; set; }
+}
+
+[GenerateSerializer]
+public class FailedWorkUnitLogEvent : WorkflowCoordinatorLogEvent
+{
+    [Id(0)] public required string WorkUnitGrainId { get; set; }
+    [Id(1)] public long? Term { get; set; } // Nullable for skipped units
 }
 
 [GenerateSerializer]
