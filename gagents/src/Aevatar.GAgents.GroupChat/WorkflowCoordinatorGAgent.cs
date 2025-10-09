@@ -233,6 +233,7 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
 
             case FailedWorkUnitLogEvent failedWorkUnitLogEvent:
                 // Handle actual failures - mark as Failed and remove term
+                state.WorkflowStatus = WorkflowCoordinatorStatus.Failed;
                 var failedWorkUnitInfoList =
                     state.CurrentWorkUnitInfos.FindAll(f => f.GrainId == failedWorkUnitLogEvent.WorkUnitGrainId);
                 foreach (var workUnit in failedWorkUnitInfoList)
@@ -250,7 +251,10 @@ public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, Wo
                 break;
 
             case WorkflowFinishLogEvent:
-                state.WorkflowStatus = WorkflowCoordinatorStatus.Pending;
+                if (state.WorkflowStatus != WorkflowCoordinatorStatus.Failed)
+                {
+                    state.WorkflowStatus = WorkflowCoordinatorStatus.Pending;
+                }
                 state.TermToWorkUnitGrainId = new Dictionary<long, string>();
                 if (state.BackupWorkUnitInfos.Count > 0)
                 {
