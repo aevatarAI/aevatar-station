@@ -5,6 +5,7 @@ This directory contains detailed technical documentation for the major modules o
 ## Available Module Documentation
 
 - [Aevatar.Core](./Aevatar.Core.md) - Core framework components for Generative Agents
+- [Aevatar.EventForwarding](./Aevatar.EventForwarding.md) - Hierarchical event forwarding system for multi-level agent communication
 - [Aevatar.EventSourcing.Core](./Aevatar.EventSourcing.Core.md) - Event sourcing implementation
 - [Aevatar.Plugins](./Aevatar.Plugins.md) - Plugin system for extending agent capabilities
 - [Aevatar.PermissionManagement](./Aevatar.PermissionManagement.md) - Access control system for agents and resources

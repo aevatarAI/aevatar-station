@@ -7,15 +7,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 
-public interface IBroadcastGAgent : IGAgent
+public interface IBroadcastGAgent : ICoreGAgent
 {
     Task BroadcastEventAsync<T>(string streamIdString, T @event) where T : EventBase;
 }
 
-public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEvent>
-    : GAgentBase<TBroadcastState, TBroadcastStateLogEvent>, IBroadcastGAgent
+public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEvent, TEvent, TConfiguration>
+    : CoreGAgentBase<TBroadcastState, TBroadcastStateLogEvent, TEvent, TConfiguration>, IBroadcastGAgent
         where TBroadcastState : BroadcastGState, new()
         where TBroadcastStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>
+        where TEvent : EventBase
+        where TConfiguration : ConfigurationBase
 {
     // For batch subscription operations
     private readonly Dictionary<string, Guid> _pendingSubscriptions = new();
@@ -57,16 +59,23 @@ public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEve
         return Task.FromResult("This is an agent that used to manage publishing and subscribing of the broadcast events.");
     }
 
+
     /// <summary>
-    /// 
+    /// Broadcasts an event using the specified stream ID string
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="streamIdString"></param>
-    /// <param name="event"></param>
+    /// <typeparam name="T">The type of event to broadcast</typeparam>
+    /// <param name="streamIdString">The stream ID string to broadcast on</param>
+    /// <param name="event">The event to broadcast</param>
     /// <returns></returns>
     public async Task BroadcastEventAsync<T>(string streamIdString, T @event) where T : EventBase
     {
+        if (string.IsNullOrWhiteSpace(streamIdString))
+        {
+            throw new ArgumentException("StreamIdString cannot be null or empty", nameof(streamIdString));
+        }
+        
         var stream = GenStream<T>(streamIdString);
+        Logger.LogInformation("[{0}.{1}]Broadcasting event {2} to stream {3}", this.GetType().Name, nameof(BroadcastEventAsync), @event, stream.StreamId.ToString());
         var eventWrapper = new EventWrapper<T>(@event, Guid.NewGuid(), this.GetGrainId());
         eventWrapper.PublishedTimestampUtc = DateTime.UtcNow;
         await stream.OnNextAsync(eventWrapper);
@@ -92,7 +101,7 @@ public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEve
     protected async Task<StreamSubscriptionHandle<EventWrapperBase>> SubscribeBroadcastEventAsync<T>(string agentType, Func<T, Task> eventHandler) where T : EventBase
     {
         // Clear any previous pending operations for a single subscription
-        StartBatchSubscriptionAsync();
+        await StartBatchSubscriptionAsync();
         
         // Add the subscription
         await AddSubscriptionAsync(agentType, eventHandler);
@@ -122,8 +131,15 @@ public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEve
         long getHandlesCost = 0;
         long resumeCost = 0;
         long subscribeCost = 0;
+        
+        // Basic validation
+        if (string.IsNullOrWhiteSpace(agentType))
+        {
+            throw new ArgumentException("AgentType cannot be null or empty", nameof(agentType));
+        }
+        
         var stream = GenStream<T>(agentType);
-
+        Logger.LogInformation("[{0}.{1}]Adding subscription to stream {2}", this.GetType().Name, nameof(AddSubscriptionAsync), stream.StreamId.ToString());
         var logger = ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger<EventWrapperBaseAsyncObserver>();
         if (logger == null)
         {
@@ -413,10 +429,28 @@ public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEve
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
     }
 
-    private string GetStreamIdString<T>(string grType)
+    /// <summary>
+    /// Gets the stream ID string for the given agent type and event type.
+    /// Override this method to customize how publishers and consumers are paired.
+    /// </summary>
+    /// <typeparam name="T">The event type</typeparam>
+    /// <param name="grType">The agent type or identifier</param>
+    /// <returns>The stream ID string that pairs publishers and consumers</returns>
+    protected virtual string GetStreamIdString<T>(string grType)
     {
         var streamIdString = grType + "." + typeof(T).Name;
         Logger.LogInformation("[{0}.{1}]StreamIdString: {2}", this.GetType().Name, nameof(GetStreamIdString), streamIdString);
         return streamIdString;
     }
 }
+
+public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEvent>
+    : BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEvent, EventBase, ConfigurationBase>
+        where TBroadcastState : BroadcastGState, new()
+        where TBroadcastStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>;
+
+public abstract class BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEvent, TEvent>
+    : BroadcastGAgentBase<TBroadcastState, TBroadcastStateLogEvent, TEvent, ConfigurationBase>
+        where TBroadcastState : BroadcastGState, new()
+        where TBroadcastStateLogEvent : StateLogEventBase<TBroadcastStateLogEvent>
+        where TEvent : EventBase;
