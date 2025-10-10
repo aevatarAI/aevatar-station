@@ -17,6 +17,7 @@ public class WorkflowCoordinatorState : StateBase
     [Id(8)] public bool EnableRunRecord { get; set; }
     [Id(9)] public Guid CurrentExecutionRecordId { get; set; }
     [Id(10)] public long RoundId { get; set; }
+    [Id(11)] public DateTime? CreateTime { get; set; }
 
     public WorkUnitInfo? GetWorkUnit(string workUnitGrainId)
     {
