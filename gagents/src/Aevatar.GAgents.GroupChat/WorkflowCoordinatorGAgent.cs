@@ -10,10 +10,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Volo.Abp.Threading;
+using Aevatar.Core.Placement;
 
 namespace Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 
 [GAgent]
+[SiloNamePatternPlacement("Projector")]
 public class WorkflowCoordinatorGAgent : GAgentBase<WorkflowCoordinatorState, WorkflowCoordinatorLogEvent, EventBase,
     WorkflowCoordinatorConfigDto>, IWorkflowCoordinatorGAgent
 {

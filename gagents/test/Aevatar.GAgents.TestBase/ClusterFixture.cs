@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.Core.Abstractions.Plugin;
+using Aevatar.Core.Placement;
 using Aevatar.Extensions;
 using Aevatar.GAgents.AI.BrainFactory;
 using Aevatar.GAgents.AI.Common;
@@ -186,6 +187,9 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddSingleton<IGAgentExecutor, GAgentExecutor>();
                     services.AddSingleton<IGAgentManager, GAgentManager>();
                     services.AddSingleton<IPluginGAgentManager, PluginGAgentManager>();
+                    
+                    // Register SiloNamePatternPlacement strategy for grain placement
+                    services.AddPlacementDirector<SiloNamePatternPlacement, SiloNamePatternPlacementDirector>();
                     // 注册Mock MCP客户端提供者用于测试（与TestBase保持一致使用Singleton）
                     services.AddSingleton<IMcpClientProvider, MockMcpClientProvider>();
                     services.AddSingleton<MockMcpClientProvider>();
@@ -198,7 +202,8 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
-                .AddLogStorageBasedLogConsistencyProvider("LogStorage");
+                .AddLogStorageBasedLogConsistencyProvider("LogStorage")
+                .Configure<Orleans.Configuration.SiloOptions>(options => options.SiloName = "Projector");
         }
     }
 
