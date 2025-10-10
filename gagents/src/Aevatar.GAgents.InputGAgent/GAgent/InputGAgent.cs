@@ -8,12 +8,14 @@ using Aevatar.GAgents.InputGAgent.GAgent.SEvent;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
 using Orleans.Providers;
+using Aevatar.Core.Placement;
 using Orleans.Runtime;
 
 [module: Interceptor]
 
 namespace Aevatar.GAgents.InputGAgent.GAgent;
 
+[SiloNamePatternPlacement("Projector")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent(nameof(InputGAgent))]

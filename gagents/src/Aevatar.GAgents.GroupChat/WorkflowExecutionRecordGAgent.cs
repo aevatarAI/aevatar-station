@@ -8,10 +8,12 @@ using Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent;
 using GroupChat.GAgent.Feature.Coordinator.GEvent;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Aevatar.Core.Placement;
 
 namespace Aevatar.GAgents.GroupChat.WorkflowCoordinator;
 
 [GAgent]
+[SiloNamePatternPlacement("Projector")]
 public class WorkflowExecutionRecordGAgent :
     GAgentBase<WorkflowExecutionRecordState, WorkflowExecutionRecordLogEvent, EventBase>, IWorkflowExecutionRecordGAgent
 {
