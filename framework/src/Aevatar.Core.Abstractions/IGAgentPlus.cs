@@ -101,19 +101,6 @@ public interface IGAgentPlus : ICoreGAgent
     [ReadOnly]
     Task<List<GrainId>> GetParentsAsync();
 
-    /// <summary>
-    /// Get the type of GAgent initialization event.
-    /// </summary>
-    /// <returns></returns>
-    [ReadOnly]
-    Task<Type?> GetConfigurationTypeAsync();
-
-    /// <summary>
-    /// Config the GAgent.
-    /// </summary>
-    /// <param name="configuration"></param>
-    /// <returns></returns>
-    Task ConfigAsync(ConfigurationBase configuration);
     
     /// <summary>
     /// Prepare the agent with available resource context.

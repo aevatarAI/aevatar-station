@@ -38,6 +38,9 @@ public class AevatarModule : AbpModule
         
         context.Services.AddSingleton<IGAgentManager, GAgentManager>();
         context.Services.AddTransient<IGAgentFactory, GAgentFactory>();
+        // Register generic factories for specific grain types
+        context.Services.AddSingleton<IGAgentFactory<IGAgent>, GAgentFactory<IGAgent>>();
+        context.Services.AddSingleton<IGAgentFactory<IGAgentPlus>, GAgentFactory<IGAgentPlus>>();
         context.Services.AddTransient<IPluginGAgentManager, PluginGAgentManager>();
         context.Services.AddSingleton<IConfigureGrainTypeComponents, ConfigureAevatarGrainActivator>();
         context.Services.AddSingleton<IStateDispatcher, StateDispatcher>();
