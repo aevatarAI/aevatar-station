@@ -56,7 +56,7 @@ public class HostController : AevatarController
     /// <param name="page">Page number (1-based, default: 1)</param>
     /// <param name="pageSize">Page size (default: 100)</param>
     /// <returns>Paged workflow logs (no total for performance)</returns>
-    [HttpGet("workflow-log")]
+    [HttpGet("log/workflow")]
     public async Task<List<HostLogIndex>> GetWorkflowLogs([FromQuery] WorkflowLogQueryDto input)
     {
         var page = input.PageIndex < 1 ? 1 : input.PageIndex;
