@@ -7,7 +7,7 @@ namespace Aevatar.Schema;
 
 public interface ISchemaProvider
 {
-    JsonSchema GetTypeSchema(Type type, DynamicDropDownContext? context = null);
+    JsonSchema GetTypeSchema(Type type, DynamicDropDownContext? dynamicContext = null, SchemaProcessingContext? documentationContext = null);
 
     Dictionary<string, string> ConvertValidateError(ICollection<ValidationError> errors);
 }

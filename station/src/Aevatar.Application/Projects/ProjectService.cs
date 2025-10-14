@@ -58,10 +58,8 @@ public class ProjectService : OrganizationService, IProjectService
     {
         ValidateDisplayName(input.DisplayName);
 
-        var domainName = new string(input.DisplayName
-            .ToLowerInvariant()
-            .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-')
-            .ToArray());
+        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
+        var domainName = GenerateDomainName(input.DisplayName, organization);
 
         // Ensure the generated domain name is not empty after filtering
         if (string.IsNullOrEmpty(domainName))
@@ -69,8 +67,8 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("Project name must contain at least one valid character (letter, digit, or hyphen) for domain name generation");
         }
 
-        _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName}", 
-            input.OrganizationId, input.DisplayName, domainName);
+        _logger.LogInformation("Starting project creation process. OrganizationId: {OrganizationId}, DisplayName: {DisplayName}, DomainName: {DomainName} (Length: {DomainLength})", 
+            input.OrganizationId, input.DisplayName, domainName, domainName.Length);
 
         var domain = await _domainRepository.FirstOrDefaultAsync(o =>
             o.NormalizedDomainName == domainName.ToUpperInvariant() && o.IsDeleted == false);
@@ -81,7 +79,6 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException($"DomainName: {domainName} already exists");
         }
 
-        var organization = await OrganizationUnitRepository.GetAsync(input.OrganizationId);
         var trimmedDisplayName = input.DisplayName.Trim();
         var projectId = GuidGenerator.Create();
         var project = new OrganizationUnit(
@@ -103,8 +100,8 @@ public class ProjectService : OrganizationService, IProjectService
 
         var ownerRoleId = await AddOwnerRoleAsync(project.Id);
         var readerRoleId = await AddReaderRoleAsync(project.Id);
-        _logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}", 
-            ownerRoleId, readerRoleId);
+        _logger.LogInformation("Project roles created successfully. OwnerRoleId: {OwnerRoleId}, ReaderRoleId: {ReaderRoleId}, Email: {Email} ", 
+            ownerRoleId, readerRoleId, CurrentUser.Email);
 
         project.ExtraProperties[AevatarConsts.OrganizationTypeKey] = OrganizationType.Project;
         project.ExtraProperties[AevatarConsts.OrganizationRoleKey] = new List<Guid> { ownerRoleId, readerRoleId };
@@ -120,6 +117,15 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("The same project name already exists");
         }
 
+        if (!CurrentUser.Email.IsNullOrEmpty())
+        {
+            await SetMemberAsync(projectId, new SetOrganizationMemberDto
+            {
+                Email = CurrentUser.Email,
+                Join = true,
+                RoleId = ownerRoleId
+            });
+        }
         await _developerService.CreateServiceAsync(domainName, project.Id);
         _logger.LogInformation("Developer service created successfully for domain: {DomainName}", domainName);
 
@@ -367,5 +373,48 @@ public class ProjectService : OrganizationService, IProjectService
             throw new UserFriendlyException("No recent used projectId");
         }
         return JsonConvert.DeserializeObject<RecentUsedProjectDto>(value)!;
+    }
+    
+    private static string GenerateDomainName(string displayName, OrganizationUnit organization)
+    {
+        // Generate project slug from display name
+        // Note: ValidateDisplayName already ensures at least one letter/digit exists
+        var projectSlug = new string(displayName
+                .ToLowerInvariant()
+                .Where(c => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == ' ')
+                .ToArray())
+            .Replace(' ', '-') // Replace spaces with hyphens
+            .Trim('-'); // Remove leading/trailing hyphens
+        
+        // Limit project slug to max 20 characters to ensure total domain length stays within Kubernetes limits
+        if (projectSlug.Length > 20)
+        {
+            projectSlug = projectSlug[..20].TrimEnd('-');
+        }
+        
+        // Use first 8 characters of organization ID as identifier (sufficient for uniqueness)
+        var orgIdentifier = organization.Id.ToString("N")[..8];
+        
+        // Generate unique suffix using timestamp and hash (4 characters for compactness)
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
+        var hash = (displayName + organization.Id.ToString() + timestamp).GetHashCode();
+        var uniqueSuffix = Math.Abs(hash).ToString("x")[..4]; // Take first 4 hex digits
+        
+        // Format: {project-slug}-{org-identifier}-{unique-suffix}
+        // Max length: 20 + 1 + 8 + 1 + 4 = 34 characters
+        // With Kubernetes prefixes/suffixes (deployment- + -silo-1 = 18 chars), total ≤ 52 chars (well under 63 limit)
+        var domainName = $"{projectSlug}-{orgIdentifier}-{uniqueSuffix}";
+        
+        // Additional safety check: ensure domain name doesn't exceed 45 characters
+        if (domainName.Length > 45)
+        {
+            // Further trim project slug if needed
+            var excessLength = domainName.Length - 45;
+            var newSlugLength = Math.Max(1, projectSlug.Length - excessLength);
+            projectSlug = projectSlug[..newSlugLength].TrimEnd('-');
+            domainName = $"{projectSlug}-{orgIdentifier}-{uniqueSuffix}";
+        }
+        
+        return domainName;
     }
 }
