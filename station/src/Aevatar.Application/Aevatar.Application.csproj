@@ -18,6 +18,9 @@
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj" />
         <ProjectReference Include="..\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
     </ItemGroup>
 
