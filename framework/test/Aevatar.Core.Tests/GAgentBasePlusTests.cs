@@ -377,7 +377,7 @@ public class GAgentBasePlusTests : GAgentTestKitBase
         await child.SubscribeToParentAsync(parent2);
 
         // Act
-        await child.RemoveSpecificParentAsync(parent1.GetGrainId());
+        await child.RemoveParentAsync(parent1.GetGrainId());
 
         // Assert
         var parents = await child.GetParentsAsync();
@@ -397,7 +397,7 @@ public class GAgentBasePlusTests : GAgentTestKitBase
         await parent.RegisterAsync(child2);
 
         // Act
-        await parent.RemoveSpecificChildAsync(child1.GetGrainId());
+        await parent.RemoveChildAsync(child1.GetGrainId());
 
         // Assert
         var children = await parent.GetChildrenAsync();

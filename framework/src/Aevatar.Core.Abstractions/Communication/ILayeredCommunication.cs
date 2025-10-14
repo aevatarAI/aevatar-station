@@ -1,5 +1,3 @@
-using Orleans.Streams;
-
 namespace Aevatar.Core.Abstractions.Communication;
 
 /// <summary>
@@ -9,43 +7,10 @@ namespace Aevatar.Core.Abstractions.Communication;
 public interface ILayeredCommunication
 {
     /// <summary>
-    /// Publishes an event upwards to parent with a specific event ID.
+    /// Publishes an event directly based on its direction property using stream-based broadcasting
     /// </summary>
-    /// <typeparam name="T">Event type that inherits from EventBase</typeparam>
+    /// <typeparam name="T">The event type</typeparam>
     /// <param name="event">The event to publish</param>
-    /// <param name="eventId">The event ID</param>
-    /// <returns>Task representing the async operation</returns>
-    Task PublishEventUpwardsAsync<T>(T @event, Guid eventId) where T : EventBase;
-
-    /// <summary>
-    /// Sends an event upwards to the parent agent.
-    /// </summary>
-    /// <typeparam name="T">Event type that inherits from EventBase</typeparam>
-    /// <param name="eventWrapper">The event wrapper to send</param>
-    /// <returns>Task representing the async operation</returns>
-    Task SendEventUpwardsAsync<T>(EventWrapper<T> eventWrapper) where T : EventBase;
-
-    /// <summary>
-    /// Sends an event downwards to children agents using broadcasting.
-    /// </summary>
-    /// <typeparam name="T">Event type that inherits from EventBase</typeparam>
-    /// <param name="eventWrapper">The event wrapper to send</param>
-    /// <returns>Task representing the async operation</returns>
-    Task SendEventDownwardsAsync<T>(EventWrapper<T> eventWrapper) where T : EventBase;
-
-    /// <summary>
-    /// Sends an event to the same agent (self).
-    /// </summary>
-    /// <typeparam name="T">Event type that inherits from EventBase</typeparam>
-    /// <param name="eventWrapper">The event wrapper to send</param>
-    /// <returns>Task representing the async operation</returns>
-    Task SendEventToSelfAsync<T>(EventWrapper<T> eventWrapper) where T : EventBase;
-
-    /// <summary>
-    /// Forwards an event to specified children using broadcasting.
-    /// </summary>
-    /// <param name="eventWrapper">The event wrapper to forward</param>
-    /// <param name="childrenIds">List of children IDs to forward to</param>
-    /// <returns>Task representing the async operation</returns>
-    Task ForwardEventAsync(EventWrapperBase eventWrapper, List<GrainId> childrenIds);
-} 
+    /// <returns>Task representing the asynchronous operation</returns>
+    Task PublishEventByDirectionAsync<T>(T @event) where T : EventBase;
+}

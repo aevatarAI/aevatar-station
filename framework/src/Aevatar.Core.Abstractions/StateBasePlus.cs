@@ -4,7 +4,6 @@ namespace Aevatar.Core.Abstractions;
 public class StateBasePlus : BroadcastGState
 {
     [Id(0)] public List<GrainId> Children { get; set; } = [];
-    [Id(1)] public GrainId? Parent { get; set; }
     [Id(2)] public string? GAgentCreator { get; set; }
     [Id(3)] public List<GrainId> Parents { get; set; } = [];
 

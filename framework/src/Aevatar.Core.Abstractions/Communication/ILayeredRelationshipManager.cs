@@ -1,97 +1,40 @@
 namespace Aevatar.Core.Abstractions.Communication;
 
 /// <summary>
-/// Interface for managing parent-child relationships in layered communication patterns.
-/// Handles relationship operations and state persistence for hierarchical agent structures.
+/// Composite interface for managing parent-child relationships in layered communication patterns.
+/// Combines state management, subscription management, and high-level orchestration operations.
 /// </summary>
-public interface ILayeredRelationshipManager
+public interface ILayeredRelationshipManager : IRelationshipStateManager, IRelationshipSubscriptionManager
 {
     /// <summary>
     /// Registers a single child agent and establishes the relationship.
+    /// High-level orchestration that combines state management and communication setup.
     /// </summary>
     /// <param name="gAgent">The child agent to register</param>
     /// <returns>Task representing the async operation</returns>
-    Task RegisterAsync(IGAgent gAgent);
+    Task RegisterAsync(IGAgentPlus gAgent);
 
     /// <summary>
     /// Registers multiple child agents in a batch operation.
+    /// High-level orchestration that combines state management and communication setup.
     /// </summary>
     /// <param name="gAgents">List of agents to register</param>
     /// <returns>Task representing the async operation</returns>
-    Task RegisterManyAsync(List<IGAgent> gAgents);
+    Task RegisterManyAsync(List<IGAgentPlus> gAgents);
 
     /// <summary>
     /// Unregisters a child agent and removes the relationship.
+    /// High-level orchestration that combines state cleanup and communication teardown.
     /// </summary>
     /// <param name="gAgent">The child agent to unregister</param>
     /// <returns>Task representing the async operation</returns>
-    Task UnregisterAsync(IGAgent gAgent);
+    Task UnregisterAsync(IGAgentPlus gAgent);
 
     /// <summary>
-    /// Subscribes to a parent agent.
+    /// Unregisters the current agent from one of its parents.
+    /// High-level orchestration that combines state cleanup and communication teardown.
     /// </summary>
-    /// <param name="gAgent">The parent agent to subscribe to</param>
+    /// <param name="parentAgent">The parent agent to unregister from</param>
     /// <returns>Task representing the async operation</returns>
-    Task SubscribeToAsync(IGAgent gAgent);
-
-    /// <summary>
-    /// Unsubscribes from a parent agent.
-    /// </summary>
-    /// <param name="gAgent">The parent agent to unsubscribe from</param>
-    /// <returns>Task representing the async operation</returns>
-    Task UnsubscribeFromAsync(IGAgent gAgent);
-
-    /// <summary>
-    /// Gets the list of all child agents.
-    /// </summary>
-    /// <returns>List of grain IDs of child agents</returns>
-    Task<List<GrainId>> GetChildrenAsync();
-
-    /// <summary>
-    /// Gets the parent agent ID.
-    /// </summary>
-    /// <returns>The grain ID of the parent agent</returns>
-    Task<GrainId> GetParentAsync();
-
-    /// <summary>
-    /// Adds a child to the internal state (low-level operation).
-    /// </summary>
-    /// <param name="grainId">The grain ID of the child to add</param>
-    /// <returns>Task representing the async operation</returns>
-    Task AddChildAsync(GrainId grainId);
-
-    /// <summary>
-    /// Adds multiple children to the internal state (low-level operation).
-    /// </summary>
-    /// <param name="grainIds">List of grain IDs to add as children</param>
-    /// <returns>Task representing the async operation</returns>
-    Task AddChildManyAsync(List<GrainId> grainIds);
-
-    /// <summary>
-    /// Removes a child from the internal state (low-level operation).
-    /// </summary>
-    /// <param name="grainId">The grain ID of the child to remove</param>
-    /// <returns>Task representing the async operation</returns>
-    Task RemoveChildAsync(GrainId grainId);
-
-    /// <summary>
-    /// Sets the parent in the internal state (low-level operation).
-    /// </summary>
-    /// <param name="grainId">The grain ID of the parent to set</param>
-    /// <returns>Task representing the async operation</returns>
-    Task SetParentAsync(GrainId grainId);
-
-    /// <summary>
-    /// Clears the parent relationship in the internal state (low-level operation).
-    /// </summary>
-    /// <param name="grainId">The grain ID of the parent to clear</param>
-    /// <returns>Task representing the async operation</returns>
-    Task ClearParentAsync(GrainId grainId);
-
-    /// <summary>
-    /// Validates the relationship integrity for a specific grain.
-    /// </summary>
-    /// <param name="grainId">The grain ID to validate relationships for</param>
-    /// <returns>Task representing the async operation</returns>
-    Task ValidateRelationshipAsync(GrainId grainId);
+    Task UnregisterParentAsync(IGAgentPlus parentAgent);
 } 

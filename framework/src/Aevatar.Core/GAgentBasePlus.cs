@@ -39,17 +39,18 @@ public abstract class
 [GAgent]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
-public abstract partial class
+public abstract class
     GAgentBasePlus<TState, TStateLogEvent, TEvent, TConfiguration>
-    : BroadcastGAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>, IStateGAgentPlus<TState>, IExtGAgentPlus
+    : BroadcastGAgentBase<TState, TStateLogEvent, TEvent, TConfiguration>, IStateGAgentPlus<TState>
     where TState : StateBasePlus, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TEvent : EventBase
     where TConfiguration : ConfigurationBase
 {
-
     private Guid? _correlationId;
     private GrainId GrainId => this.GetGrainId();
+
+    #region ILayeredRelationshipManager Implementation
 
     /// <summary>
     /// Register a GAgent as a child of the current GAgent.
@@ -108,6 +109,47 @@ public abstract partial class
         await Task.WhenAll(tasks);
     }
 
+    /// <summary>
+    /// Unregister a GAgent from the current GAgent's children.
+    /// </summary>
+    /// <param name="gAgent"></param>
+    /// <returns></returns>
+    public async Task UnregisterAsync(IGAgentPlus gAgent)
+    {
+        await RemoveChildAsync(gAgent.GetGrainId());
+
+        // Clean up bidirectional state: child should remove this agent from its parents list
+        await gAgent.RemoveParentAsync(this.GetGrainId());
+
+        // Clean up bidirectional communication
+        await gAgent.UnsubscribeFromParentAsync(this);     // Child unsubscribes from parent's downward streams
+        await this.UnsubscribeFromChildAsync(gAgent);       // Parent unsubscribes from child's upward streams
+
+        await OnUnregisterAgentAsync(gAgent.GetGrainId());
+    }
+
+    /// <summary>
+    /// Unregister the current GAgent from one of its parents.
+    /// </summary>
+    /// <param name="parentAgent">The parent agent to unregister from</param>
+    /// <returns></returns>
+    public async Task UnregisterParentAsync(IGAgentPlus parentAgent)
+    {
+        await RemoveParentAsync(parentAgent.GetGrainId());
+
+        // Clean up bidirectional state: parent should remove this agent from its children list
+        await parentAgent.RemoveChildAsync(this.GetGrainId());
+
+        // Clean up bidirectional communication
+        await this.UnsubscribeFromParentAsync(parentAgent);    // Current agent unsubscribes from parent's downward streams
+        await parentAgent.UnsubscribeFromChildAsync(this);     // Parent unsubscribes from current agent's upward streams
+
+        await OnUnregisterParentAsync(parentAgent.GetGrainId());
+    }
+
+    #endregion
+
+    #region IRelationshipSubscriptionManager Implementation
 
     /// <summary>
     /// Subscribe to a parent GAgent to receive downward events from the parent.
@@ -184,9 +226,7 @@ public abstract partial class
     /// <param name="gAgent">The parent GAgent to unsubscribe from</param>
     /// <returns></returns>
     public async Task UnsubscribeFromParentAsync(IGAgentPlus gAgent)
-    {
-        await RemoveParentAsync(gAgent.GetGrainId());
-        
+    {        
         // Unsubscribe from parent's streams (parent is stream owner, direction 1)
         var parentStreamId = GetStreamIdStringPrefix(gAgent.GetGrainId().ToString(), 1);
         await this.UnSubscribeBroadcastAsync<TEvent>(parentStreamId);
@@ -203,32 +243,6 @@ public abstract partial class
         var childStreamId = GetStreamIdStringPrefix(childAgent.GetGrainId().ToString(), 0);
         await this.SubscribeBroadcastEventAsync<TEvent>(childStreamId, EventForwardingEventHandlerAsync);
         // await this.SubscribeBroadcastEventAsync<TConfiguration>(childStreamId, ConfigurationForwardingEventHandlerAsync);
-    }
-    
-    /// <summary>
-    /// Subscribe to many children's upward streams using batch pattern to receive upward events from the children.
-    /// </summary>
-    /// <param name="childGrainIds">The child grain IDs to subscribe to</param>
-    private async Task SubscribeToManyChildByIdAsync(List<GrainId> childGrainIds)
-    {
-        if (childGrainIds.IsNullOrEmpty())
-        {
-            return;
-        }
-
-        // Use batch subscription pattern for multiple children
-        await StartBatchSubscriptionAsync();
-        
-        foreach (var childGrainId in childGrainIds)
-        {
-            // Subscribe to upward events from each child (child is stream owner, direction 0)
-            var childStreamId = GetStreamIdStringPrefix(childGrainId.ToString(), 0);
-            await AddSubscriptionAsync<TEvent>(childStreamId, EventForwardingEventHandlerAsync);
-            // await AddSubscriptionAsync<TConfiguration>(childStreamId, ConfigurationForwardingEventHandlerAsync);
-        }
-        
-        // Save batch subscriptions
-        await SaveBatchSubscriptionsAsync();
     }
     
     /// <summary>
@@ -258,6 +272,32 @@ public abstract partial class
     }
     
     /// <summary>
+    /// Subscribe to many children's upward streams using batch pattern to receive upward events from the children.
+    /// </summary>
+    /// <param name="childGrainIds">The child grain IDs to subscribe to</param>
+    private async Task SubscribeToManyChildByIdAsync(List<GrainId> childGrainIds)
+    {
+        if (childGrainIds.IsNullOrEmpty())
+        {
+            return;
+        }
+
+        // Use batch subscription pattern for multiple children
+        await StartBatchSubscriptionAsync();
+
+        foreach (var childGrainId in childGrainIds)
+        {
+            // Subscribe to upward events from each child (child is stream owner, direction 0)
+            var childStreamId = GetStreamIdStringPrefix(childGrainId.ToString(), 0);
+            await AddSubscriptionAsync<TEvent>(childStreamId, EventForwardingEventHandlerAsync);
+            // await AddSubscriptionAsync<TConfiguration>(childStreamId, ConfigurationForwardingEventHandlerAsync);
+        }
+
+        // Save batch subscriptions
+        await SaveBatchSubscriptionsAsync();
+    }
+    
+    /// <summary>
     /// Unsubscribe from child's upward streams
     /// </summary>
     /// <param name="childAgent">The child agent to unsubscribe from</param>
@@ -269,43 +309,9 @@ public abstract partial class
         // await this.UnSubscribeBroadcastAsync<TConfiguration>(childStreamId);
     }
 
-    /// <summary>
-    /// Unregister a GAgent from the current GAgent's children.
-    /// </summary>
-    /// <param name="gAgent"></param>
-    /// <returns></returns>
-    public async Task UnregisterAsync(IGAgentPlus gAgent)
-    {
-        await RemoveChildAsync(gAgent.GetGrainId());
+    #endregion
 
-        // Clean up bidirectional state: child should remove this agent from its parents list
-        await gAgent.RemoveSpecificParentAsync(this.GetGrainId());
-
-        // Clean up bidirectional communication
-        await gAgent.UnsubscribeFromParentAsync(this);     // Child unsubscribes from parent's downward streams
-        await this.UnsubscribeFromChildAsync(gAgent);       // Parent unsubscribes from child's upward streams
-
-        await OnUnregisterAgentAsync(gAgent.GetGrainId());
-    }
-
-    /// <summary>
-    /// Unregister the current GAgent from one of its parents.
-    /// </summary>
-    /// <param name="parentAgent">The parent agent to unregister from</param>
-    /// <returns></returns>
-    public async Task UnregisterParentAsync(IGAgentPlus parentAgent)
-    {
-        await RemoveParentAsync(parentAgent.GetGrainId());
-
-        // Clean up bidirectional state: parent should remove this agent from its children list
-        await parentAgent.RemoveSpecificChildAsync(this.GetGrainId());
-
-        // Clean up bidirectional communication
-        await this.UnsubscribeFromParentAsync(parentAgent);    // Current agent unsubscribes from parent's downward streams
-        await parentAgent.UnsubscribeFromChildAsync(this);     // Parent unsubscribes from current agent's upward streams
-
-        await OnUnregisterParentAsync(parentAgent.GetGrainId());
-    }
+    #region IRelationshipStateManager Implementation
 
     /// <summary>
     /// Get the children of the current GAgent.
@@ -314,16 +320,6 @@ public abstract partial class
     public Task<List<GrainId>> GetChildrenAsync()
     {
         return Task.FromResult(State.Children);
-    }
-
-    /// <summary>
-    /// Get the parent of the current GAgent.
-    /// </summary>
-    /// <returns></returns>
-    [Obsolete("Use GetParentsAsync instead")]
-    public Task<GrainId> GetParentAsync()
-    {
-        return Task.FromResult(State.Parent ?? default);
     }
     
     /// <summary>
@@ -336,29 +332,124 @@ public abstract partial class
     }
 
     /// <summary>
-    /// Remove a specific parent from the current GAgent's parents list.
-    /// This method is called by parent agents during unregistration.
+    /// Validates the relationship integrity for a specific grain.
     /// </summary>
-    /// <param name="parentGrainId">The grain ID of the parent to remove</param>
-    /// <returns></returns>
-    public async Task RemoveSpecificParentAsync(GrainId parentGrainId)
+    /// <param name="grainId">The grain ID to validate relationships for</param>
+    /// <returns>Task representing the async operation</returns>
+    public async Task ValidateRelationshipAsync(GrainId grainId)
     {
-        await RemoveParentAsync(parentGrainId);
+        // Basic validation logic - check if the grain is in our children or parents list
+        var isChild = State.Children.Contains(grainId);
+        var isParent = State.Parents.Contains(grainId);
+        
+        if (!isChild && !isParent)
+        {
+            Logger.LogWarning("Grain {GrainId} is not in our relationship lists", grainId);
+        }
+        
+        Logger.LogDebug("Relationship validation completed for grain {GrainId}. IsChild: {IsChild}, IsParent: {IsParent}", 
+            grainId, isChild, isParent);
+        
+        // Future enhancement: could add more sophisticated validation logic here
+        await Task.CompletedTask;
     }
 
     /// <summary>
-    /// Remove a specific child from the current GAgent's children list.
-    /// This method is called by child agents during unregistration.
+    /// Adds a child to the internal state (low-level operation).
     /// </summary>
-    /// <param name="childGrainId">The grain ID of the child to remove</param>
-    /// <returns></returns>
-    public async Task RemoveSpecificChildAsync(GrainId childGrainId)
+    /// <param name="grainId">The grain ID of the child to add</param>
+    /// <returns>Task representing the async operation</returns>
+    public async Task AddChildAsync(GrainId grainId)
     {
-        await RemoveChildAsync(childGrainId);
+        if (State.Children.Contains(grainId))
+        {
+            Logger.LogError($"Cannot add duplicate child {grainId}.");
+            return;
+        }
+        
+        Logger.LogDebug("GrainId [{GrainId}] Adding child to {Parent}", this.GetGrainId().ToString(), grainId);
+
+        base.RaiseEvent(new AddChildStateLogEvent
+        {
+            Child = grainId
+        });
+        await ConfirmEvents();
     }
 
-    #region Layered Communication Event Handling
+    /// <summary>
+    /// Adds multiple children to the internal state (low-level operation).
+    /// </summary>
+    /// <param name="grainIds">List of grain IDs to add as children</param>
+    /// <returns>Task representing the async operation</returns>
+    public async Task AddChildManyAsync(List<GrainId> grainIds)
+    {    
+        base.RaiseEvent(new AddChildManyStateLogEvent
+        {
+            Children = grainIds
+        });
+        await ConfirmEvents();
+    }
 
+    /// <summary>
+    /// Removes a child from the internal state (low-level operation).
+    /// </summary>
+    /// <param name="grainId">The grain ID of the child to remove</param>
+    /// <returns>Task representing the async operation</returns>
+    public async Task RemoveChildAsync(GrainId grainId)
+    {
+        Logger.LogDebug("GrainId [{GrainId}] Removing child to {Parent}", this.GetGrainId().ToString(), grainId);
+        if (!State.Children.IsNullOrEmpty())
+        {
+            base.RaiseEvent(new RemoveChildStateLogEvent
+            {
+                Child = grainId
+            });
+            await ConfirmEvents();
+        }
+        Logger.LogDebug("GrainId [{GrainId}] Removed child {Parent}", this.GetGrainId().ToString(), grainId);
+    }
+
+    /// <summary>
+    /// Adds a parent to the internal state (low-level operation).
+    /// </summary>
+    /// <param name="grainId">The grain ID of the parent to add</param>
+    /// <returns>Task representing the async operation</returns>
+    public async Task AddParentAsync(GrainId grainId)
+    {
+        Logger.LogDebug("GrainId [{GrainId}] Adding parent {Parent}", this.GetGrainId().ToString(), grainId);
+        base.RaiseEvent(new AddParentStateLogEvent
+        {
+            Parent = grainId
+        });
+        await ConfirmEvents();
+        Logger.LogDebug("GrainId [{GrainId}] Added parent {Parent}", this.GetGrainId().ToString(), grainId);
+    }
+
+    /// <summary>
+    /// Removes a parent relationship from the internal state (low-level operation).
+    /// </summary>
+    /// <param name="grainId">The grain ID of the parent to remove</param>
+    /// <returns>Task representing the async operation</returns>
+    public async Task RemoveParentAsync(GrainId grainId)
+    {
+        Logger.LogDebug("GrainId [{GrainId}] Removing parent {Parent}", this.GetGrainId().ToString(), grainId);
+        base.RaiseEvent(new RemoveParentStateLogEvent
+        {
+            Parent = grainId
+        });
+        await ConfirmEvents();
+    }
+
+    #endregion
+
+    #region IGAgentPlus Implementation
+
+    /// <summary>
+    /// Prepare the agent with available resource context.
+    /// This allows agents to discover and utilize external resources without explicit configuration.
+    /// </summary>
+    /// <param name="context">The resource context containing available resources and metadata</param>
+    /// <returns>Task representing the asynchronous operation</returns>
     public virtual async Task PrepareResourceContextAsync(ResourceContext context)
     {
         Logger.LogDebug("Preparing resource context for GAgent {GrainId} with {ResourceCount} resources",
@@ -376,6 +467,10 @@ public abstract partial class
         // Default implementation does nothing - derived classes can override this
         return Task.CompletedTask;
     }
+
+    #endregion
+
+    #region ILayeredCommunication Implementation
 
     [EventHandler]
     // ReSharper disable once UnusedMember.Global
@@ -573,14 +668,19 @@ public abstract partial class
 
     #region Orleans Grain Lifecycle Overrides
 
+    /// <summary>
+    /// Called when the grain is activated.
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
         // Note: No GAgentBase-specific dependencies to initialize
         // State management is handled by CoreGAgentBase with StatePublisher
-        
+
         // Call base method for any derived class customization
         await base.OnGAgentActivateAsync(cancellationToken);
-        
+
         // Re-establish subscriptions that were lost during deactivation
         await ResumeForwardingSubscriptionsAsync();
     }
@@ -628,14 +728,7 @@ public abstract partial class
 
     #endregion
 
-    #region State Management Overrides
-
-    // Note: State change handling is now handled by CoreGAgentBase with StatePublisher
-    // GAgentBase no longer needs to override state management methods since CoreGAgentBase handles it
-
-    #endregion
-
-    #region Layered Communication Helper Methods
+    #region ILayeredRelationshipManager Virtual Methods
 
     protected virtual Task OnRegisterAgentAsync(GrainId agentGuid)
     {
@@ -659,7 +752,7 @@ public abstract partial class
 
     #endregion
 
-    #region Publishing and Event Communication
+    #region ILayeredCommunication Helper Methods
 
 
     /// <summary>
@@ -732,7 +825,7 @@ public abstract partial class
 
     #endregion
 
-    #region State Management and Subscriptions
+    #region State Event Handling and Event Classes
 
     protected override void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
     {
@@ -750,10 +843,6 @@ public abstract partial class
                 Logger.LogDebug("GrainId {GrainId}: Removing child {Child}", this.GetGrainId().ToString(), removeChildEvent.Child);
                 State.Children.Remove(removeChildEvent.Child);
                 break;
-            case SetParentStateLogEvent setParentEvent:
-                Logger.LogDebug("GrainId {GrainId}: Setting parent to {Parent}", this.GetGrainId().ToString(), setParentEvent.Parent);
-                State.Parent = setParentEvent.Parent;
-                break;
             case AddParentStateLogEvent addParentEvent:
                 Logger.LogDebug("GrainId {GrainId}: Adding parent {Parent}", this.GetGrainId().ToString(), addParentEvent.Parent);
                 if (!State.Parents.Contains(addParentEvent.Parent))
@@ -763,42 +852,10 @@ public abstract partial class
                 Logger.LogDebug("GrainId {GrainId}: Removing parent {Parent}", this.GetGrainId().ToString(), removeParentEvent.Parent);
                 State.Parents.Remove(removeParentEvent.Parent);
                 break;
-            case ClearParentStateLogEvent clearParentEvent:
-                Logger.LogDebug("GrainId {GrainId}: Clearing parent {Parent}", this.GetGrainId().ToString(), clearParentEvent.Parent);
-                if (State.Parent == clearParentEvent.Parent)
-                    State.Parent = default;
-                break;
         }
         
         // Call base implementation for any additional logic in derived classes
         base.GAgentTransitionState(state, @event);
-        
-    }
-
-    private async Task AddChildAsync(GrainId grainId)
-    {
-        if (State.Children.Contains(grainId))
-        {
-            Logger.LogError($"Cannot add duplicate child {grainId}.");
-            return;
-        }
-        
-        Logger.LogDebug("GrainId [{GrainId}] Adding child to {Parent}", this.GetGrainId().ToString(), grainId);
-
-        base.RaiseEvent(new AddChildStateLogEvent
-        {
-            Child = grainId
-        });
-        await ConfirmEvents();
-    }
-
-    private async Task AddChildManyAsync(List<GrainId> grainIds)
-    {    
-        base.RaiseEvent(new AddChildManyStateLogEvent
-        {
-            Children = grainIds
-        });
-        await ConfirmEvents();
     }
 
     [GenerateSerializer]
@@ -813,50 +870,10 @@ public abstract partial class
         [Id(0)] public required List<GrainId> Children { get; set; }
     }
 
-    private async Task RemoveChildAsync(GrainId grainId)
-    {
-        Logger.LogDebug("GrainId [{GrainId}] Removing child to {Parent}", this.GetGrainId().ToString(), grainId);
-        if (!State.Children.IsNullOrEmpty())
-        {
-            base.RaiseEvent(new RemoveChildStateLogEvent
-            {
-                Child = grainId
-            });
-            await ConfirmEvents();
-        }
-    }
-
     [GenerateSerializer]
     public class RemoveChildStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public GrainId Child { get; set; }
-    }
-
-    [GenerateSerializer]
-    public class SetParentStateLogEvent : StateLogEventBase<TStateLogEvent>
-    {
-        [Id(0)] public GrainId Parent { get; set; }
-    }
-
-    private async Task SetParentAsync(GrainId grainId)
-    {
-        Logger.LogDebug("GrainId [{GrainId}] Setting parent to {Parent}", this.GetGrainId().ToString(), grainId);
-        base.RaiseEvent(new SetParentStateLogEvent
-        {
-            Parent = grainId
-        });
-        await ConfirmEvents();
-    }
-
-    private async Task AddParentAsync(GrainId grainId)
-    {
-        Logger.LogDebug("Agent [{GrainId}] is adding {Parent} as one of the parent", this.GetGrainId().ToString(), grainId);
-        base.RaiseEvent(new AddParentStateLogEvent
-        {
-            Parent = grainId
-        });
-        await ConfirmEvents();
-        Logger.LogDebug("Agent [{GrainId}] has added {Parent} as one of the parent", this.GetGrainId().ToString(), grainId);
     }
 
     [GenerateSerializer]
@@ -866,41 +883,9 @@ public abstract partial class
     }
 
     [GenerateSerializer]
-    public class ClearParentStateLogEvent : StateLogEventBase<TStateLogEvent>
-    {
-        [Id(0)] public GrainId Parent { get; set; }
-    }
-    
-    [GenerateSerializer]
     public class RemoveParentStateLogEvent : StateLogEventBase<TStateLogEvent>
     {
         [Id(0)] public GrainId Parent { get; set; }
-    }
-    
-    /// <summary>
-    /// Clear the parent relationship in the internal state (low-level operation).
-    /// </summary>
-    /// <param name="grainId">The grain ID of the parent to clear</param>
-    /// <returns>Task representing the async operation</returns>
-    private async Task ClearParentAsync(GrainId grainId)
-    {
-        Logger.LogDebug("GrainId [{GrainId}] Removing parent to {Parent}", this.GetGrainId().ToString(), grainId);
-        base.RaiseEvent(new ClearParentStateLogEvent
-        {
-            Parent = grainId
-        });
-        await ConfirmEvents();
-    }
-    
-    private async Task RemoveParentAsync(GrainId grainId)
-    {
-        Logger.LogDebug("Agent [{GrainId}] is removing {Parent} from parents list", this.GetGrainId().ToString(), grainId);
-        base.RaiseEvent(new RemoveParentStateLogEvent
-        {
-            Parent = grainId
-        });
-        await ConfirmEvents();
-        Logger.LogDebug("Agent [{GrainId}] has removed {Parent} from parents list", this.GetGrainId().ToString(), grainId);
     }
 
     #endregion
