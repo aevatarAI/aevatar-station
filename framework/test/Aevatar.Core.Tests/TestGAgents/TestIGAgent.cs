@@ -8,7 +8,7 @@ public interface ITestIGAgent : IGAgent
     Task<string> GetTestValueAsync();
 }
 
-
+[GrainType("TestIGAgent")]
 public class TestIGAgent : GAgentBase<TestState, TestStateLogEvent, EventBase, ConfigurationBase>, ITestIGAgent
 {
     public async Task<string> GetTestValueAsync()
