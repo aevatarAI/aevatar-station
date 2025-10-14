@@ -65,7 +65,9 @@ public abstract class
             return;
         }
 
-        await AddChildAsync(gAgent.GetGrainId());
+        // Set up bidirectional state relationships
+        await AddChildAsync(gAgent.GetGrainId());              // Parent adds child to its children list
+        await gAgent.AddParentAsync(this.GetGrainId());        // Child adds parent to its parents list
 
         // Set up bidirectional communication
         await gAgent.SubscribeToParentAsync(this);     // Child subscribes to parent's downward streams
@@ -95,16 +97,20 @@ public abstract class
         var grainIds = gAgents.Select(g => g.GetGrainId()).ToList();
         var tasks = new List<Task>();
 
+        // Set up bidirectional state relationships
+        foreach (var gAgent in gAgents)
+        {
+            tasks.Add(gAgent.AddParentAsync(this.GetGrainId()));    // Each child adds parent to its parents list
+        }
+        tasks.Add(AddChildManyAsync(grainIds));                      // Parent adds all children to its children list
+
         // Set up bidirectional communication
         foreach (var gAgent in gAgents)
         {
-            tasks.Add(gAgent.SubscribeToParentAsync(this));     // Each child subscribes to parent's downward streams
+            tasks.Add(gAgent.SubscribeToParentAsync(this));          // Each child subscribes to parent's downward streams
         }
+        tasks.Add(this.SubscribeToManyChildAsync(gAgents));          // Parent subscribes to all children's upward streams in batch
 
-        // Parent subscribes to all children's upward streams in batch
-        tasks.Add(this.SubscribeToManyChildAsync(gAgents));
-
-        tasks.Add(AddChildManyAsync(grainIds));
         tasks.Add(OnRegisterAgentManyAsync(grainIds));
         await Task.WhenAll(tasks);
     }
@@ -158,8 +164,6 @@ public abstract class
     /// <returns></returns>
     public async Task SubscribeToParentAsync(IGAgentPlus gAgent)
     {
-        await AddParentAsync(gAgent.GetGrainId());
-
         // Subscribe to downward events from parent (parent is stream owner, direction 1)
         var parentStreamId = GetStreamIdStringPrefix(gAgent.GetGrainId().ToString(), 1);
         await this.SubscribeBroadcastEventAsync<TEvent>(parentStreamId, EventForwardingEventHandlerAsync);

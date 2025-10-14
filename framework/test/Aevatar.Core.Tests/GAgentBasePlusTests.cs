@@ -130,7 +130,7 @@ public class GAgentBasePlusTests : GAgentTestKitBase
 
     #region Subscription Management Tests
 
-    [Fact(DisplayName = "SubscribeToParentAsync should establish parent subscription")]
+    [Fact(DisplayName = "SubscribeToParentAsync should establish parent subscription only")]
     public async Task SubscribeToParentAsync_ShouldEstablishSubscription()
     {
         // Arrange
@@ -140,20 +140,20 @@ public class GAgentBasePlusTests : GAgentTestKitBase
         // Act
         await child.SubscribeToParentAsync(parent);
         
-        // Assert - Verify parent relationship is established
-        var childParents = await child.GetParentsAsync();
-        childParents.ShouldContain(parent.GetGrainId());
-        
-        // Verify subscription handler is registered in State.Subscription
+        // Assert - Verify subscription handler is registered in State.Subscription (NOT parent relationship)
         var childSubscriptions = await child.GetSubscriptionHandlesAsync();
         childSubscriptions.ShouldNotBeNull();
         
         // Verify that there is a subscription for the parent's downward stream
         var expectedStreamKey = $"{parent.GetGrainId()}.1.EventBase"; // parent.direction.eventType
         childSubscriptions.Keys.ShouldContain(k => k.Contains(parent.GetGrainId().ToString()) && k.Contains(".1."));
+        
+        // Verify that NO parent relationship is established (subscription != relationship)
+        var childParents = await child.GetParentsAsync();
+        childParents.ShouldNotContain(parent.GetGrainId());
     }
 
-    [Fact(DisplayName = "UnsubscribeFromParentAsync should remove parent subscription")]
+    [Fact(DisplayName = "UnsubscribeFromParentAsync should remove parent subscription only")]
     public async Task UnsubscribeFromParentAsync_ShouldRemoveSubscription()
     {
         // Arrange
@@ -168,13 +168,13 @@ public class GAgentBasePlusTests : GAgentTestKitBase
         // Act
         await child.UnsubscribeFromParentAsync(parent);
         
-        // Assert - Verify parent relationship is removed
-        var childParents = await child.GetParentsAsync();
-        childParents.ShouldNotContain(parent.GetGrainId());
-        
-        // Verify subscription handler is removed from State.Subscription
+        // Assert - Verify subscription handler is removed from State.Subscription (NOT parent relationship)
         var subscriptionsAfter = await child.GetSubscriptionHandlesAsync();
         subscriptionsAfter.Keys.ShouldNotContain(k => k.Contains(parent.GetGrainId().ToString()) && k.Contains(".1."));
+        
+        // Verify that parent relationship is NOT affected (unsubscription != relationship removal)
+        var childParents = await child.GetParentsAsync();
+        childParents.ShouldBeEmpty(); // Was empty before since SubscribeToParentAsync doesn't create relationships
     }
 
     [Fact(DisplayName = "SubscribeToManyParentAsync should subscribe child to parent streams for event forwarding")]
@@ -353,14 +353,15 @@ public class GAgentBasePlusTests : GAgentTestKitBase
         var parent2 = await Silo.CreateGrainAsync<TestIGAgentPlus>(Guid.NewGuid());
         var child = await Silo.CreateGrainAsync<TestIGAgentPlus>(Guid.NewGuid());
 
-        await child.SubscribeToParentAsync(parent1);
-        await child.SubscribeToParentAsync(parent2);
+        // Use AddParentAsync to establish actual parent relationships (not just subscriptions)
+        await child.AddParentAsync(parent1.GetGrainId());
+        await child.AddParentAsync(parent2.GetGrainId());
 
         // Act
         var parents = await child.GetParentsAsync();
 
         // Assert
-        parents.Count.ShouldBeGreaterThanOrEqualTo(2);
+        parents.Count.ShouldBe(2);
         parents.ShouldContain(parent1.GetGrainId());
         parents.ShouldContain(parent2.GetGrainId());
     }
@@ -373,8 +374,9 @@ public class GAgentBasePlusTests : GAgentTestKitBase
         var parent2 = await Silo.CreateGrainAsync<TestIGAgentPlus>(Guid.NewGuid());
         var child = await Silo.CreateGrainAsync<TestIGAgentPlus>(Guid.NewGuid());
 
-        await child.SubscribeToParentAsync(parent1);
-        await child.SubscribeToParentAsync(parent2);
+        // Use AddParentAsync to establish actual parent relationships
+        await child.AddParentAsync(parent1.GetGrainId());
+        await child.AddParentAsync(parent2.GetGrainId());
 
         // Act
         await child.RemoveParentAsync(parent1.GetGrainId());
