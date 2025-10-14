@@ -26,6 +26,8 @@ public class AevatarHttpApiModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         ConfigureLocalization();
+        var configuration = context.Services.GetConfiguration();
+        Configure<KubernetesOptions>(configuration.GetSection("Kubernetes"));
     }
 
     private void ConfigureLocalization()

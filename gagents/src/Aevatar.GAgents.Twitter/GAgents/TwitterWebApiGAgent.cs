@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
 using Aevatar.GAgents.Basic;
 using Aevatar.GAgents.Twitter.GEvents;
 using GroupChat.GAgent;
@@ -72,12 +73,14 @@ public class TwitterWebApiGAgent :
 
     #region GAgent Overrides
 
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    protected override Task<int> GetInterestValueAsync()
     {
         return Task.FromResult(1);
     }
 
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages)
     {
         return Task.FromResult(new ChatResponse
         {

@@ -4,7 +4,9 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Aevatar.Core.Interception;
 using Orleans.Providers;
+using Orleans.Runtime;
 using Aevatar.Core.Abstractions;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
@@ -14,6 +16,7 @@ using Aevatar.GAgents.AI.Common;
 using WorkflowChatMessage = GroupChat.GAgent.Feature.Common.ChatMessage;
 using Aevatar.Core.Placement;
 
+[module: Interceptor]
 namespace Aevatar.GAgents.Twitter.GAgents.ChatAIAgent;
 
 [SiloNamePatternPlacement("Projector")]
@@ -38,13 +41,15 @@ public class ChatAIGAgent :
     }
 
     // Implementation of GroupMemberGAgentBase abstract methods
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    protected override Task<int> GetInterestValueAsync()
     {
         // AI chat agent always shows high interest in conversations
         return Task.FromResult(80);
     }
 
-    protected override async Task<ChatResponse> ChatAsync(Guid blackboardId,
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    protected override async Task<ChatResponse> ChatAsync(
         List<WorkflowChatMessage>? coordinatorMessages)
     {
         var response = new ChatResponse();
@@ -52,7 +57,7 @@ public class ChatAIGAgent :
         if (coordinatorMessages == null || coordinatorMessages.Count == 0)
         {
             // Let AI generate a default response based on its Instructions
-            _logger.LogInformation($"{State.MemberName} generating default AI response based on Instructions");
+            _logger.LogInformation($"[{GrainId}] {State.MemberName} generating default AI response based on Instructions");
 
             // Use Instructions as base context and let AI say something
             var promptWithInstructions =
@@ -75,7 +80,7 @@ public class ChatAIGAgent :
         // Process the workflow messages
         var userMessage = string.Join(" ", coordinatorMessages.Select(m => m.Content));
 
-        _logger.LogInformation($"{State.MemberName} processing workflow message: {userMessage}");
+        _logger.LogInformation($"[{GrainId}] {State.MemberName} processing workflow message: {userMessage}");
 
         // Use real AI through ChatWithHistory method
         var aiMessages = await ChatWithHistoryAndToolsAsync(userMessage);
@@ -96,9 +101,10 @@ public class ChatAIGAgent :
         return response;
     }
 
-    protected override Task GroupChatFinishAsync(Guid blackboardId)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    protected override Task GroupChatFinishAsync()
     {
-        _logger.LogInformation($"{State.MemberName} workflow finished for blackboard {blackboardId}");
+        _logger.LogInformation($"[{GrainId}] {State.MemberName} workflow finished for blackboard {BlackboardId}");
         return Task.CompletedTask;
     }
 
@@ -123,13 +129,13 @@ public class ChatAIGAgent :
             ToolGAgents = configuration.ToolGAgents,
         });
 
-        _logger.LogDebug("PerformConfigAsync ChatAIGAgent configuration and initialization completed");
+        _logger.LogDebug($"[{GrainId}] PerformConfigAsync ChatAIGAgent configuration and initialization completed");
     }
 
     protected override void GroupMemberTransitionState(ChatAIGAgentState state,
         StateLogEventBase<ChatAIGAgentEvent> @event)
     {
-        _logger.LogDebug("GroupMemberTransitionState: {data}, type:{type}",
+        _logger.LogDebug("[{grainId}] GroupMemberTransitionState: {data}, type:{type}", GrainId,
             JsonConvert.SerializeObject(@event), @event.GetType().FullName);
 
         switch (@event)

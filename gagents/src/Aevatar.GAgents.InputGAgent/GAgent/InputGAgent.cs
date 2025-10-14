@@ -2,12 +2,16 @@
 // ABOUTME: Extends GroupMemberGAgentBase to integrate with group chat functionality
 
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
 using Aevatar.GAgents.InputGAgent.Dto;
 using Aevatar.GAgents.InputGAgent.GAgent.SEvent;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
 using Orleans.Providers;
 using Aevatar.Core.Placement;
+using Orleans.Runtime;
+
+[module: Interceptor]
 
 namespace Aevatar.GAgents.InputGAgent.GAgent;
 
@@ -22,12 +26,15 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.FromResult("Input agent that returns configured input text");
     }
 
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty, RoundIdProperty, GrainIdProperty})]
+    protected override Task<int> GetInterestValueAsync()
     {
+        
         return Task.FromResult(100);
     }
 
-    protected override Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? messages)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty, RoundIdProperty, GrainIdProperty})]
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? messages)
     {
         var response = new ChatResponse
         {
@@ -39,7 +46,7 @@ public class InputGAgent : MemberGAgentBase<InputGAgentState, InputGAgentLogEven
         return Task.FromResult(response);
     }
 
-    protected override Task GroupChatFinishAsync(Guid blackboardId)
+    protected override Task GroupChatFinishAsync()
     {
         return Task.CompletedTask;
     }

@@ -31,12 +31,12 @@ public abstract class
     [EventHandler]
     public async Task HandleEventAsync(EvaluationInterestEvent @event)
     {
-        var score = await GetInterestValueAsync(@event.BlackboardId);
+        var score = await GetInterestValueAsync();
 
         await PublishAsync(new EvaluationInterestResponseEvent()
         {
             MemberId = this.GetPrimaryKey(),
-            BlackboardId = @event.BlackboardId,
+            BlackboardId = BlackboardId,
             InterestValue = score,
             ChatTerm = @event.ChatTerm
         });
@@ -52,11 +52,10 @@ public abstract class
 
         try
         {
-            // var history = await GetCareChatMessagesFromBlackboardAsync(@event.BlackboardId);
-            var talkResponse = await ChatAsync(@event.BlackboardId, @event.CoordinatorMessages);
+            var talkResponse = await ChatAsync(@event.CoordinatorMessages);
             await PublishAsync(new ChatResponseEvent
             {
-                BlackboardId = @event.BlackboardId,
+                BlackboardId = BlackboardId,
                 MemberId = this.GetPrimaryKey(),
                 MemberName = State.MemberName,
                 ChatResponse = talkResponse,
@@ -68,7 +67,7 @@ public abstract class
             Logger.LogError($"[GroupMemberGAgentBase] Handler ChatEvent fail: {e.Message}");
             await PublishAsync(new ChatResponseEvent()
             {
-                BlackboardId = @event.BlackboardId,
+                BlackboardId = BlackboardId,
                 MemberId = this.GetPrimaryKey(),
                 MemberName = State.MemberName,
                 FailureSummary = e.ToString(),
@@ -80,35 +79,111 @@ public abstract class
     [EventHandler]
     public async Task HandleEventAsync(GroupChatFinishEvent @event)
     {
-        await GroupChatFinishAsync(@event.BlackboardId);
+        await GroupChatFinishAsync();
     }
 
     [EventHandler]
     public async Task HandleEventAsync(CoordinatorPingEvent @event)
     {
-        if (await IgnoreBlackboardPingEvent(@event.BlackboardId) == false)
+        if (await IgnoreBlackboardPingEvent() == false)
         {
             await PublishAsync(new CoordinatorPongEvent()
             {
-                BlackboardId = @event.BlackboardId,
+                BlackboardId = BlackboardId,
                 MemberId = this.GetPrimaryKey(),
                 MemberName = State.MemberName
             });
         }
     }
 
-    protected abstract Task<int> GetInterestValueAsync(Guid blackboardId);
+    protected abstract Task<int> GetInterestValueAsync();
 
-    protected abstract Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages);
+    protected abstract Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages);
 
-    protected virtual Task GroupChatFinishAsync(Guid blackboardId)
+    protected virtual Task GroupChatFinishAsync()
     {
         return Task.CompletedTask;
     }
 
-    protected virtual Task<bool> IgnoreBlackboardPingEvent(Guid blackboardId)
+    protected virtual Task<bool> IgnoreBlackboardPingEvent()
     {
         return Task.FromResult(false);
+    }
+
+    /// <summary>
+    /// Workflow ID for this group member instance, used by InterceptorAttribute for workflow logging
+    /// </summary>
+    public virtual string? WorkflowId { get; protected set; }
+
+    /// <summary>
+    /// Round identifier for current workflow execution cycle. Used by InterceptorAttribute as contextual field.
+    /// </summary>
+    public virtual long? RoundId { get; protected set; }
+
+    /// <summary>
+    /// Grain ID for this group member instance, used by InterceptorAttribute for workflow logging
+    /// </summary>
+    public virtual string? GrainId { get; protected set; }
+
+    /// <summary>
+    /// BlackboardId as Guid, computed from WorkflowId
+    /// </summary>
+    public virtual Guid BlackboardId 
+    { 
+        get 
+        {
+            if (string.IsNullOrEmpty(WorkflowId)) return Guid.Empty;
+            return Guid.TryParse(WorkflowId, out var guid) ? guid : Guid.Empty;
+        }
+    }
+
+    /// <summary>
+    /// Workflow context property constants for interceptor
+    /// </summary>
+    protected const string WorkflowLogCategory = "WORKFLOW";
+    protected const string WorkflowIdProperty = "WorkflowId";
+
+    /// <summary>
+    /// Round context property constant for interceptor
+    /// </summary>
+    protected const string RoundIdProperty = "RoundId";
+
+    /// <summary>
+    /// Grain context property constant for interceptor
+    /// </summary>
+    protected const string GrainIdProperty = "GrainId";
+
+    /// <summary>
+    /// Override to automatically extract WorkflowId from ResourceContext metadata
+    /// and set it as instance property for use by InterceptorAttribute
+    /// </summary>
+    protected override async Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        await base.OnPrepareResourceContextAsync(context);
+
+        // Extract WorkflowId from metadata if available and set as instance property
+        if (context.Metadata.TryGetValue("WorkflowId", out var workflowIdObj))
+        {
+            WorkflowId = workflowIdObj?.ToString();
+            
+            Logger.LogInformation("[GroupMemberGAgentBase] Set WorkflowId property from ResourceContext: WorkflowId={WorkflowId}", 
+                WorkflowId);
+        }
+
+        // Extract RoundId from metadata if available and set as instance property
+        if (context.Metadata.TryGetValue("RoundId", out var roundIdObj))
+        {
+            if (long.TryParse(roundIdObj?.ToString(), out var parsedRoundId))
+            {
+                RoundId = parsedRoundId;
+                Logger.LogInformation("[GroupMemberGAgentBase] Set RoundId property from ResourceContext: RoundId={RoundId}", 
+                    RoundId);
+            }
+        }
+
+        // Set GrainId for logging context
+        GrainId = this.GrainReference.GrainId.ToString();
+        Logger.LogInformation("[GroupMemberGAgentBase] Set GrainId property: GrainId={GrainId}", GrainId);
     }
 
     [GenerateSerializer]

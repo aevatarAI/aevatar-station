@@ -10,12 +10,15 @@
 
   <ItemGroup>
     <PackageReference Include="AElf.Sdk.CSharp" />
+    <PackageReference Include="Fody" />
+    <PackageReference Include="MethodDecorator.Fody" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
     <ProjectReference Include="..\Aevatar.GAgents.GroupChat\Aevatar.GAgents.GroupChat.csproj" />
     <ProjectReference Include="..\Aevatar.GAgents.AIGAgent\Aevatar.GAgents.AIGAgent.csproj" />
+    <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Interception\Aevatar.Core.Interception.csproj" />
   </ItemGroup>
 
   <ItemGroup>

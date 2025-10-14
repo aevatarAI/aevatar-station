@@ -1,9 +1,12 @@
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
 using Aevatar.GAgents.GroupChat.Core.Dto;
 using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
 using GroupChat.GAgent.GEvent;
 using Volo.Abp;
+
+[module: Interceptor]
 
 namespace Aevatar.GAgents.GroupChat.Test.GAgents;
 
@@ -35,14 +38,16 @@ public class WorkerGAgentGAgent : GroupMemberGAgentBase<WorkerState, WorkerEvent
         return Task.FromResult(State);
     }
 
-    protected override Task<int> GetInterestValueAsync(Guid blackboardId)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
+    protected override Task<int> GetInterestValueAsync()
     {
         var random = new Random();
         
         return Task.FromResult(random.Next(1, 90));
     }
 
-    protected override async Task<ChatResponse> ChatAsync(Guid blackboardId, List<ChatMessage>? coordinatorMessages)
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
+    protected override async Task<ChatResponse> ChatAsync(List<ChatMessage>? coordinatorMessages)
     {
         if (State.DelaySeconds > 0)
         {

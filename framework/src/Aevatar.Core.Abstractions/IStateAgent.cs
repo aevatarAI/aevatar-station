@@ -88,6 +88,14 @@ public interface IGAgent : IGrainWithGuidKey
     /// <param name="context">The resource context containing available resources and metadata</param>
     /// <returns>Task representing the asynchronous operation</returns>
     Task PrepareResourceContextAsync(ResourceContext context);
+
+    /// <summary>
+    /// Get the current state as JSON string for snapshot purposes.
+    /// Returns null if the GAgent does not implement IStateGAgent&lt;TState&gt;.
+    /// </summary>
+    /// <returns>JSON representation of the current state, or null if not stateful</returns>
+    [ReadOnly]
+    Task<string?> GetStateSnapshotAsync();
 }
 
 public interface IStateGAgent<TState> : IGAgent

@@ -273,6 +273,19 @@ public abstract partial class
         return Task.FromResult(State);
     }
 
+    public virtual Task<string?> GetStateSnapshotAsync()
+    {
+        try
+        {
+            return Task.FromResult<string?>(System.Text.Json.JsonSerializer.Serialize(State));
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogWarning(ex, "Failed to serialize state snapshot for {GrainId}", this.GetGrainId());
+            return Task.FromResult<string?>(null);
+        }
+    }
+
     public sealed override async Task OnActivateAsync(CancellationToken cancellationToken)
     {
         _copier = ServiceProvider.GetRequiredService<DeepCopier>();
@@ -382,9 +395,9 @@ public abstract partial class
         {
             return;
         }
+        var snapshot = _copier!.Copy(State);
 
-
-        InternalOnStateChangedAsync().ContinueWith(task =>
+        InternalOnStateChangedAsync(snapshot,Version).ContinueWith(task =>
         {
             if (task.Exception != null)
             {
@@ -396,18 +409,16 @@ public abstract partial class
         _lastProcessedVersion = Version;       
     }
 
-    private async Task InternalOnStateChangedAsync()
+    private async Task InternalOnStateChangedAsync(TState snapshot, int version)
     {
         await HandleStateChangedAsync();
         if (StateDispatcher != null)
         {
-            var snapshot = _copier!.Copy(State);
-            
-            var singleStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
+            var singleStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, version);
             singleStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
             await StateDispatcher.PublishSingleAsync(this.GetGrainId(), singleStateWrapper);
             
-            var batchStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, Version);
+            var batchStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, version);
             batchStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
             await StateDispatcher.PublishAsync(this.GetGrainId(), batchStateWrapper);
         }
