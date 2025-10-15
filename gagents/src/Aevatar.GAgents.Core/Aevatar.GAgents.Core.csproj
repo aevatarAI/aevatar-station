@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <PackageId>Aevatar.GAgents.Core</PackageId>
+        <PackageType>Dependency</PackageType>
+        <Title>Aevatar GAgents Core Library</Title>
+        <Authors>AElf</Authors>
+        <Description>Core shared components for Aevatar GAgents, including BusinessAgentBase for workflow coordination.</Description>
+        <PackageTags>agent</PackageTags>
+        <RepositoryUrl>https://github.com/aevatarAI/aevatar-gagents</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageProjectUrl>https://github.com/aevatarAI/aevatar-gagents</PackageProjectUrl>
+    </PropertyGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core\Aevatar.Core.csproj" />
+        <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
+    </ItemGroup>
+</Project>
