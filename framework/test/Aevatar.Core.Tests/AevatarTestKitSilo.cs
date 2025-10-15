@@ -10,5 +10,9 @@ public class AevatarTestKitSilo : TestKitSilo
     {
         services.AddTransient<IGAgentFactory, GAgentFactory>();
         services.AddTransient<IGAgentManager, GAgentManager>();
+        
+        // Register generic factories for both IGAgent and IGAgentPlus
+        services.AddTransient<IGAgentFactory<IGAgent>, GAgentFactory<IGAgent>>();
+        services.AddTransient<IGAgentFactory<IGAgentPlus>, GAgentFactory<IGAgentPlus>>();
     }
 }

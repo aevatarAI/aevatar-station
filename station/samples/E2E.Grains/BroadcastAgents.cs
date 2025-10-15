@@ -44,7 +44,7 @@ public class BroadcastTestEvent : EventBase
 /// <summary>
 /// Publisher agent interface for broadcast scenarios
 /// </summary>
-public interface IBroadcastScheduleAgent : IGAgent
+public interface IBroadcastScheduleAgent : IBroadcastGAgent
 {
     Task BroadcastEventAsync(BroadcastTestEvent @event);
     Task<long> GetEventsSentAsync();
@@ -54,7 +54,7 @@ public interface IBroadcastScheduleAgent : IGAgent
 /// <summary>
 /// Subscriber agent interface for broadcast scenarios
 /// </summary>
-public interface IBroadcastUserAgent : IGAgent
+public interface IBroadcastUserAgent : IBroadcastGAgent
 {
     new Task ActivateAsync();
     Task<int> GetCount();

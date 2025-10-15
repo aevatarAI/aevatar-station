@@ -2,21 +2,8 @@ using Orleans.Concurrency;
 
 namespace Aevatar.Core.Abstractions;
 
-public interface IGAgent : IGrainWithGuidKey
+public interface IGAgent : IGAgentBase
 {
-    /// <summary>
-    /// Used for activating the agent manually.
-    /// </summary>
-    /// <returns></returns>
-    Task ActivateAsync();
-
-    /// <summary>
-    /// Get GAgent description.
-    /// </summary>
-    /// <returns></returns>
-    [ReadOnly]
-    Task<string> GetDescriptionAsync();
-
     /// <summary>
     /// Register a GAgent as the next level of the current GAgent.
     /// </summary>
@@ -46,14 +33,6 @@ public interface IGAgent : IGrainWithGuidKey
     Task UnregisterAsync(IGAgent gAgent);
 
     /// <summary>
-    /// Get all subscribed events of current GAgent.
-    /// </summary>
-    /// <param name="includeBaseHandlers"></param>
-    /// <returns></returns>
-    [ReadOnly]
-    Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false);
-
-    /// <summary>
     /// Get subscriber list of current GAgent.
     /// </summary>
     /// <returns></returns>
@@ -67,19 +46,6 @@ public interface IGAgent : IGrainWithGuidKey
     [ReadOnly]
     Task<GrainId> GetParentAsync();
 
-    /// <summary>
-    /// Get the type of GAgent initialization event.
-    /// </summary>
-    /// <returns></returns>
-    [ReadOnly]
-    Task<Type?> GetConfigurationTypeAsync();
-
-    /// <summary>
-    /// Config the GAgent.
-    /// </summary>
-    /// <param name="configuration"></param>
-    /// <returns></returns>
-    Task ConfigAsync(ConfigurationBase configuration);
     
     /// <summary>
     /// Prepare the agent with available resource context.

@@ -19,11 +19,12 @@ public class StateDispatcher : IStateDispatcher
         _aevatarOptions = clusterClient.ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
     }
 
+    // Original methods for backward compatibility
     public async Task PublishAsync<TState>(GrainId grainId, StateWrapper<TState> stateWrapper) where TState : StateBase
     {
         try
         {
-            var index =  GetProjectorIndex(grainId);
+            var index = GetProjectorIndex(grainId);
             var streamId = StreamId.Create(_aevatarOptions.StateProjectionStreamNamespace, typeof(StateWrapper<TState>).FullName! + index);
             _logger.LogInformation($"Publishing state change for grain {grainId} to stream {streamId}-{index}");
             var stream = _streamProvider.GetStream<StateWrapper<TState>>(streamId);
@@ -48,6 +49,40 @@ public class StateDispatcher : IStateDispatcher
         catch (Exception e)
         {
             _logger.LogError($"Error projecting state for grain {grainId}: {e.Message}");
+            throw;
+        }
+    }
+
+    // Plus methods for enhanced GAgent components
+    public async Task PublishPlusAsync<TState>(GrainId grainId, StateWrapperPlus<TState> stateWrapper) where TState : CoreStateBase
+    {
+        try
+        {
+            var index = GetProjectorIndex(grainId);
+            var streamId = StreamId.Create(_aevatarOptions.StateProjectionStreamNamespace, typeof(StateWrapperPlus<TState>).FullName! + index);
+            _logger.LogInformation($"Publishing Plus state change for grain {grainId} to stream {streamId}-{index}");
+            var stream = _streamProvider.GetStream<StateWrapperPlus<TState>>(streamId);
+            await stream.OnNextAsync(stateWrapper);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError($"Error projecting Plus state for grain {grainId}: {e.Message}");
+            throw;
+        }
+    }
+
+    public async Task PublishSinglePlusAsync<TState>(GrainId grainId, StateWrapperPlus<TState> stateWrapper) where TState : CoreStateBase
+    {
+        try
+        {
+            var streamId = StreamId.Create(_aevatarOptions.StateProjectionStreamNamespace, typeof(StateWrapperPlus<TState>).FullName!);
+            _logger.LogInformation($"Publishing Plus state change for grain {grainId} to stream {streamId}");
+            var stream = _streamProvider.GetStream<StateWrapperPlus<TState>>(streamId);
+            await stream.OnNextAsync(stateWrapper);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError($"Error projecting Plus state for grain {grainId}: {e.Message}");
             throw;
         }
     }

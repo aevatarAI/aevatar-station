@@ -385,6 +385,10 @@ public static class OrleansHostExtension
                 // services.AddSingleton<IStateProjector, AevatarStateProjector>();
                 services.AddSingleton<IStateDispatcher, StateDispatcher>();
                 services.AddSingleton<IGAgentFactory, GAgentFactory>();
+                
+                // Register generic factories for specific grain types
+                services.AddSingleton<IGAgentFactory<IGAgent>, GAgentFactory<IGAgent>>();
+                services.AddSingleton<IGAgentFactory<IGAgentPlus>, GAgentFactory<IGAgentPlus>>();
                 services.AddSemanticKernel()
                     .AddQdrantVectorStore()
                     .AddAzureOpenAITextEmbedding();
