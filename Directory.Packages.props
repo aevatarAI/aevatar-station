@@ -38,8 +38,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="9.0.2" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.33.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.33.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.66.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Core" Version="1.66.0" />
     <PackageVersion Include="NJsonSchema" Version="11.1.0" />
     <PackageVersion Include="Octokit" Version="14.0.0" />
     <PackageVersion Include="OpenAI.API" Version="1.0.0" />
@@ -220,8 +220,8 @@
     <!-- AI packages -->
     <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Qdrant" Version="1.33.0-preview" />
     <PackageVersion Include="Microsoft.SemanticKernel.PromptTemplates.Handlebars" Version="1.32.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAIInference" Version="1.33.0-beta" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.33.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureAIInference" Version="1.57.0-beta" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.57.0-alpha" />
 
     <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
