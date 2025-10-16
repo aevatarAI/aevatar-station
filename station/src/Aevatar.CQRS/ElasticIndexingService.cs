@@ -183,21 +183,23 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     {
         Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
 
-        if (underlyingType.IsGenericType)
-        {
-            var genericDef = underlyingType.GetGenericTypeDefinition();
-            if (SupportedCollectionTypes.Contains(genericDef))
-            {
-                var genericArgs = underlyingType.GetGenericArguments();
-                if (genericArgs.Length == 2 && SupportedDictionaryTypes.Contains(genericDef))
-                {
-                    return IsBasicType(genericArgs[0]) && IsBasicType(genericArgs[1]);
-                }
-                
-                return IsBasicType(genericArgs[0]);
-            }
-        }
-
+        //Skip dictionary parsing when saving state.  start
+        // if (underlyingType.IsGenericType)
+        // {
+        //     var genericDef = underlyingType.GetGenericTypeDefinition();
+        //     if (SupportedCollectionTypes.Contains(genericDef))
+        //     {
+        //         var genericArgs = underlyingType.GetGenericArguments();
+        //         if (genericArgs.Length == 2 && SupportedDictionaryTypes.Contains(genericDef))
+        //         {
+        //             return IsBasicType(genericArgs[0]) && IsBasicType(genericArgs[1]);
+        //         }
+        //         
+        //         return IsBasicType(genericArgs[0]);
+        //     }
+        // }
+        //end 
+        
         if (underlyingType.IsPrimitive)
             return true;
 
