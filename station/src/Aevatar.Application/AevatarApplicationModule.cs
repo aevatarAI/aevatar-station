@@ -9,6 +9,7 @@ using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
+using Aevatar.GAgents.Core;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.LocalDevelopment;
@@ -69,6 +70,9 @@ public class AevatarApplicationModule : AbpModule
         var configuration = context.Services.GetConfiguration();
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
+        
+        // Register IGAgentFactory for BusinessAgentBase (required for workflow agents)
+        context.Services.AddSingleton<IGAgentFactory<IBusinessAgentBase>, GAgentFactory<IBusinessAgentBase>>();
         
         // 配置Schema处理器
         ConfigureSchemaProcessors(context);

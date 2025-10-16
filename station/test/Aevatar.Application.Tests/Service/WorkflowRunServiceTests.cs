@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.Core;
 using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
 using Aevatar.Schema;
 using Aevatar.Service;
@@ -16,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using NJsonSchema;
 using Orleans;
+using Orleans.Metadata;
 using Orleans.Runtime;
 using Shouldly;
 using Volo.Abp;
@@ -28,10 +30,11 @@ public class WorkflowRunServiceTests
     private readonly Mock<IWorkflowViewService> _mockWorkflowViewService;
     private readonly Mock<ISubscriptionAppService> _mockSubscriptionAppService;
     private readonly Mock<IAgentService> _mockAgentService;
-    private readonly Mock<IGAgentFactory> _mockGAgentFactory;
+    private readonly Mock<IGAgentFactory<IBusinessAgentBase>> _mockGAgentFactory;
     private readonly Mock<ISchemaProvider> _mockSchemaProvider;
     private readonly Mock<ILogger<WorkflowRunService>> _mockLogger;
     private readonly Mock<IClusterClient> _mockClusterClient;
+    private readonly Mock<IGAgentManager> _mockGAgentManager;
     private readonly WorkflowRunService _workflowRunService;
 
     public WorkflowRunServiceTests()
@@ -39,11 +42,14 @@ public class WorkflowRunServiceTests
         _mockWorkflowViewService = new Mock<IWorkflowViewService>();
         _mockSubscriptionAppService = new Mock<ISubscriptionAppService>();
         _mockAgentService = new Mock<IAgentService>();
-        _mockGAgentFactory = new Mock<IGAgentFactory>();
+        _mockGAgentFactory = new Mock<IGAgentFactory<IBusinessAgentBase>>();
         _mockSchemaProvider = new Mock<ISchemaProvider>();
         _mockLogger = new Mock<ILogger<WorkflowRunService>>();
         _mockClusterClient = new Mock<IClusterClient>();
+        _mockGAgentManager = new Mock<IGAgentManager>();
 
+        // Note: GrainTypeResolver cannot be mocked (concrete class with required dependencies)
+        // For these tests, we pass null since GetAllWorkflowAgents method is not tested in most cases
         _workflowRunService = new WorkflowRunService(
             _mockWorkflowViewService.Object,
             _mockSubscriptionAppService.Object,
@@ -51,15 +57,19 @@ public class WorkflowRunServiceTests
             _mockGAgentFactory.Object,
             _mockSchemaProvider.Object,
             _mockLogger.Object,
-            _mockClusterClient.Object);
+            _mockClusterClient.Object,
+            _mockGAgentManager.Object,
+            null!);
     }
 
     private void SetupGAgentFactoryMock()
     {
-        // Create a mock IGAgent that returns a valid configuration type
-        var mockGAgent = new Mock<IGAgent>();
+        // Create a mock IBusinessAgentBase that returns a valid configuration type
+        var mockGAgent = new Mock<IBusinessAgentBase>();
         mockGAgent.Setup(x => x.GetConfigurationTypeAsync())
             .Returns(Task.FromResult<Type?>(typeof(TestAgentConfiguration)));
+        mockGAgent.Setup(x => x.GetIsWorkflowAgentAsync())
+            .Returns(Task.FromResult(false)); // Not a workflow infrastructure agent
         
         // Setup for the main GetGAgentAsync method with optional configuration parameter
         // This should cover all calls including GetGAgentAsync(grainId) which defaults to GetGAgentAsync(grainId, null)
@@ -316,15 +326,18 @@ public class WorkflowRunServiceTests
         // Arrange & Act & Assert
         // Note: The actual constructor doesn't do null checks, so these tests expect no exceptions
         var service1 = new WorkflowRunService(null, _mockSubscriptionAppService.Object, _mockAgentService.Object, 
-            _mockGAgentFactory.Object, _mockSchemaProvider.Object, _mockLogger.Object, _mockClusterClient.Object);
+            _mockGAgentFactory.Object, _mockSchemaProvider.Object, _mockLogger.Object, _mockClusterClient.Object,
+            _mockGAgentManager.Object, null!);
         service1.ShouldNotBeNull();
 
         var service2 = new WorkflowRunService(_mockWorkflowViewService.Object, null, _mockAgentService.Object,
-            _mockGAgentFactory.Object, _mockSchemaProvider.Object, _mockLogger.Object, _mockClusterClient.Object);
+            _mockGAgentFactory.Object, _mockSchemaProvider.Object, _mockLogger.Object, _mockClusterClient.Object,
+            _mockGAgentManager.Object, null!);
         service2.ShouldNotBeNull();
 
         var service3 = new WorkflowRunService(_mockWorkflowViewService.Object, _mockSubscriptionAppService.Object, null,
-            _mockGAgentFactory.Object, _mockSchemaProvider.Object, _mockLogger.Object, _mockClusterClient.Object);
+            _mockGAgentFactory.Object, _mockSchemaProvider.Object, _mockLogger.Object, _mockClusterClient.Object,
+            _mockGAgentManager.Object, null!);
         service3.ShouldNotBeNull();
     }
 
@@ -523,7 +536,7 @@ public class WorkflowRunServiceTests
         var request = CreateValidWorkflowRunRequest(viewAgentId);
 
         // Setup agent that returns null configuration type
-        var mockGAgent = new Mock<IGAgent>();
+        var mockGAgent = new Mock<IBusinessAgentBase>();
         mockGAgent.Setup(x => x.GetConfigurationTypeAsync())
             .Returns(Task.FromResult<Type?>(null)); // Null configuration type
 

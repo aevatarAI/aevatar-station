@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.Core.Placement;
 using Aevatar.Core.Abstractions;
@@ -48,6 +49,14 @@ public class WorkflowEndConfigDto : ConfigurationBase
 [SiloNamePatternPlacement("Projector")]
 public class WorkflowEndAgent : BusinessAgentBase<WorkflowEndState, WorkflowEndAgentLogEvent, WorkflowEndConfigDto>, IWorkflowEndAgent
 {
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        // Mark this agent as a workflow infrastructure agent to exclude from topology discovery
+        this._isWorkflowAgent = true;
+        
+        await base.OnGAgentActivateAsync(cancellationToken);
+    }
+
     public override Task<string> GetDescriptionAsync()
         => Task.FromResult("Workflow End Agent that marks workflow completion - WorkflowCoordinator maintains all workflow information");
 

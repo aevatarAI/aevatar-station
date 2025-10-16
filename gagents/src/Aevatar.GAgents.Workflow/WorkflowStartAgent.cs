@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.Core;
@@ -48,6 +49,14 @@ public class WorkflowStartConfigDto : ConfigurationBase
 [SiloNamePatternPlacement("Projector")]
 public class WorkflowStartAgent : BusinessAgentBase<WorkflowStartState, WorkflowStartAgentLogEvent, WorkflowStartConfigDto>, IWorkflowStartAgent
 {
+    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        // Mark this agent as a workflow infrastructure agent to exclude from topology discovery
+        this._isWorkflowAgent = true;
+        
+        await base.OnGAgentActivateAsync(cancellationToken);
+    }
+
     public override Task<string> GetDescriptionAsync()
         => Task.FromResult("Workflow Start Agent that initiates workflows by forwarding events to child agents");
 
