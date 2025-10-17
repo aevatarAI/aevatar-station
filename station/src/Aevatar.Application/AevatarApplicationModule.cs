@@ -74,6 +74,9 @@ public class AevatarApplicationModule : AbpModule
         // Register IGAgentFactory for BusinessAgentBase (required for workflow agents)
         context.Services.AddSingleton<IGAgentFactory<IBusinessAgentBase>, GAgentFactory<IBusinessAgentBase>>();
         
+        // Register WorkflowViewService explicitly
+        context.Services.AddSingleton<IWorkflowViewService, WorkflowViewServicePlus>();
+        
         // 配置Schema处理器
         ConfigureSchemaProcessors(context);
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));

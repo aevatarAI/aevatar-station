@@ -40,8 +40,8 @@ public class Program
     private static IWorkflowCoordinatorGAgentPlus? _workflowCoordinator;
     // NOTE: WorkflowExecutionRecord is created per workflow execution, not shared
     
-    // NEW: Proxy agent for P2P event publishing
-    private static IWorkflowProxyAgent? _proxyAgent;
+    // NEW: Workflow view agent for managing workflow topology
+    private static IWorkflowViewGAgentPlus? _workflowViewAgent;
     
     // Agent IDs for consistency
     private static Guid _startAgentId;
@@ -52,7 +52,7 @@ public class Program
     
     // NEW: Workflow monitoring agent IDs
     private static Guid _workflowCoordinatorId;
-    private static Guid _proxyAgentId;
+    private static Guid _workflowViewAgentId;
     // NOTE: ExecutionRecord ID is generated per workflow execution
     
     // Current configuration values
@@ -269,8 +269,8 @@ Log.Logger = new LoggerConfiguration()
                 _workflowCoordinatorId = Guid.NewGuid();
                 // ExecutionRecord IDs are generated per workflow execution
                 
-                // NEW: Generate ID for proxy agent
-                _proxyAgentId = Guid.NewGuid();
+                // NEW: Generate ID for workflow view agent
+                _workflowViewAgentId = Guid.NewGuid();
                 
                 AnsiConsole.MarkupLine("[yellow]🆕 Generating new agent IDs (first initialization)[/]");
             }
@@ -290,8 +290,8 @@ Log.Logger = new LoggerConfiguration()
             AnsiConsole.MarkupLine($"  • WorkflowCoordinator: [cyan]{_workflowCoordinatorId}[/] (shared across executions)");
             AnsiConsole.MarkupLine($"  • ExecutionRecord: [yellow]Created per workflow execution[/]");
             
-            // NEW: Display proxy agent ID
-            AnsiConsole.MarkupLine($"  • WorkflowProxyAgent: [magenta]{_proxyAgentId}[/] (P2P event publisher)");
+            // NEW: Display workflow view agent ID
+            AnsiConsole.MarkupLine($"  • WorkflowViewAgent: [magenta]{_workflowViewAgentId}[/] (workflow topology management)");
             AnsiConsole.WriteLine();
 
             // Create grain references (always refresh references to ensure they're current)
@@ -306,8 +306,8 @@ Log.Logger = new LoggerConfiguration()
             _workflowCoordinator = _client.GetGrain<IWorkflowCoordinatorGAgentPlus>(_workflowCoordinatorId);
             // ExecutionRecord agents are created per workflow execution
             
-            // NEW: Create grain reference for proxy agent
-            _proxyAgent = _client.GetGrain<IWorkflowProxyAgent>(_proxyAgentId);
+            // NEW: Create grain reference for workflow view agent
+            _workflowViewAgent = _client.GetGrain<IWorkflowViewGAgentPlus>(_workflowViewAgentId);
 
             AnsiConsole.MarkupLine("[green]✅ All grain references created/refreshed (including shared workflow coordinator)![/]");
             AnsiConsole.WriteLine();
@@ -728,9 +728,9 @@ Log.Logger = new LoggerConfiguration()
     {
         try
         {
-            if (_startAgent == null || _proxyAgent == null)
+            if (_startAgent == null || _workflowViewAgent == null)
             {
-                AnsiConsole.MarkupLine("[red]❌ StartAgent or ProxyAgent not initialized. Please run 'Initialize workflow agents' first.[/]");
+                AnsiConsole.MarkupLine("[red]❌ StartAgent or WorkflowViewAgent not initialized. Please run 'Initialize workflow agents' first.[/]");
                 return;
             }
 
@@ -770,10 +770,10 @@ Log.Logger = new LoggerConfiguration()
             AnsiConsole.MarkupLine($"  • Task: [green]{workflowEvent.TaskResult}[/]");
             AnsiConsole.MarkupLine($"  • Message: [grey]{workflowEvent.Message}[/]");
 
-            // Use proxy agent's built-in P2P event sending to send event directly to start agent
-            await _proxyAgent!.SendEventToAgentAsync(workflowEvent, _startAgent!.GetGrainId());
+            // Use workflow view agent's built-in P2P event sending to send event directly to start agent
+            await _workflowViewAgent!.SendEventToAgentAsync(workflowEvent, _startAgent!.GetGrainId());
 
-            AnsiConsole.MarkupLine("[bold green]✅ Workflow event sent via proxy agent successfully![/]");
+            AnsiConsole.MarkupLine("[bold green]✅ Workflow event sent via workflow view agent successfully![/]");
             AnsiConsole.WriteLine();
             
             // ✅ FIX: Wait for WorkflowCoordinator to process event and create ExecutionRecord

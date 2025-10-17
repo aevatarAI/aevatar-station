@@ -14,17 +14,17 @@ namespace Aevatar.Application.Tests.Service;
 public class WorkflowViewServiceTests
 {
     private readonly Mock<IAgentService> _mockAgentService;
-    private readonly Mock<IGAgentFactory> _mockGAgentFactory;
-    private readonly Mock<ILogger<WorkflowViewService>> _mockLogger;
-    private readonly WorkflowViewService _workflowViewService;
+    private readonly Mock<IGAgentFactory<IGAgentPlus>> _mockGAgentFactory;
+    private readonly Mock<ILogger<WorkflowViewServicePlus>> _mockLogger;
+    private readonly WorkflowViewServicePlus _workflowViewService;
     
     public WorkflowViewServiceTests()
     {
         _mockAgentService = new Mock<IAgentService>();
-        _mockGAgentFactory = new Mock<IGAgentFactory>();
-        _mockLogger = new Mock<ILogger<WorkflowViewService>>();
+        _mockGAgentFactory = new Mock<IGAgentFactory<IGAgentPlus>>();
+        _mockLogger = new Mock<ILogger<WorkflowViewServicePlus>>();
         
-        _workflowViewService = new WorkflowViewService(
+        _workflowViewService = new WorkflowViewServicePlus(
             _mockAgentService.Object,
             _mockGAgentFactory.Object,
             _mockLogger.Object,
@@ -304,22 +304,22 @@ public class WorkflowViewServiceTests
     }
 
     [Fact]
-    public void WorkflowViewService_Constructor_ShouldRequireAllDependencies()
+    public void WorkflowViewServicePlus_Constructor_ShouldRequireAllDependencies()
     {
         // Arrange & Act & Assert
         // Note: The actual constructor doesn't do null checks, so these tests expect no exceptions
-        var service1 = new WorkflowViewService(null, _mockGAgentFactory.Object, _mockLogger.Object, null);
+        var service1 = new WorkflowViewServicePlus(null, _mockGAgentFactory.Object, _mockLogger.Object, null);
         service1.ShouldNotBeNull();
 
-        var service2 = new WorkflowViewService(_mockAgentService.Object, null, _mockLogger.Object, null);
+        var service2 = new WorkflowViewServicePlus(_mockAgentService.Object, null, _mockLogger.Object, null);
         service2.ShouldNotBeNull();
 
-        var service3 = new WorkflowViewService(_mockAgentService.Object, _mockGAgentFactory.Object, null, null);
+        var service3 = new WorkflowViewServicePlus(_mockAgentService.Object, _mockGAgentFactory.Object, null, null);
         service3.ShouldNotBeNull();
     }
 
     [Fact]
-    public void WorkflowViewService_ShouldImplementIWorkflowViewService()
+    public void WorkflowViewServicePlus_ShouldImplementIWorkflowViewService()
     {
         // Assert
         _workflowViewService.ShouldBeAssignableTo<IWorkflowViewService>();

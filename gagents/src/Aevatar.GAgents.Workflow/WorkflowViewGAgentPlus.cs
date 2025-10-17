@@ -40,17 +40,8 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
                 throw new ArgumentException("The workflow view node has invalid value.");
             }
 
-            if (node.AgentId != Guid.Empty)
-            {
-                var grainId = GrainId.Create(node.AgentType, node.AgentId.ToString("N"));
-                var agent = GrainFactory.GetGrain<IGAgent>(grainId);
-                var agentParent = await agent.GetParentAsync();
-                if (agentParent != default && State.WorkflowCoordinatorGAgentId != Guid.Empty && State.WorkflowCoordinatorGAgentId != agentParent.GetGuidKey())
-                {
-                    Logger.LogError($"[WorkflowViewGAgent] GAgent {grainId} already has a parent GAgent.");
-                    throw new ArgumentException($"GAgent {grainId} already has a parent GAgent.");
-                }
-            }
+            
+            
         }
 
         if (State.WorkflowCoordinatorGAgentId != Guid.Empty && State.WorkflowCoordinatorGAgentId != configuration.WorkflowCoordinatorGAgentId)
@@ -98,7 +89,9 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
             UpdateNodeList = updateNodeList,
             RemoveNodeIdList = removeNodeIdList,
             WorkflowNodeUnitList = configuration.WorkflowNodeUnitList,
-            Name = configuration.Name
+            Name = configuration.Name,
+            WorkflowStartAgentId = configuration.WorkflowStartAgentId,
+            WorkflowEndAgentId = configuration.WorkflowEndAgentId
         });
         if (configuration.WorkflowCoordinatorGAgentId != Guid.Empty)
         {
@@ -187,6 +180,8 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
                 state.WorkflowNodeUnitList = updateWorkflowViewLogEvent.WorkflowNodeUnitList;
                 state.Name = updateWorkflowViewLogEvent.Name;
                 state.AgentId = this.GetPrimaryKey();
+                state.WorkflowStartAgentId = updateWorkflowViewLogEvent.WorkflowStartAgentId;
+                state.WorkflowEndAgentId = updateWorkflowViewLogEvent.WorkflowEndAgentId;
                 break;
             case UpdateNodeAgentIdLogEvent nodeAgentIdLogEvent:
                 var updateAgentIdNode = state.WorkflowNodeList.FirstOrDefault(t => t.NodeId == nodeAgentIdLogEvent.NodeId);
