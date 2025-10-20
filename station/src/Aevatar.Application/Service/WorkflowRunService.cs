@@ -394,7 +394,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
         try
         {
-            var tempGrainId = GrainId.Create(agentType, Guid.NewGuid().ToString());
+            var tempGrainId = GrainId.Create(agentType, GuidUtil.GuidToGrainKey(Guid.NewGuid()));
             var agent = await _gAgentFactory.GetGAgentAsync(tempGrainId);
             var configurationType = ExtractConfigurationProperties(await agent.GetConfigurationTypeAsync());
             if (configurationType == null)
