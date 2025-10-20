@@ -42,7 +42,7 @@ public class InputGAgentPlus : BusinessAgentBase<InputGAgentStatePlus, InputGAge
         try
         {
             // Assign the WorkUnitAgentId to represent this processing node
-            workflowEvent.WorkUnitAgentId = this.GetPrimaryKey();
+            workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
             
             workflowEvent.Message = State.Input ?? "No input configured";
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowInProgress;

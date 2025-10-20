@@ -169,7 +169,7 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
                 throw new UserFriendlyException($"create workflowCoordinatorGAgent fail: {e.Message}");
             }
 
-            await _agentService.AddSubAgentAsync(workflowCoordinatorGAgentDto.AgentGuid, new AddSubAgentDto());
+           // await _agentService.AddSubAgentAsync(workflowCoordinatorGAgentDto.AgentGuid, new AddSubAgentDto());
         }
         else
         {
@@ -192,7 +192,10 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
                 viewAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
         }
 
-        // update workflowViewAgent
+        // Initialize workflow agent IDs (WorkflowStartAgentId, WorkflowEndAgentId) before updating
+        InitializeWorkflowAgentIds(viewConfigDto);
+        
+        // update workflowViewAgent with initialized IDs
         configJson = JsonConvert.SerializeObject(viewConfigDto);
         var viewConfigProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(configJson);
         viewConfigProperties.Remove("PublisherGrainId");
@@ -203,7 +206,7 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
             Name = agentDto.Name
         });
         
-        // ✅ NEW: Setup workflow relationships (Start/End/Coordinator + business agents)
+        // Setup workflow relationships (Start/End/Coordinator + business agents)
         await SetupWorkflowRelationshipsAsync(viewAgentId, viewConfigDto);
         
         return agentDto;
@@ -249,19 +252,16 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     {
         _logger.LogInformation("Setting up workflow relationships for workflow {WorkflowName}", viewConfigDto.Name);
         
-        // Step 1: Initialize agent IDs
-        InitializeWorkflowAgentIds(viewConfigDto);
-        
-        // Step 2: Get all agent references
+        // Step 1: Get all agent references
         var agents = await GetWorkflowAgentsAsync(viewAgentId, viewConfigDto);
         
-        // Step 3: Analyze workflow topology
+        // Step 2: Analyze workflow topology
         var topology = AnalyzeWorkflowTopology(viewConfigDto);
         
-        // Step 4: Setup business agent relationships (includes Coordinator relationships, incremental update)
+        // Step 3: Setup business agent relationships (includes Coordinator relationships, incremental update)
         await SetupBusinessAgentTopologyAsync(agents, topology, viewConfigDto);
         
-        // Step 5: Setup Coordinator → WorkflowViewAgent relationship
+        // Step 4: Setup Coordinator → WorkflowViewAgent relationship
         await UpdateAgentChildrenAsync(agents.CoordinatorAgent, new List<Guid> { agents.WorkflowViewAgent.GetPrimaryKey() }, 
             "Coordinator", "WorkflowViewAgent");
         
@@ -353,7 +353,6 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
             var targetNode = topology.NodeMap[nodeUnit.NextNodeId];
             
             var sourceAgent = await _gAgentFactory.GetGAgentAsync<IGAgentPlus>(sourceNode.AgentId);
-            var targetAgent = await _gAgentFactory.GetGAgentAsync<IGAgentPlus>(targetNode.AgentId);
             
             await UpdateAgentChildrenAsync(sourceAgent, new List<Guid> { targetNode.AgentId, coordinatorId }, 
                 $"BusinessAgent({sourceNode.Name})", $"{targetNode.Name} + Coordinator");

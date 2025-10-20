@@ -33,3 +33,8 @@ public class UpdateWorkflowAgentIdLogEvent : WorkflowViewLogEvent
 {
     [Id(0)] public Guid AgentId { get; set; }
 }
+
+[GenerateSerializer]
+public class IncrementRoundIdLogEvent : WorkflowViewLogEvent
+{
+}

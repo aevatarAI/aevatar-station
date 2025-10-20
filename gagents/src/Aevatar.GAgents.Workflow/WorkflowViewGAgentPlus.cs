@@ -1,10 +1,11 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.Core;
+using Aevatar.GAgents.Workflow.Core;
 using Aevatar.GAgents.Workflow.Core.Configs;
 using Aevatar.GAgents.Workflow.Core.Events;
 using Aevatar.GAgents.Workflow.Core.States;
 using Microsoft.Extensions.Logging;
-using Aevatar.GAgents.Workflow.Core;
 
 namespace Aevatar.GAgents.Workflow;
 
@@ -24,6 +25,60 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
     protected override async Task PerformConfigAsync(WorkflowViewConfigDto configuration)
     {
         await TrySaveWorkflowViewAsync(configuration);
+    }
+
+    /// <summary>
+    /// Get current round ID (execution counter)
+    /// </summary>
+    public Task<int> GetCurrentRoundIdAsync()
+    {
+        return Task.FromResult(State.RoundId);
+    }
+
+    /// <summary>
+    /// Execute workflow by creating and sending WorkflowEvent to StartAgent, and increment RoundId
+    /// Execution name is automatically generated as: {WorkflowName}-Round{RoundId}
+    /// </summary>
+    public async Task<Guid> ExecuteWorkflowAsync()
+    {
+        // Validate prerequisites
+        if (State.WorkflowStartAgentId == Guid.Empty)
+        {
+            Logger.LogError("[WorkflowViewGAgent] Cannot execute workflow: WorkflowStartAgentId is not initialized");
+            throw new InvalidOperationException("WorkflowStartAgentId is not initialized. Please publish the workflow first.");
+        }
+        
+        // Increment RoundId for each workflow execution
+        RaiseEvent(new IncrementRoundIdLogEvent());
+        await ConfirmEvents();
+        
+        // Generate execution name based on workflow name and RoundId
+        var executionName = $"{State.Name}-Round{State.RoundId}";
+        
+        Logger.LogInformation("[WorkflowViewGAgent] Starting workflow execution '{ExecutionName}', RoundId: {RoundId}", 
+            executionName, State.RoundId);
+        
+        // Create simplified WorkflowEvent
+        var workflowEvent = new WorkflowEvent
+        {
+            Direction = EventDirection.Down,
+            WorkflowId = Guid.NewGuid(), // Temporary workflow ID, WorkflowCoordinator will create actual ExecutionRecord
+            AgentId = State.WorkflowStartAgentId,
+            WorkflowAgentStatus = WorkflowAgentStatus.Pending,
+            Message = $"Workflow '{executionName}' execution started",
+            Metadata = new Dictionary<string, object>
+            {
+                { "ExecutionName", executionName },
+                { "RoundId", State.RoundId },
+                { "WorkflowName", State.Name }
+            }
+        };
+        
+        // Get StartAgent GrainId
+        var startAgentGrainId = GrainId.Create(typeof(IWorkflowStartAgent).FullName!, State.WorkflowStartAgentId.ToString());
+        
+        // Send event to StartAgent
+        return await SendEventToAgentAsync(workflowEvent, startAgentGrainId);
     }
 
     private async Task TrySaveWorkflowViewAsync(WorkflowViewConfigDto configuration)
@@ -192,6 +247,9 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
                 break;
             case UpdateWorkflowAgentIdLogEvent updateWorkflowAgentIdLogEvent:
                 state.WorkflowCoordinatorGAgentId = updateWorkflowAgentIdLogEvent.AgentId;
+                break;
+            case IncrementRoundIdLogEvent:
+                state.RoundId++;
                 break;
         }
 

@@ -70,7 +70,7 @@ public class WorkflowEndAgent : BusinessAgentBase<WorkflowEndState, WorkflowEndA
             workflowEvent.WorkflowId);  // Execution Record Agent ID
         
         // Assign the WorkUnitAgentId to represent this processing node
-        workflowEvent.WorkUnitAgentId = this.GetPrimaryKey();
+        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
         
         // Mark workflow as completed using existing event fields
         workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;

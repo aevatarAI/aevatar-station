@@ -4,6 +4,7 @@ using Aevatar.GAgents.Workflow.Core;
 using Newtonsoft.Json;
 using Aevatar.Core.Placement;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Aevatar.GAgents.Workflow.Core.States;
 using Aevatar.GAgents.Core;
 using Aevatar.GAgents.Workflow.Core.Models;
@@ -35,6 +36,48 @@ public class WorkflowExecutionRecordGAgentPlus :
     protected override bool AreAllDependenciesReadyAsync(WorkflowEvent workflowEvent)
     {
         return true;
+    }
+
+    /// <summary>
+    /// Capture the current state snapshot of a target GAgent
+    /// Uses the new GetStateSnapshotAsync method from IGAgent interface
+    /// </summary>
+    private async Task<string?> CaptureAgentStateAsync(string targetAgentGrainId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(targetAgentGrainId))
+            {
+                Logger.LogDebug("Skipping state capture for empty agent ID");
+                return null;
+            }
+
+            // Get the target GAgent using GAgentFactory
+            var gAgentFactory = ServiceProvider.GetRequiredService<IGAgentFactory>();
+            var grainId = GrainId.Parse(targetAgentGrainId);
+            var targetGAgent = await gAgentFactory.GetGAgentAsync(grainId);
+            
+            Logger.LogDebug("🔍 Attempting to get state snapshot for agent: {TargetAgentId}", targetAgentGrainId);
+
+            // Call GetStateSnapshotAsync method
+            var stateSnapshot = await targetGAgent.GetStateSnapshotAsync();
+            
+            if (!string.IsNullOrEmpty(stateSnapshot))
+            {
+                Logger.LogDebug("✅ Successfully retrieved state snapshot for agent: {TargetAgentId}", targetAgentGrainId);
+                return stateSnapshot;
+            }
+            else
+            {
+                Logger.LogDebug("ℹ️ GAgent returned null state snapshot (likely not stateful): {TargetAgentId}", targetAgentGrainId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "❌ Error during agent state capture for {TargetAgentId}", targetAgentGrainId);
+            return null;
+        }
     }
 
     /// <summary>
@@ -106,12 +149,12 @@ public class WorkflowExecutionRecordGAgentPlus :
         });
         
         // ✅ FIX: Also track WorkflowStartAgent as a completed work unit
-        if (workflowEvent.WorkUnitAgentId != Guid.Empty)
+        if (!string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
         {
             Logger.LogInformation("🚀 [ExecutionRecordGAgent] Marking WorkflowStartAgent work unit as completed: {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString()
+                WorkUnitGrainId = workflowEvent.WorkUnitAgentId
             });
         }
         
@@ -121,21 +164,33 @@ public class WorkflowExecutionRecordGAgentPlus :
 
     private async Task HandleWorkflowAsync(WorkflowEvent workflowEvent)
     {
-        Logger.LogDebug("ExecutionRecordGAgent handling WorkflowTaskCompleted for work unit agent {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
+        Logger.LogDebug("ExecutionRecordGAgent handling WorkflowInProgress for work unit agent {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
+        
+        // Capture current state snapshot of the work unit agent
+        var stateSnapshot = await CaptureAgentStateAsync(workflowEvent.WorkUnitAgentId);
         
         if (workflowEvent.ErrorMessage.IsNullOrEmpty())
         {
+            // Extract OutputData from WorkflowEvent
+            var outputData = workflowEvent.Message ?? string.Empty;
+            if (workflowEvent.Metadata.TryGetValue("OutputData", out var outputObj))
+            {
+                outputData = outputObj?.ToString() ?? outputData;
+            }
+            
             // Track successful completion using WorkUnitAgentId to find the current work unit
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString()
+                WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
+                OutputData = outputData,
+                CurrentStateSnapshot = stateSnapshot
             });
         }
         else
         {
             RaiseEvent(new FailExecuteWorkflowLogEvent()
             {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString(),
+                WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
                 FailureSummary = workflowEvent.ErrorMessage
             });
         }
@@ -149,12 +204,12 @@ public class WorkflowExecutionRecordGAgentPlus :
             workflowEvent.WorkflowId, workflowEvent.WorkUnitAgentId, State.Status);
         
         // ✅ FIX: Also track WorkflowEndAgent as a completed work unit BEFORE completing overall workflow
-        if (workflowEvent.WorkUnitAgentId != Guid.Empty)
+        if (!string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
         {
             Logger.LogInformation("🏁 [ExecutionRecordGAgent] Marking WorkflowEndAgent work unit as completed: {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString()
+                WorkUnitGrainId = workflowEvent.WorkUnitAgentId
             });
         }
         
@@ -192,7 +247,7 @@ public class WorkflowExecutionRecordGAgentPlus :
         
         RaiseEvent(new FailExecuteWorkflowLogEvent()
         {
-            WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString(),
+            WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
             FailureSummary = workflowEvent.ErrorMessage ?? "Task failed without specific error message"
         });
         await ConfirmEvents();
@@ -236,7 +291,8 @@ public class WorkflowExecutionRecordGAgentPlus :
                     new WorkUnitExecutionRecord
                     {
                         WorkUnitGrainId = o.AgentId.ToString(),
-                        Status = WorkflowExecutionStatus.Pending
+                        Status = WorkflowExecutionStatus.Pending,
+                        AgentName = o.Name
                     }).ToList();
                 break;
             case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
@@ -264,6 +320,8 @@ public class WorkflowExecutionRecordGAgentPlus :
                         {
                             workUnit.Status = WorkflowExecutionStatus.Running;
                         }
+                        workUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
+                        workUnit.CurrentStateSnapshot = startExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                     }
                     
                     Logger.LogInformation("✅ [ExecutionRecordGAgent] Successfully updated {Count} WorkUnit records for {WorkUnitGrainId} to status: Running at {StartTime}", 
@@ -290,6 +348,8 @@ public class WorkflowExecutionRecordGAgentPlus :
                         Logger.LogInformation("🔄 [ExecutionRecordGAgent] Updating WorkUnit record - Setting status from {OldStatus} to Completed", workUnit.Status);
                         workUnit.EndTime = endTime;
                         workUnit.Status = WorkflowExecutionStatus.Completed;
+                        workUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                        workUnit.CurrentStateSnapshot = finishExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                     }
                     
                     Logger.LogInformation("✅ [ExecutionRecordGAgent] Successfully updated {Count} WorkUnit records for {WorkUnitGrainId} to status: Completed at {EndTime}", 
@@ -357,21 +417,29 @@ public class FinishExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
 public class StartExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string WorkUnitGrainId { get; set; } = string.Empty;
+    [Id(1)]
+    public string InputData { get; set; } = string.Empty;
+    [Id(2)]
+    public string? CurrentStateSnapshot { get; set; }
 }
 
 [GenerateSerializer]
 public class FinishExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string WorkUnitGrainId { get; set; } = string.Empty;
+    [Id(1)]
+    public string OutputData { get; set; } = string.Empty;
+    [Id(2)]
+    public string? CurrentStateSnapshot { get; set; }
 }
 
 [GenerateSerializer]
 public class FailExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string WorkUnitGrainId { get; set; } = string.Empty;
     [Id(1)]
-    public string FailureSummary { get; set; }
+    public string FailureSummary { get; set; } = string.Empty;
 }

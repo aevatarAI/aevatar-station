@@ -187,16 +187,6 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
         workflowEvent.Metadata["RoundId"] = State.RoundId + 1;
         workflowEvent.Metadata["Content"] = initContent;
         workflowEvent.Metadata["WorkUnitInfos"] = State.CurrentWorkUnitInfos.ToList();
-
-        var executionRecordId = await RegisterExecutionRecordAsync(executionName, initContent);
-    
-        RaiseEvent(new WorkflowStartLogEvent
-        {
-            ExecutionRecordId = executionRecordId,
-            ExecutionName = executionName
-        });
-        await ConfirmEvents();
-        
         Logger.LogDebug("[WorkflowCoordinatorGAgent] HandleWorkflowStartAsync end");
     }
 
@@ -333,6 +323,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
                 break;
 
             case WorkflowFinishLogEvent:
+                State.WorkflowStatus = WorkflowCoordinatorStatus.Failed;
                 state.WorkflowStatus = WorkflowCoordinatorStatus.Pending;
                 // REMOVED: TermToWorkUnitGrainId system no longer used (direct AgentId correlation)
                 if (state.BackupWorkUnitInfos.Count > 0)
@@ -390,8 +381,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
             case WorkflowStartFailedLogEvent:
                 State.WorkflowStatus = WorkflowCoordinatorStatus.Failed;
                 State.LastRunningTime = DateTime.UtcNow;
-                State.CurrentExecutionRecordId = Guid.Empty;
-                State.CurrentExecutionName = null;
+                
                 break;
         }
         base.GAgentTransitionState(state, @event);

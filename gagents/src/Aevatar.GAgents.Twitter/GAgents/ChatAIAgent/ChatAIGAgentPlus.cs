@@ -81,7 +81,7 @@ public class ChatAIGAgentPlus :
         try
         {
             // Assign the WorkUnitAgentId to represent this processing node
-            workflowEvent.WorkUnitAgentId = this.GetPrimaryKey();
+            workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
             
             // Check if there's a message to process with AI
             if (!string.IsNullOrEmpty(workflowEvent.Message))

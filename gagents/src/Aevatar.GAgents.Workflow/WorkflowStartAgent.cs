@@ -70,7 +70,7 @@ public class WorkflowStartAgent : BusinessAgentBase<WorkflowStartState, Workflow
             workflowEvent.WorkflowId);  // Execution Record Agent ID
         
         // Assign the WorkUnitAgentId to represent this processing node
-        workflowEvent.WorkUnitAgentId = this.GetPrimaryKey();
+        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
         
         // Update existing event fields for this step
         workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowStarted;

@@ -11,7 +11,9 @@ using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Common;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.Core;
-using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
+// using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto; // Removed due to type conflicts with Workflow.Core.Configs
+using Aevatar.GAgents.Workflow.Core;
+using Aevatar.GAgents.Workflow.Core.Configs;
 using Aevatar.Schema;
 using Aevatar.Subscription;
 using Aevatar.WorkflowRun;
@@ -78,31 +80,33 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         // Step 2: Publish workflow
         var publishedAgent = await PublishWorkflowAsync(request.ViewAgentId);
         
-        // Step 3: Execute workflow
-        var executionSuccess = await ExecuteWorkflowAsync(publishedAgent.Item2.WorkflowCoordinatorGAgentId, request);
-
-        if (!executionSuccess)
+        // Step 3: Execute workflow through IWorkflowViewGAgentPlus
+        Guid executionEventId;
+        try
         {
-            _logger.LogWarning("Workflow execution failed for ViewAgentId: {ViewAgentId}, coordinator agent not ready",
-                request.ViewAgentId);
+            executionEventId = await ExecuteWorkflowAsync(request.ViewAgentId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to execute workflow for ViewAgentId: {ViewAgentId}", request.ViewAgentId);
             return new WorkflowRunResultDto
             {
                 IsSuccess = false,
                 WorkflowId = publishedAgent.Item2.WorkflowCoordinatorGAgentId,
-                Message = "Workflow coordinator agent is not ready yet. Please retry the execution in a few moments.",
+                Message = $"Workflow execution failed: {ex.Message}",
                 PublishedAgent = publishedAgent.Item1
             };
         }
 
         // All steps completed successfully
-        _logger.LogInformation("Workflow run completed successfully for ViewAgentId: {ViewAgentId}",
-            request.ViewAgentId);
+        _logger.LogInformation("Workflow run completed successfully for ViewAgentId: {ViewAgentId}, ExecutionEventId: {ExecutionEventId}",
+            request.ViewAgentId, executionEventId);
 
         return new WorkflowRunResultDto
         {
             IsSuccess = true,
             WorkflowId = publishedAgent.Item2.WorkflowCoordinatorGAgentId,
-            Message = "Workflow executed successfully",
+            Message = $"Workflow executed successfully. Execution event ID: {executionEventId}",
             PublishedAgent = publishedAgent.Item1
         };
     }
@@ -300,16 +304,34 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
 
     /// <summary>
-    /// 执行工作流 - 检查事件是否可用后再发布
+    /// Execute workflow directly through IWorkflowViewGAgentPlus.ExecuteWorkflowAsync()
+    /// Execution name is automatically generated as: {WorkflowName}-Round{RoundId}
     /// </summary>
-    private async Task<bool> ExecuteWorkflowAsync(Guid coordinatorAgentId, WorkflowRunRequestDto request)
+    /// <param name="viewAgentId">WorkflowViewAgent ID</param>
+    /// <returns>Event ID of the workflow event</returns>
+    private async Task<Guid> ExecuteWorkflowAsync(Guid viewAgentId)
+    {
+        _logger.LogInformation("[ExecuteWorkflow] Starting workflow execution for ViewAgentId: {ViewAgentId}", viewAgentId);
+        
+        // Get IWorkflowViewGAgentPlus grain
+        var workflowViewAgent = _clusterClient.GetGrain<IWorkflowViewGAgentPlus>(viewAgentId);
+        
+        // Direct call to ExecuteWorkflowAsync (execution name generated internally as {Name}-Round{RoundId})
+        var executionEventId = await workflowViewAgent.ExecuteWorkflowAsync();
+        
+        _logger.LogInformation("[ExecuteWorkflow] Workflow execution started successfully. ViewAgentId: {ViewAgentId}, EventId: {ExecutionEventId}", 
+            viewAgentId, executionEventId);
+        
+        return executionEventId;
+    }
+    
+    private async Task<Guid> ExecuteWorkflowAsync_Old(Guid coordinatorAgentId, WorkflowRunRequestDto request)
     {
         const string targetEventType = "Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent.StartWorkflowCoordinatorEvent";
         const int maxRetries = 20;
         const int retryDelayMs = 1000;
 
         _logger.LogInformation("Starting workflow execution for coordinator agent: {CoordinatorAgentId}", coordinatorAgentId);
-
         for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
             _logger.LogInformation("Checking event availability, attempt {Attempt}/{MaxRetries} for agent: {AgentId}", 
@@ -340,7 +362,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
                     _logger.LogInformation("Workflow event published successfully for agent: {AgentId}",
                         coordinatorAgentId);
-                    return true;
+                    return Guid.NewGuid(); // Return a dummy event ID for old implementation
                 }
 
                 _logger.LogWarning("StartWorkflowCoordinatorEvent not found on attempt {Attempt}",attempt);
@@ -358,7 +380,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         }
 
         _logger.LogError("Failed to find StartWorkflowCoordinatorEvent after {MaxRetries} attempts for agent: {AgentId}", maxRetries, coordinatorAgentId);
-        return false;
+        return Guid.Empty;
     }
 
     #region Agent Validation Methods

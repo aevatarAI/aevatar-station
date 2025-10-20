@@ -62,7 +62,7 @@ public class WorkflowEvent : EventBase
     [Id(8)] public DateTime StepStartTime { get; set; } = DateTime.UtcNow;
     [Id(9)] public DateTime? StepEndTime { get; set; }
     [Id(10)] public Dictionary<string, object> Metadata { get; set; } = new();
-    [Id(11)] public Guid WorkUnitAgentId { get; set; }
+    [Id(11)] public string WorkUnitAgentId { get; set; } = string.Empty;
     
     // Inherits from EventBase:
     // - Message: Text data pipeline between agents
