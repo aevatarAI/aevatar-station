@@ -4,7 +4,11 @@ using Aevatar.GAgents.Core;
 
 namespace Aevatar.GAgents.Workflow.Core;
 
-public interface IWorkflowCoordinatorGAgentPlus : IStateGAgentPlus<WorkflowCoordinatorStatePlus>, IBusinessAgentBase
+/// <summary>
+/// ✅ REFACTORED: WorkflowCoordinatorGAgent is a system agent, not a business agent
+/// Removed IBusinessAgentBase inheritance as it's not a business processor
+/// </summary>
+public interface IWorkflowCoordinatorGAgentPlus : IStateGAgentPlus<WorkflowCoordinatorStatePlus>
 {
     /// <summary>
     /// ✅ TASK 16: Get start node agent IDs for service-direct workflow execution
