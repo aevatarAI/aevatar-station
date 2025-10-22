@@ -51,8 +51,9 @@ public class WorkflowEndAgent : BusinessAgentBase<WorkflowEndState, WorkflowEndA
 {
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        // Mark this agent as a workflow infrastructure agent to exclude from topology discovery
-        this._isWorkflowAgent = true;
+        // ✅ WorkflowEndAgent is a business agent and should be included in topology discovery
+        // DO NOT set _isWorkflowAgent = true here
+        this._isWorkflowAgent = false;
         
         await base.OnGAgentActivateAsync(cancellationToken);
     }

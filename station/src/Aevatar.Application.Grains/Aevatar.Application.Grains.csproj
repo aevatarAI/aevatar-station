@@ -24,6 +24,9 @@
         <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.PsiOmni.Plugins\Aevatar.GAgents.PsiOmni.Plugins.csproj" />
         <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.MCP\Aevatar.GAgents.MCP.csproj" />
         <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.InputGAgent\Aevatar.GAgents.InputGAgent.csproj" />
+        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
+        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Workflow\Aevatar.GAgents.Workflow.csproj" />
+        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Workflow.Core\Aevatar.GAgents.Workflow.Core.csproj" />
         <PackageReference Include="MethodDecorator.Fody" />
         <PackageReference Include="Fody" />
     </ItemGroup>

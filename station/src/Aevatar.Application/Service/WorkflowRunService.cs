@@ -92,7 +92,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             return new WorkflowRunResultDto
             {
                 IsSuccess = false,
-                WorkflowId = publishedAgent.Item2.WorkflowCoordinatorGAgentId,
+                WorkflowId = request.ViewAgentId,
                 Message = $"Workflow execution failed: {ex.Message}",
                 PublishedAgent = publishedAgent.Item1
             };
@@ -105,7 +105,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         return new WorkflowRunResultDto
         {
             IsSuccess = true,
-            WorkflowId = publishedAgent.Item2.WorkflowCoordinatorGAgentId,
+            WorkflowId = request.ViewAgentId,
             Message = $"Workflow executed successfully. Execution event ID: {executionEventId}",
             PublishedAgent = publishedAgent.Item1
         };
@@ -187,7 +187,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Invalid workflow configuration format");
         }
 
-        if (viewConfigDto == null)
+        if (viewConfigDto == null || viewConfigDto.WorkflowNodeList == null || viewConfigDto.WorkflowNodeList.Count == 0)
         {
             throw new UserFriendlyException("Workflow contains no nodes");
         }
@@ -550,7 +550,13 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             var config = (ConfigurationBase)actualDto!;
             var schema = _schemaProvider.GetTypeSchema(config.GetType());
             var validateResponse = schema.Validate(configJson, new JsonSchemaValidatorSettings { PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase });
-            if (validateResponse.Count > 0) throw new UserFriendlyException($"Schema validation failed for {configType.DtoType}");
+            if (validateResponse.Count > 0)
+            {
+                var errors = string.Join("; ", validateResponse.Select(e => $"{e.Path}: {e.Kind}"));
+                _logger.LogWarning("[AgentValidation] Schema validation failed for {ConfigType}. Errors: {Errors}. JSON: {ConfigJson}", 
+                    configType.DtoType, errors, configJson);
+                throw new UserFriendlyException($"Schema validation failed for {configType.DtoType}: {errors}");
+            }
 
             if (config is IValidatableObject validatableConfig)
             {

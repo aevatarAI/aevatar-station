@@ -73,34 +73,24 @@ public class ChatAIGAgentPlus :
     /// ✅ UPDATED: Override OnBusinessAgentEventForwardingEventHandlerAsync instead of OnEventForwardingEventHandlerAsync
     /// This ensures BusinessAgentBase validation runs first
     /// Simplified: just check if there's a message to process with AI
+    /// Exception handling is delegated to BusinessAgentBase
     /// </summary>
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
         _logger.LogInformation("ChatAIGAgent {AgentId} received WorkflowEvent", this.GetPrimaryKey());
 
-        try
+        // Assign the WorkUnitAgentId to represent this processing node
+        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
+        
+        // Check if there's a message to process with AI
+        if (!string.IsNullOrEmpty(workflowEvent.Message))
         {
-            // Assign the WorkUnitAgentId to represent this processing node
-            workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
-            
-            // Check if there's a message to process with AI
-            if (!string.IsNullOrEmpty(workflowEvent.Message))
-            {
-                await ProcessChatTaskAsync(workflowEvent);
-            }
-            else
-            {
-                _logger.LogDebug("ChatAIGAgent {AgentId} received event with no message to process",
-                    this.GetPrimaryKey());
-            }
+            await ProcessChatTaskAsync(workflowEvent);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "ChatAIGAgent {AgentId} failed to process WorkflowEvent", this.GetPrimaryKey());
-
-            // Update workflow event with error
-            workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowFailed;
-            workflowEvent.ErrorMessage = ex.Message;
+            _logger.LogDebug("ChatAIGAgent {AgentId} received event with no message to process",
+                this.GetPrimaryKey());
         }
     }
 
@@ -131,6 +121,12 @@ public class ChatAIGAgentPlus :
                 ? aiResponse.Response
                 : "I'm having trouble processing your request.";
 
+            // ✅ Check if AI returned an error response
+            if (responseContent.StartsWith("Error:", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(responseContent);
+            }
+
             // ✅ FIXED: Use event sourcing to update state
             RaiseEvent(new ChatResponseEvent
             {
@@ -139,8 +135,9 @@ public class ChatAIGAgentPlus :
             });
             await ConfirmEvents();
 
-            // Update workflow event with AI response
-            workflowEvent.Message = responseContent;
+            // ✅ CRITICAL FIX: Set TaskResult (Agent's output), not Message
+            // Message is the input from upstream, TaskResult is this agent's output
+            workflowEvent.TaskResult = responseContent;
             workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowInProgress;
 
@@ -151,9 +148,14 @@ public class ChatAIGAgentPlus :
         {
             _logger.LogError(ex, "ChatAIGAgent {AgentId} failed to process chat task", this.GetPrimaryKey());
 
+            // ✅ Set error information before re-throwing
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowFailed;
-            workflowEvent.ErrorMessage = ex.Message;
-            workflowEvent.Message = "I encountered an error processing your request.";
+            workflowEvent.ErrorMessage = ex.Message; // Technical error for FailureSummary
+            // DON'T set TaskResult - no output on failure
+            // DON'T update Message - keep original input intact
+            
+            // Re-throw to let BusinessAgentBase handle the failure
+            throw;
         }
     }
 

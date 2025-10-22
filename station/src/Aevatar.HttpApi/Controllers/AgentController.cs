@@ -52,7 +52,7 @@ public class AgentController : AevatarController
 
     [HttpPost]
     // [Authorize(Policy = AevatarPermissions.Agent.Create)]
-    [Authorize]
+  //  [Authorize]
     public async Task<AgentDto> CreateAgent([FromBody] CreateAgentInputDto createAgentInputDto)
     {
         _logger.LogInformation("Create Agent: {agent}", JsonConvert.SerializeObject(createAgentInputDto));

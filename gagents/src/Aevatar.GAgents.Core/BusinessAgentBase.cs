@@ -66,7 +66,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
             }
 
             // Record input message from upstream agent
-            if (!string.IsNullOrEmpty(workflowEvent.Message) && workflowEvent.AgentId != Guid.Empty)
+            if (!string.IsNullOrEmpty(workflowEvent.Message) && !string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
             {
                 await RecordInputMessageAsync(workflowEvent);
             }
@@ -97,10 +97,27 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
 
             // Update event with error information
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowFailed;
-            workflowEvent.ErrorMessage = ex.Message;
+            // ✅ Only set ErrorMessage if not already set by derived class
+            if (string.IsNullOrEmpty(workflowEvent.ErrorMessage))
+            {
+                workflowEvent.ErrorMessage = ex.Message;
+            }
+            
+            // ✅ Update TaskResult to empty on failure (no output produced)
+            workflowEvent.TaskResult = string.Empty;
+            
+            // ✅ Transfer Message for downstream (keep original input)
+            // workflowEvent.Message remains unchanged - it contains the input that caused the failure
 
             // Clear received messages even on error to avoid stale data
             ClearReceivedMessages();
+            
+            // ✅ CRITICAL: Manually forward failure event using PublishEventByDirectionAsync
+            // We cannot rely on EventForwardingHandlerCore because returning false blocks forwarding
+            // This ensures WorkflowExecutionRecordGAgent receives failure notifications
+            Logger.LogInformation("Forwarding failure event from {AgentId} to downstream agents", this.GetGrainId());
+            await PublishEventByDirectionAsync(workflowEvent);
+            
             return false;
         }
 
@@ -140,11 +157,26 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     {
         // Update workflow status
         UpdateWorkflowStatusPost(workflowEvent);
+        
+        // ✅ FIX: Only transfer TaskResult to Message if NO error occurred
+        // This prevents error messages from propagating as normal data
+        if (string.IsNullOrEmpty(workflowEvent.ErrorMessage))
+        {
+            // SUCCESS: Transfer TaskResult to Message for downstream agents
+            workflowEvent.Message = workflowEvent.TaskResult ?? workflowEvent.Message;
+            
+            Logger.LogInformation("✅ Business agent {AgentId} completed successfully, forwarding Message: {Message}",
+                this.GetGrainId(), 
+                workflowEvent.Message?.Length > 50 ? workflowEvent.Message.Substring(0, 50) + "..." : workflowEvent.Message);
+        }
+        else
+        {
+            // FAILURE: Keep Message as is (original InputData), don't propagate error as normal data
+            Logger.LogWarning("❌ Business agent {AgentId} failed with error: {ErrorMessage}, NOT forwarding TaskResult",
+                this.GetGrainId(), workflowEvent.ErrorMessage);
+        }
 
-        Logger.LogInformation("Business agent {AgentId} completed WorkflowEvent processing: {WorkflowEventType}",
-            this.GetGrainId(), workflowEvent.WorkflowEventType);
-
-        // Clear received messages after successful processing
+        // Clear received messages after processing
         ClearReceivedMessages();
 
         await Task.CompletedTask;
@@ -188,8 +220,15 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// </summary>
     protected virtual void UpdateWorkflowStatusPre(WorkflowEvent workflowEvent)
     {
+        // ✅ Save original input before processing for accurate InputData tracking
+        // Each agent saves its own input (Message) before processing
+        workflowEvent.Metadata["inputData"] = workflowEvent.Message ?? string.Empty;
+        
         // Update workflow tracking information for processing start
         workflowEvent.StepStartTime = DateTime.UtcNow;
+        
+        // ✅ DESIGN: InputData = Message (what the agent RECEIVED from upstream)
+        // No need for Metadata["InputData"] - Message already contains the input
     }
 
     /// <summary>
@@ -198,14 +237,34 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// </summary>
     protected virtual void UpdateWorkflowStatusPost(WorkflowEvent workflowEvent)
     {
-        // Update workflow tracking information for processing completion
-        workflowEvent.AgentId = this.GetGrainId().GetGuidKey();
-        workflowEvent.AgentName = this.GetType().FullName;
-        workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
-        workflowEvent.StepEndTime = DateTime.UtcNow;
+        // ✅ FIX: Only set Completed status if no error occurred
+        if (string.IsNullOrEmpty(workflowEvent.ErrorMessage))
+        {
+            // SUCCESS: Update workflow tracking information for processing completion
+            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
+            workflowEvent.StepEndTime = DateTime.UtcNow;
+            
+            // Only set TaskResult if it's empty (agent should have set it)
+            if (string.IsNullOrEmpty(workflowEvent.TaskResult))
+            {
+                workflowEvent.TaskResult = workflowEvent.Message ?? string.Empty;
+            }
 
-        Logger.LogDebug("Updated WorkflowEvent and agent state status for agent {AgentId}: {WorkflowEventType}, WorkflowStatus: {WorkflowStatus}",
-            this.GetGrainId(), workflowEvent.WorkflowEventType, State.WorkflowAgentStatus);
+            Logger.LogDebug("✅ Agent {AgentId} completed successfully: {WorkflowEventType}, Status: {WorkflowStatus}, TaskResult: {TaskResult}",
+                this.GetGrainId(), workflowEvent.WorkflowEventType, workflowEvent.WorkflowAgentStatus, 
+                workflowEvent.TaskResult?.Length > 50 ? workflowEvent.TaskResult.Substring(0, 50) + "..." : workflowEvent.TaskResult);
+        }
+        else
+        {
+            // ✅ FAILURE: Set Failed status when error occurred
+            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Failed;
+            workflowEvent.StepEndTime = DateTime.UtcNow;
+            // Keep TaskResult as is (may contain error-friendly message or be empty)
+            
+            Logger.LogWarning("❌ Agent {AgentId} failed: {WorkflowEventType}, Status: {WorkflowStatus}, ErrorMessage: {ErrorMessage}",
+                this.GetGrainId(), workflowEvent.WorkflowEventType, workflowEvent.WorkflowAgentStatus, 
+                workflowEvent.ErrorMessage);
+        }
     }
 
     /// <summary>
@@ -232,8 +291,8 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
                 return false;
             }
 
-            Logger.LogDebug("[BusinessAgentBase] All dependencies ready for WorkflowId: {WorkflowId}, AgentId: {AgentId}",
-                workflowEvent.WorkflowId, workflowEvent.AgentId);
+            Logger.LogDebug("[BusinessAgentBase] All dependencies ready for WorkflowId: {WorkflowId}, WorkUnitAgentId: {WorkUnitAgentId}",
+                workflowEvent.WorkflowId, workflowEvent.WorkUnitAgentId);
             
             return true;
         }
@@ -257,8 +316,8 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
                 // ✅ CORRECT: Use private field - no state persistence needed
                 _receivedMessages.Add(workflowEvent.Message);
 
-                Logger.LogDebug("[BusinessAgentBase] Recorded input message from agent {FromAgentId} for WorkflowId: {WorkflowId}. Total messages: {Count}",
-                    workflowEvent.AgentId, workflowEvent.WorkflowId, _receivedMessages.Count);
+                Logger.LogDebug("[BusinessAgentBase] Recorded input message from agent {FromWorkUnitAgentId} for WorkflowId: {WorkflowId}. Total messages: {Count}",
+                    workflowEvent.WorkUnitAgentId, workflowEvent.WorkflowId, _receivedMessages.Count);
             }
         }
         catch (Exception ex)

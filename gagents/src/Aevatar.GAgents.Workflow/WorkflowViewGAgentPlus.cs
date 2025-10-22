@@ -1,15 +1,20 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Placement;
 using Aevatar.GAgents.Core;
 using Aevatar.GAgents.Workflow.Core;
 using Aevatar.GAgents.Workflow.Core.Configs;
 using Aevatar.GAgents.Workflow.Core.Events;
 using Aevatar.GAgents.Workflow.Core.States;
 using Microsoft.Extensions.Logging;
+using Orleans.Providers;
 
 namespace Aevatar.GAgents.Workflow;
 
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent]
+[SiloNamePatternPlacement("Projector")]
 public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, WorkflowViewLogEvent, EventBase,
     WorkflowViewConfigDto>, IWorkflowViewGAgentPlus
 {
@@ -58,12 +63,32 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
         Logger.LogInformation("[WorkflowViewGAgent] Starting workflow execution '{ExecutionName}', RoundId: {RoundId}", 
             executionName, State.RoundId);
         
+        // Ensure WorkflowStartAgent is registered as a child (parent-child relationship)
+        // This is critical for stream-based event forwarding
+        var startAgent = GrainFactory.GetGrain<IWorkflowStartAgent>(State.WorkflowStartAgentId);
+        var startAgentGrainId = GrainId.Create(typeof(IWorkflowStartAgent).FullName!, State.WorkflowStartAgentId.ToString("N"));
+        
+        // Check if WorkflowStartAgent is already a child, if not, register it
+        if (!State.Children.Contains(startAgentGrainId))
+        {
+            Logger.LogWarning("[WorkflowViewGAgent] WorkflowStartAgent not registered as child, registering now (this should have been done during publish)");
+            await RegisterAsync(startAgent);
+            Logger.LogDebug("[WorkflowViewGAgent] Successfully registered WorkflowStartAgent as child");
+        }
+        
+        // Extract agent type name from GrainId string (format: "Type/Key")
+        var startAgentGrainIdStr = startAgentGrainId.ToString();
+        var agentTypeName = startAgentGrainIdStr.Contains('/') 
+            ? startAgentGrainIdStr.Split('/')[0] 
+            : typeof(IWorkflowStartAgent).FullName!;
+        
         // Create simplified WorkflowEvent
         var workflowEvent = new WorkflowEvent
         {
             Direction = EventDirection.Down,
-            WorkflowId = Guid.NewGuid(), // Temporary workflow ID, WorkflowCoordinator will create actual ExecutionRecord
-            AgentId = State.WorkflowStartAgentId,
+            WorkflowId = this.GetPrimaryKey(), // Temporary workflow ID, WorkflowCoordinator will create actual ExecutionRecord
+            WorkUnitAgentId = startAgentGrainId.ToString(), // Full GrainId string for WorkflowCoordinator topology discovery
+            WorkflowEventType = WorkflowEventType.WorkflowStarted,
             WorkflowAgentStatus = WorkflowAgentStatus.Pending,
             Message = $"Workflow '{executionName}' execution started",
             Metadata = new Dictionary<string, object>
@@ -74,11 +99,12 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
             }
         };
         
-        // Get StartAgent GrainId
-        var startAgentGrainId = GrainId.Create(typeof(IWorkflowStartAgent).FullName!, State.WorkflowStartAgentId.ToString());
+        // Publish event to child agents (WorkflowStartAgent will receive it because it subscribed to this agent's stream)
+        Logger.LogDebug("[WorkflowViewGAgent] Publishing WorkflowEvent to children (WorkflowStartAgent)");
+        await PublishEventByDirectionAsync(workflowEvent);
+        Logger.LogDebug("[WorkflowViewGAgent] Successfully published WorkflowEvent");
         
-        // Send event to StartAgent
-        return await SendEventToAgentAsync(workflowEvent, startAgentGrainId);
+        return Guid.NewGuid(); // Return event ID for tracking
     }
 
     private async Task TrySaveWorkflowViewAsync(WorkflowViewConfigDto configuration)

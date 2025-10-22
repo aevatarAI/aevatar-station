@@ -18,9 +18,6 @@
         <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
         <ProjectReference Include="..\Aevatar.Kubernetes\Aevatar.Kubernetes.csproj" />
         <ProjectReference Include="..\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj" />
-        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
-        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Workflow\Aevatar.GAgents.Workflow.csproj" />
-        <ProjectReference Include="..\..\..\gagents\src\Aevatar.GAgents.Workflow.Core\Aevatar.GAgents.Workflow.Core.csproj" />
     </ItemGroup>
 
     <ItemGroup>

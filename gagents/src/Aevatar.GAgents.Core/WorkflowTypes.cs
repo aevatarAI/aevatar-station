@@ -40,7 +40,8 @@ public enum WorkflowStatus
 public enum WorkflowAgentStatus
 {
     Pending,
-    Completed
+    Completed,
+    Failed
 }
 
 /// <summary>
@@ -52,9 +53,8 @@ public class WorkflowEvent : EventBase
 {
     // Workflow coordination properties
     [Id(0)] public Guid WorkflowId { get; set; }
-    [Id(1)] public Guid AgentId { get; set; }
+    // Removed [Id(1)] AgentId and [Id(3)] AgentTypeName - replaced by WorkUnitAgentId
     [Id(2)] public WorkflowEventType WorkflowEventType { get; set; }
-    [Id(3)] public string AgentName { get; set; } = string.Empty;
     [Id(4)] public string TaskResult { get; set; } = string.Empty;
     [Id(5)] public WorkflowAgentStatus WorkflowAgentStatus { get; set; }
     [Id(6)] public string ErrorMessage { get; set; } = string.Empty;

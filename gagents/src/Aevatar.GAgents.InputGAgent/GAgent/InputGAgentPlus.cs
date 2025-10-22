@@ -44,7 +44,9 @@ public class InputGAgentPlus : BusinessAgentBase<InputGAgentStatePlus, InputGAge
             // Assign the WorkUnitAgentId to represent this processing node
             workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
             
-            workflowEvent.Message = State.Input ?? "No input configured";
+            // ✅ CRITICAL FIX: Set TaskResult (Agent's output), not Message
+            // Message is the input from upstream, TaskResult is this agent's output
+            workflowEvent.TaskResult = State.Input ?? "No input configured";
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowInProgress;
             workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
         }

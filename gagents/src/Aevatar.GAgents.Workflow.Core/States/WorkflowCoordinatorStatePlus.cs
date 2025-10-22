@@ -33,8 +33,8 @@ public class WorkflowCoordinatorStatePlus : BusinessAgentState
     /// </summary>
     [Id(12)] public string? CurrentExecutionName { get; set; }
 
-    // Updated method using AgentId instead of GrainId (signature changed from design document)
-    public WorkUnitInfo? GetWorkUnit(Guid agentId)
+    // Updated method using AgentId as GrainId string instead of Guid (signature changed from design document)
+    public WorkUnitInfo? GetWorkUnit(string agentId)
     {
         return CurrentWorkUnitInfos.FirstOrDefault(w => w.AgentId == agentId);
     }
@@ -45,7 +45,7 @@ public class WorkflowCoordinatorStatePlus : BusinessAgentState
             e => e.UnitStatusEnum is WorkerUnitStatusEnum.Pending or WorkerUnitStatusEnum.InProgress) == false;
     }
 
-    public bool CheckWorkUnitCanProgress(Guid agentId)
+    public bool CheckWorkUnitCanProgress(string agentId)
     {
         var workUnitInfo = CurrentWorkUnitInfos.FindAll(f => f.AgentId == agentId);
         if (workUnitInfo.Count == 0)
@@ -62,29 +62,29 @@ public class WorkflowCoordinatorStatePlus : BusinessAgentState
         return preWorkUnits.Exists(e => e.UnitStatusEnum != WorkerUnitStatusEnum.Finished) == false;
     }
 
-    public List<Guid> GetUpStreamGrainIds(Guid currentAgentId)
+    public List<string> GetUpStreamGrainIds(string currentAgentId)
     {
         return CurrentWorkUnitInfos.Where(w => w.NextAgentId == currentAgentId).Select(s => s.AgentId).ToList();
     }
 
-    public List<Guid> GetTopUpStreamGrainIds()
+    public List<string> GetTopUpStreamGrainIds()
     {
-        var downStreamAgentIds = CurrentWorkUnitInfos.Where(w => w.NextAgentId != Guid.Empty).Select(s => s.NextAgentId);
+        var downStreamAgentIds = CurrentWorkUnitInfos.Where(w => !string.IsNullOrEmpty(w.NextAgentId)).Select(s => s.NextAgentId);
         return CurrentWorkUnitInfos.Where(w => downStreamAgentIds.Contains(w.AgentId) == false).Select(s => s.AgentId).ToList();
     }
 
     // Updated existing method to work with new consolidated fields (signature changed from design document)
-    public List<Guid> GetDownStreamGrainIds(Guid currentAgentId)
+    public List<string> GetDownStreamGrainIds(string currentAgentId)
     {
         var downStream = CurrentWorkUnitInfos.FindAll(f => f.AgentId == currentAgentId);
-        return (from item in downStream where item.NextAgentId != Guid.Empty select item.NextAgentId)
+        return (from item in downStream where !string.IsNullOrEmpty(item.NextAgentId) select item.NextAgentId)
                .Distinct()
                .ToList();
     }
 
     // REMOVED: GetWorkUnitFromTerm method - no longer needed without Term system
 
-    public List<Guid> GetAllWorkerUnitGrainIds()
+    public List<string> GetAllWorkerUnitGrainIds()
     {
         return CurrentWorkUnitInfos.Select(s => s.AgentId).Distinct().ToList();
     }
