@@ -12,7 +12,9 @@ namespace Aevatar.CQRS;
 public interface IIndexingService
 {
     public Task CheckExistOrCreateStateIndex<T>(T stateBase) where T : StateBase;
+    public Task CheckExistOrCreateStateIndexPlus<T>(T stateBase) where T : CoreStateBase;
     public Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands);
+    public Task SaveOrUpdateStateIndexBatchAsyncPlus(IEnumerable<SaveStateCommandPlus> commands);
 
     public Task<string> GetStateIndexDocumentsAsync(string stateName,
         Action<QueryDescriptor<dynamic>> query, int skip = 0, int limit = 1000);

@@ -34,3 +34,32 @@ public class SaveStateBatchCommandHandler : IRequestHandler<SaveStateBatchComman
         await _indexingService.SaveOrUpdateStateIndexBatchAsync(commands);
     }
 }
+
+public class SaveStateBatchCommandPlusHandler : IRequestHandler<SaveStateBatchCommandPlus>
+{
+    private readonly IIndexingService _indexingService;
+
+    public SaveStateBatchCommandPlusHandler(
+        IIndexingService indexingService
+    )
+    {
+        _indexingService = indexingService;
+    }
+
+    public async Task Handle(SaveStateBatchCommandPlus request, CancellationToken cancellationToken)
+    {
+        foreach (var stateCommand in request.Commands)
+        {
+            // Check or create the necessary index for each Plus state
+            await _indexingService.CheckExistOrCreateStateIndexPlus(stateCommand.State);
+        }
+
+        // Save all indices in a single operation for batch processing
+        await SaveIndicesAsync(request.Commands);
+    }
+
+    private async Task SaveIndicesAsync(IEnumerable<SaveStateCommandPlus> commands)
+    {
+        await _indexingService.SaveOrUpdateStateIndexBatchAsyncPlus(commands);
+    }
+}

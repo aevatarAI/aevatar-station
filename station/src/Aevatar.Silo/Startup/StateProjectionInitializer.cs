@@ -30,12 +30,12 @@ namespace Aevatar.Silo.Startup
             
             try
             {
-                // Get all types that inherit from StateBase
-                var stateBaseTypes = _typeDiscoverer.GetAllInheritedTypesOf(typeof(StateBase));
-                _logger.LogInformation("Found {Count} StateBase inherited types", stateBaseTypes.Count);
+                // Get all types that inherit from StateBasePlus
+                var stateTypes = _typeDiscoverer.GetAllInheritedTypesOf(typeof(StateBasePlus));
+                _logger.LogInformation("Found {Count} StateBasePlus inherited types", stateTypes.Count);
                 
-                // For each StateBase type, get the corresponding StateProjectionGrain and activate it
-                foreach (var stateType in stateBaseTypes)
+                // For each StateBasePlus type, get the corresponding StateProjectionGrain and activate it
+                foreach (var stateType in stateTypes)
                 {
                     try
                     {
