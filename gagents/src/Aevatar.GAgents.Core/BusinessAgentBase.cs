@@ -44,6 +44,46 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
+    /// Initialize GrainIdString property for Interceptor logging during agent activation
+    /// </summary>
+    protected override Task OnGAgentActivateAsync(CancellationToken cancellationToken)
+    {
+        // Initialize GrainIdString for Interceptor attribute logging
+        GrainIdString = this.GetGrainId().ToString();
+        
+        Logger.LogDebug("[BusinessAgentBase] Initialized GrainIdString property: {GrainIdString}", GrainIdString);
+        
+        return base.OnGAgentActivateAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Workflow context property constants for interceptor logging
+    /// </summary>
+    protected const string WorkflowLogCategory = "WORKFLOW";
+    protected const string WorkflowIdProperty = "WorkflowId";
+    protected const string RoundIdProperty = "RoundId";
+    protected const string GrainIdProperty = "GrainId";
+
+    /// <summary>
+    /// Workflow ID for this agent instance, used by InterceptorAttribute for workflow logging
+    /// Initialized from WorkflowEvent.WorkflowId during event processing
+    /// </summary>
+    public virtual string? WorkflowId { get; protected set; }
+
+    /// <summary>
+    /// Round identifier for current workflow execution cycle. Used by InterceptorAttribute as contextual field.
+    /// Currently not used in Plus workflow system, but maintained for compatibility with old workflow logging
+    /// </summary>
+    public virtual long? RoundId { get; protected set; }
+
+    /// <summary>
+    /// Grain ID string for this agent instance, used by InterceptorAttribute for workflow logging
+    /// Initialized from Orleans GrainId during agent activation
+    /// Property name uses "GrainIdString" to avoid conflict with Orleans.Runtime.GrainId type
+    /// </summary>
+    public virtual string? GrainIdString { get; protected set; }
+
+    /// <summary>
     /// ✅ NEW: Private field to track received messages from upstream agents
     /// Cleared after processing to avoid state persistence
     /// </summary>
@@ -143,6 +183,21 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// </summary>
     protected virtual async Task PreBusinessAgentProcessingAsync(WorkflowEvent workflowEvent)
     {
+        // Initialize WorkflowId property for Interceptor logging
+        if (workflowEvent.WorkflowId != Guid.Empty)
+        {
+            WorkflowId = workflowEvent.WorkflowId.ToString("N");
+        }
+
+        // Initialize RoundId property for Interceptor logging from Metadata
+        if (workflowEvent.Metadata.TryGetValue("RoundId", out var roundIdObj))
+        {
+            if (long.TryParse(roundIdObj?.ToString(), out var parsedRoundId))
+            {
+                RoundId = parsedRoundId;
+            }
+        }
+
         // Update workflow status
         UpdateWorkflowStatusPre(workflowEvent);
 

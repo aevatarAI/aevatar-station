@@ -18,6 +18,7 @@ using WorkflowChatMessage = GroupChat.GAgent.Feature.Common.ChatMessage;
 using Aevatar.Core.Placement;
 using GroupChat.GAgent.Feature.Blackboard;
 using Aevatar.GAgents.AIGAgent.Agent;
+using Aevatar.Core.Interception;
 
 namespace Aevatar.GAgents.Twitter.GAgents.ChatAIAgent;
 
@@ -75,6 +76,7 @@ public class ChatAIGAgentPlus :
     /// Simplified: just check if there's a message to process with AI
     /// Exception handling is delegated to BusinessAgentBase
     /// </summary>
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
         _logger.LogInformation("ChatAIGAgent {AgentId} received WorkflowEvent", this.GetPrimaryKey());
