@@ -62,7 +62,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     protected const string WorkflowLogCategory = "WORKFLOW";
     protected const string WorkflowIdProperty = "WorkflowId";
     protected const string RoundIdProperty = "RoundId";
-    protected const string GrainIdProperty = "GrainId";
+    protected const string GrainIdProperty = "GrainIdString";
 
     /// <summary>
     /// Workflow ID for this agent instance, used by InterceptorAttribute for workflow logging
