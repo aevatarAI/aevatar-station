@@ -62,6 +62,35 @@ public class WorkflowEndAgent : BusinessAgentBase<WorkflowEndState, WorkflowEndA
         => Task.FromResult("Workflow End Agent that marks workflow completion - WorkflowCoordinator maintains all workflow information");
 
     /// <summary>
+    /// ✅ CRITICAL: Override validation to accept failure events
+    /// WorkflowEndAgent is the fixed end node that must receive both success and failure events
+    /// Unlike other business agents, it accepts failure events to mark workflow completion
+    /// </summary>
+    protected override async Task<bool> ValidateWorkflowEventAsync(WorkflowEvent workflowEvent)
+    {
+        // Basic null check
+        if (workflowEvent == null)
+        {
+            Logger.LogWarning("WorkflowEndAgent received null WorkflowEvent");
+            return false;
+        }
+
+        // WorkflowId validation
+        if (workflowEvent.WorkflowId == Guid.Empty)
+        {
+            Logger.LogWarning("WorkflowEndAgent received WorkflowEvent with empty WorkflowId");
+            return false;
+        }
+
+        // ✅ CRITICAL: Accept both success and failure events
+        // Do NOT reject events with ErrorMessage (unlike other business agents)
+        // This allows EndAgent to mark workflow completion regardless of outcome
+        
+        await Task.CompletedTask;
+        return true;
+    }
+
+    /// <summary>
     /// ✅ TASK 14: Override BusinessAgentBase event handler for workflow completion
     /// Handles WorkflowEvent and sets WorkflowEventType.WorkflowCompleted
     /// </summary>

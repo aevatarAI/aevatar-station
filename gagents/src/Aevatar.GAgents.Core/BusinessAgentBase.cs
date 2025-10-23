@@ -99,19 +99,45 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
 
         try
         {
-            // Validation
+            // ✅ Validation first (before fast-path check)
+            // This allows derived classes (e.g., WorkflowEndAgent) to override validation and accept failure events
             if (!await ValidateWorkflowEventAsync(workflowEvent))
             {
                 return false; // Skip processing if validation fails
             }
+            
+            // ✅ FAST PATH for failure events: Skip dependency checking and input recording
+            // Failure events need to propagate quickly to WorkflowEndAgent and Coordinator
+            // Special agents (like WorkflowEndAgent) that accept failure events will process them immediately
+            bool isFailureEvent = !string.IsNullOrEmpty(workflowEvent?.ErrorMessage);
+            
+            if (isFailureEvent)
+            {
+                Logger.LogDebug("Business agent {AgentId} accepted failure event, skipping dependency check",
+                    this.GetGrainId());
+                
+                // Skip dependency checking for failure events - process immediately
+                // Pre-processing
+                await PreBusinessAgentProcessingAsync(workflowEvent);
 
-            // Record input message from upstream agent
+                // Call inheriting class handler
+                await OnBusinessAgentEventForwardingEventHandlerAsync(workflowEvent);
+
+                // Post-processing
+                await PostBusinessAgentProcessingAsync(workflowEvent);
+
+                return true;
+            }
+            
+            // ✅ Normal success event processing (with dependency checking)
+
+            // Record input message from upstream agent (for dependency checking)
             if (!string.IsNullOrEmpty(workflowEvent.Message) && !string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
             {
                 await RecordInputMessageAsync(workflowEvent);
             }
 
-            // Check dependencies after pre-processing
+            // Check dependencies after recording input
             if (!AreAllDependenciesReadyAsync(workflowEvent))
             {
                 Logger.LogWarning("Business agent {AgentId} dependencies not ready for WorkflowEvent: {WorkflowEventType}",
@@ -152,18 +178,13 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
             // Clear received messages even on error to avoid stale data
             ClearReceivedMessages();
             
-            // ✅ CRITICAL: Manually forward failure event using PublishEventByDirectionAsync
-            // We cannot rely on EventForwardingHandlerCore because returning false blocks forwarding
-            // This ensures WorkflowExecutionRecordGAgent receives failure notifications
-            Logger.LogInformation("Forwarding failure event from {AgentId} to downstream agents", this.GetGrainId());
-            await PublishEventByDirectionAsync(workflowEvent);
-            
-            return false;
+            // ✅ Return true to let base class handle event forwarding
+            // Even though processing failed, the failure event should be forwarded to downstream agents
+            // Business agents (like WorkflowEndAgent) will automatically reject failed events via ValidateWorkflowEventAsync
+            // System agents (like WorkflowCoordinator) will process the failure event for recording and coordination
+            Logger.LogInformation("Business agent {AgentId} failed, returning true to let base class forward failure event", this.GetGrainId());
+            return true;
         }
-
-        // GAgentBase automatically forwards to children - no explicit PublishEventByDirectionAsync needed
-        // Event forwarding is handled by the base class based on agent hierarchy
-        return await base.OnEventForwardingEventHandlerAsync(workflowEvent);    
     }
 
     /// <summary>
