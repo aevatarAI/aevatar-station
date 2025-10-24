@@ -241,7 +241,7 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
             executionName, executionRecordId);
 
         // Compose essential metadata for WorkflowExecutionRecordGAgent
-        workflowEvent.Metadata["RoundId"] = State.RoundId + 1;
+        workflowEvent.Metadata["RoundId"] = State.RoundId;
         workflowEvent.Metadata["Content"] = initContent;
         workflowEvent.Metadata["WorkUnitInfos"] = State.CurrentWorkUnitInfos.ToList();
         Logger.LogDebug("[WorkflowCoordinatorGAgent] HandleWorkflowStartAsync end");

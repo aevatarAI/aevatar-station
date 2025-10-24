@@ -2,6 +2,7 @@ using Orleans.Concurrency;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace Aevatar.GAgents.Core;
 
@@ -207,7 +208,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
         // Initialize WorkflowId property for Interceptor logging
         if (workflowEvent.WorkflowId != Guid.Empty)
         {
-            WorkflowId = workflowEvent.WorkflowId.ToString("N");
+            WorkflowId = workflowEvent.WorkflowId.ToString();
         }
 
         // Initialize RoundId property for Interceptor logging from Metadata
@@ -296,15 +297,15 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// </summary>
     protected virtual void UpdateWorkflowStatusPre(WorkflowEvent workflowEvent)
     {
-        // ✅ Save original input before processing for accurate InputData tracking
-        // Each agent saves its own input (Message) before processing
-        workflowEvent.Metadata["inputData"] = workflowEvent.Message ?? string.Empty;
+        // ✅ Save all received messages as JSON array for accurate InputData tracking
+        // Serializes _receivedMessages list to JSON format for logging and debugging
+        workflowEvent.Metadata["inputData"] = JsonSerializer.Serialize(_receivedMessages);
         
         // Update workflow tracking information for processing start
         workflowEvent.StepStartTime = DateTime.UtcNow;
         
-        // ✅ DESIGN: InputData = Message (what the agent RECEIVED from upstream)
-        // No need for Metadata["InputData"] - Message already contains the input
+        // ✅ DESIGN: InputData = serialized _receivedMessages (what the agent RECEIVED from all upstream agents)
+        // JSON format allows tracking multiple input messages for agents with multiple parents
     }
 
     /// <summary>
