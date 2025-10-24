@@ -101,7 +101,7 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
         var workflowEvent = new WorkflowEvent
         {
             Direction = EventDirection.Down,
-            WorkflowId = Guid.NewGuid(), // Temporary workflow ID, WorkflowCoordinator will create actual ExecutionRecord
+            WorkflowId = State.WorkflowCoordinatorGAgentId, // Use WorkflowCoordinatorGAgentId as WorkflowId
             WorkUnitAgentId = startAgentGrainId.ToString(), // Full GrainId string for WorkflowCoordinator topology discovery
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
             WorkflowAgentStatus = WorkflowAgentStatus.Pending,
