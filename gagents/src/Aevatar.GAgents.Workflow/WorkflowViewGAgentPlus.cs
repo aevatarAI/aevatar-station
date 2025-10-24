@@ -29,6 +29,21 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
 
     protected override async Task PerformConfigAsync(WorkflowViewConfigDto configuration)
     {
+        // Preserve existing system IDs from State if they exist (immutability protection)
+        // Only override configuration if State has valid (non-Empty) values
+        if (State.WorkflowStartAgentId != Guid.Empty)
+        {
+            configuration.WorkflowStartAgentId = State.WorkflowStartAgentId;
+        }
+        if (State.WorkflowEndAgentId != Guid.Empty)
+        {
+            configuration.WorkflowEndAgentId = State.WorkflowEndAgentId;
+        }
+        if (State.WorkflowCoordinatorGAgentId != Guid.Empty)
+        {
+            configuration.WorkflowCoordinatorGAgentId = State.WorkflowCoordinatorGAgentId;
+        }
+
         await TrySaveWorkflowViewAsync(configuration);
     }
 
@@ -109,6 +124,7 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
 
     private async Task TrySaveWorkflowViewAsync(WorkflowViewConfigDto configuration)
     {
+        
         if (configuration.WorkflowNodeList.IsNullOrEmpty() || configuration.Name.IsNullOrEmpty())
         {
             return;
@@ -171,8 +187,8 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
             RemoveNodeIdList = removeNodeIdList,
             WorkflowNodeUnitList = configuration.WorkflowNodeUnitList,
             Name = configuration.Name,
-            WorkflowStartAgentId = configuration.WorkflowStartAgentId,
-            WorkflowEndAgentId = configuration.WorkflowEndAgentId
+            WorkflowStartAgentId = configuration.WorkflowStartAgentId,  // Use configuration value (already protected by PerformConfigAsync)
+            WorkflowEndAgentId = configuration.WorkflowEndAgentId       // Use configuration value (already protected by PerformConfigAsync)
         });
         if (configuration.WorkflowCoordinatorGAgentId != Guid.Empty)
         {
@@ -262,12 +278,14 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
                 state.Name = updateWorkflowViewLogEvent.Name;
                 state.AgentId = this.GetPrimaryKey();
                 
-                // Only set WorkflowStartAgentId and WorkflowEndAgentId if they are empty
-                if (state.WorkflowStartAgentId == Guid.Empty)
+                // Set WorkflowStartAgentId and WorkflowEndAgentId only if provided (not empty)
+                // The event now contains either the new value or the preserved existing value
+                if (updateWorkflowViewLogEvent.WorkflowStartAgentId != Guid.Empty)
                 {
                     state.WorkflowStartAgentId = updateWorkflowViewLogEvent.WorkflowStartAgentId;
                 }
-                if (state.WorkflowEndAgentId == Guid.Empty)
+                
+                if (updateWorkflowViewLogEvent.WorkflowEndAgentId != Guid.Empty)
                 {
                     state.WorkflowEndAgentId = updateWorkflowViewLogEvent.WorkflowEndAgentId;
                 }

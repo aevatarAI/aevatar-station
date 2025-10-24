@@ -9,13 +9,16 @@ using Aevatar.GAgents.Workflow;
 using Aevatar.GAgents.Workflow.Core;
 using Aevatar.GAgents.Workflow.Core.Configs;
 using Aevatar.Options;
+using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Orleans;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using ICreatorGAgent = Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent;
 
 namespace Aevatar.Service;
 
@@ -24,14 +27,16 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
 {
     private readonly IAgentService _agentService;
     private readonly IGAgentFactory<IGAgentPlus> _gAgentFactory;
+    private readonly IClusterClient _clusterClient;
     private readonly ILogger<WorkflowViewServicePlus> _logger;
     private readonly DebugModeOptions _debugModeOptions;
 
-    public WorkflowViewServicePlus(IAgentService agentService, IGAgentFactory<IGAgentPlus> gAgentFactory,  ILogger<WorkflowViewServicePlus> logger,
+    public WorkflowViewServicePlus(IAgentService agentService, IGAgentFactory<IGAgentPlus> gAgentFactory, IClusterClient clusterClient, ILogger<WorkflowViewServicePlus> logger,
         IOptionsSnapshot<DebugModeOptions> debugModeOptions)
     {
         _agentService = agentService;
         _gAgentFactory = gAgentFactory;
+        _clusterClient = clusterClient;
         _logger = logger;
         _debugModeOptions = debugModeOptions == null ? new DebugModeOptions() : debugModeOptions.Value;
     }
@@ -189,26 +194,38 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
                 _logger.LogError(e, "workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {agentId} fail: {message}", viewAgentId, workflowCoordinatorGAgentId, e.Message);
                 throw new UserFriendlyException($"update workflowCoordinatorGAgent {viewConfigDto.WorkflowCoordinatorGAgentId} fail: {e.Message}");
             }
-            _logger.LogInformation("workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {AgentId} success.", 
-                viewAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
-        }
+        _logger.LogInformation("workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {AgentId} success.", 
+            viewAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
+    }
 
-        // Initialize workflow agent IDs (WorkflowStartAgentId, WorkflowEndAgentId) before updating
-        InitializeWorkflowAgentIds(viewConfigDto);
+    // Config workflow agent IDs: query state, supplement viewConfigDto, and persist
+    await WorkflowViewAgentConfigAsync(viewAgentId, viewConfigDto);
+    
+    // Setup workflow relationships (Start/End/Coordinator + business agents)
+    await SetupWorkflowRelationshipsAsync(viewAgentId, viewConfigDto);
+    
+    // Update agentDto.Properties with the updated viewConfigDto (which now has the correct IDs)
+    var jsonSerializerSettings = new JsonSerializerSettings
+    {
+        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+        ContractResolver = new CamelCasePropertyNamesContractResolver(),
+        NullValueHandling = NullValueHandling.Ignore
+    };
+    var serializedConfig = JsonConvert.SerializeObject(viewConfigDto, jsonSerializerSettings);
+    agentDto.Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(serializedConfig);
+    
+    _logger.LogInformation("[PublishWorkflow] Updated agentDto.Properties - StartId={StartId}, EndId={EndId}, CoordinatorId={CoordinatorId}",
+        viewConfigDto.WorkflowStartAgentId, viewConfigDto.WorkflowEndAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
         
-        // update workflowViewAgent with initialized IDs
-        configJson = JsonConvert.SerializeObject(viewConfigDto);
-        var viewConfigProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(configJson);
-        viewConfigProperties.Remove("PublisherGrainId");
-        viewConfigProperties.Remove("CorrelationId");
-        agentDto = await _agentService.UpdateAgentAsync(viewAgentId, new UpdateAgentInputDto()
-        {
-            Properties = viewConfigProperties,
-            Name = agentDto.Name
-        });
-        
-        // Setup workflow relationships (Start/End/Coordinator + business agents)
-        await SetupWorkflowRelationshipsAsync(viewAgentId, viewConfigDto);
+    // Persist updated properties to CreatorGAgent
+    var creatorGAgent = _clusterClient.GetGrain<ICreatorGAgent>(viewAgentId);
+    await creatorGAgent.UpdateAgentAsync(new UpdateAgentInput
+    {
+        Name = agentDto.Name,
+        Properties = serializedConfig
+    });
+    
+    _logger.LogInformation("[PublishWorkflow] Persisted updated configuration to CreatorGAgent");
         
         return agentDto;
     }
@@ -275,27 +292,56 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     }
     
     /// <summary>
-    /// Initialize workflow agent IDs if needed
+    /// Config workflow agent IDs: query state, supplement viewConfigDto, and persist to WorkflowViewGAgent.State
     /// </summary>
-    private void InitializeWorkflowAgentIds(WorkflowViewConfigDto viewConfigDto)
+    private async Task WorkflowViewAgentConfigAsync(Guid viewAgentId, WorkflowViewConfigDto viewConfigDto)
     {
-        if (viewConfigDto.WorkflowStartAgentId == Guid.Empty)
+        _logger.LogInformation("[WorkflowViewAgentConfig] Starting for viewAgentId={ViewId}, Input: StartId={StartId}, EndId={EndId}, CoordinatorId={CoordinatorId}",
+            viewAgentId, viewConfigDto.WorkflowStartAgentId, viewConfigDto.WorkflowEndAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
+        
+        var agentDto = await _agentService.GetAgentAsync(viewAgentId);
+        var workflowViewAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowViewGAgentPlus>(agentDto.GrainId);
+        var state = await workflowViewAgent.GetStateAsync();
+        
+        _logger.LogInformation("[WorkflowViewAgentConfig] Current State: StartId={StartId}, EndId={EndId}, CoordinatorId={CoordinatorId}",
+            state.WorkflowStartAgentId, state.WorkflowEndAgentId, state.WorkflowCoordinatorGAgentId);
+        
+        // Supplement viewConfigDto with State values (if State has valid IDs)
+        if (state.WorkflowStartAgentId != Guid.Empty)
+        {
+            viewConfigDto.WorkflowStartAgentId = state.WorkflowStartAgentId;
+            _logger.LogInformation("[WorkflowViewAgentConfig] Using existing StartAgentId from State: {Id}", state.WorkflowStartAgentId);
+        }
+        else if (viewConfigDto.WorkflowStartAgentId == Guid.Empty)
         {
             viewConfigDto.WorkflowStartAgentId = Guid.NewGuid();
-            _logger.LogInformation("Created new WorkflowStartAgent ID: {AgentId}", viewConfigDto.WorkflowStartAgentId);
+            _logger.LogInformation("[WorkflowViewAgentConfig] Generated new StartAgentId: {Id}", viewConfigDto.WorkflowStartAgentId);
         }
         
-        if (viewConfigDto.WorkflowEndAgentId == Guid.Empty)
+        if (state.WorkflowEndAgentId != Guid.Empty)
+        {
+            viewConfigDto.WorkflowEndAgentId = state.WorkflowEndAgentId;
+            _logger.LogInformation("[WorkflowViewAgentConfig] Using existing EndAgentId from State: {Id}", state.WorkflowEndAgentId);
+        }
+        else if (viewConfigDto.WorkflowEndAgentId == Guid.Empty)
         {
             viewConfigDto.WorkflowEndAgentId = Guid.NewGuid();
-            _logger.LogInformation("Generated new WorkflowEndAgent ID: {AgentId}", viewConfigDto.WorkflowEndAgentId);
+            _logger.LogInformation("[WorkflowViewAgentConfig] Generated new EndAgentId: {Id}", viewConfigDto.WorkflowEndAgentId);
         }
         
-        if (viewConfigDto.WorkflowCoordinatorGAgentId == Guid.Empty)
+        if (state.WorkflowCoordinatorGAgentId != Guid.Empty)
         {
-            _logger.LogError("WorkflowCoordinatorGAgentId is not initialized");
-            throw new UserFriendlyException("WorkflowCoordinatorGAgentId is not initialized");
+            viewConfigDto.WorkflowCoordinatorGAgentId = state.WorkflowCoordinatorGAgentId;
+            _logger.LogInformation("[WorkflowViewAgentConfig] Using existing CoordinatorId from State: {Id}", state.WorkflowCoordinatorGAgentId);
         }
+        
+        _logger.LogInformation("[WorkflowViewAgentConfig] Before ConfigAsync: StartId={StartId}, EndId={EndId}, CoordinatorId={CoordinatorId}",
+            viewConfigDto.WorkflowStartAgentId, viewConfigDto.WorkflowEndAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
+        
+        // Persist to WorkflowViewGAgent.State only
+        await workflowViewAgent.ConfigAsync(viewConfigDto);
+        
+        _logger.LogInformation("[WorkflowViewAgentConfig] Completed ConfigAsync");
     }
     
     /// <summary>
