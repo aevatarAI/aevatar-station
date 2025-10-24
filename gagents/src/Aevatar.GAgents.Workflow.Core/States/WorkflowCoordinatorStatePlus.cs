@@ -11,7 +11,6 @@ namespace Aevatar.GAgents.Workflow.Core.States;
 [GenerateSerializer]
 public class WorkflowCoordinatorStatePlus : BusinessAgentState
 {
-    [Id(0)] public Guid BlackboardId { get; set; }
     // REMOVED: [Id(1)] public long Term { get; set; } = 0;                 // Unnecessary complexity 
     [Id(2)] public List<WorkUnitInfo> CurrentWorkUnitInfos { get; set; } = new List<WorkUnitInfo>();    // Enhanced with UI data
     // REMOVED: [Id(3)] public Dictionary<long, string> TermToWorkUnitGrainId { get; set; }  // Unnecessary mapping

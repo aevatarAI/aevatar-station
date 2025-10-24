@@ -314,7 +314,7 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
         }
 
         RaiseEvent(new SetWorkflowCoordinatorLogEvent
-            { WorkflowUnit = configuration.WorkflowUnitList, BlackBoardId = State.BlackboardId, InitContent = configuration.InitContent, EnableExecutionRecord = configuration.EnableExecutionRecord});
+            { WorkflowUnit = configuration.WorkflowUnitList, WorkflowId = this.GetPrimaryKey(), InitContent = configuration.InitContent});
 
         await ConfirmEvents();
 
@@ -346,9 +346,8 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
                     state.BackupWorkUnitInfos = nodeList;
                 }
 
-                state.BlackboardId = setWorkflowCoordinatorLogEvent.BlackBoardId;
+                state.WorkflowId = setWorkflowCoordinatorLogEvent.WorkflowId;
                 state.Content = setWorkflowCoordinatorLogEvent.InitContent;
-                state.EnableRunRecord = setWorkflowCoordinatorLogEvent.EnableExecutionRecord;
                 break;
 
             case SetWorkflowCoordinatorDirectLogEvent setWorkflowCoordinatorDirectLogEvent:
@@ -363,9 +362,7 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
                     state.BackupWorkUnitInfos = setWorkflowCoordinatorDirectLogEvent.WorkUnitInfos;
                 }
 
-                state.BlackboardId = setWorkflowCoordinatorDirectLogEvent.BlackBoardId;
                 state.Content = setWorkflowCoordinatorDirectLogEvent.InitContent;
-                state.EnableRunRecord = setWorkflowCoordinatorDirectLogEvent.EnableExecutionRecord;
                 break;
 
             case FinishedWorkUnitLogEvent finishedWorkUnitLogEvent:
@@ -600,9 +597,7 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
         RaiseEvent(new SetWorkflowCoordinatorDirectLogEvent
         {
             WorkUnitInfos = discoveredWorkUnits,
-            BlackBoardId = State.BlackboardId,
             InitContent = State.Content,
-            EnableExecutionRecord = State.EnableRunRecord
         });
         await ConfirmEvents();
 
@@ -843,18 +838,15 @@ public class WorkflowCoordinatorLogEvent : StateLogEventBase<WorkflowCoordinator
 public class SetWorkflowCoordinatorLogEvent : WorkflowCoordinatorLogEvent
 {
     [Id(0)] public List<WorkflowUnitDto> WorkflowUnit { get; set; } = new();
-    [Id(1)] public Guid BlackBoardId { get; set; }
+    [Id(1)] public Guid WorkflowId { get; set; }
     [Id(2)] public string? InitContent { get; set; } = null;
-    [Id(3)] public bool EnableExecutionRecord { get; set; }
 }
 
 [GenerateSerializer]
 public class SetWorkflowCoordinatorDirectLogEvent : WorkflowCoordinatorLogEvent
 {
     [Id(0)] public List<WorkUnitInfo> WorkUnitInfos { get; set; } = new();
-    [Id(1)] public Guid BlackBoardId { get; set; }
     [Id(2)] public string? InitContent { get; set; } = null;
-    [Id(3)] public bool EnableExecutionRecord { get; set; }
 }
 
 [GenerateSerializer]
