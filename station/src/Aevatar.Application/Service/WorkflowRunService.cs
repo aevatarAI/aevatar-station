@@ -105,7 +105,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         return new WorkflowRunResultDto
         {
             IsSuccess = true,
-            WorkflowId = request.ViewAgentId,
+            WorkflowId = publishedAgent.Item2.WorkflowCoordinatorGAgentId,
             Message = $"Workflow executed successfully. Execution event ID: {executionEventId}",
             PublishedAgent = publishedAgent.Item1
         };

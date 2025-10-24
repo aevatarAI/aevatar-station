@@ -84,6 +84,7 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
 
         try
         {
+            workflowEvent.WorkflowId = this.GetPrimaryKey();
             // Always raise WorkflowEventReceivedLogEvent first
             RaiseEvent(new WorkflowEventReceivedLogEvent
             {
