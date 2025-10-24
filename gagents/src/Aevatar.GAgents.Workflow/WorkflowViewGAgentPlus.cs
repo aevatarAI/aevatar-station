@@ -261,8 +261,16 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
                 state.WorkflowNodeUnitList = updateWorkflowViewLogEvent.WorkflowNodeUnitList;
                 state.Name = updateWorkflowViewLogEvent.Name;
                 state.AgentId = this.GetPrimaryKey();
-                state.WorkflowStartAgentId = updateWorkflowViewLogEvent.WorkflowStartAgentId;
-                state.WorkflowEndAgentId = updateWorkflowViewLogEvent.WorkflowEndAgentId;
+                
+                // Only set WorkflowStartAgentId and WorkflowEndAgentId if they are empty
+                if (state.WorkflowStartAgentId == Guid.Empty)
+                {
+                    state.WorkflowStartAgentId = updateWorkflowViewLogEvent.WorkflowStartAgentId;
+                }
+                if (state.WorkflowEndAgentId == Guid.Empty)
+                {
+                    state.WorkflowEndAgentId = updateWorkflowViewLogEvent.WorkflowEndAgentId;
+                }
                 break;
             case UpdateNodeAgentIdLogEvent nodeAgentIdLogEvent:
                 var updateAgentIdNode = state.WorkflowNodeList.FirstOrDefault(t => t.NodeId == nodeAgentIdLogEvent.NodeId);
