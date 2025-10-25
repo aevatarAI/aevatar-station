@@ -214,7 +214,7 @@ public class WorkflowExecutionRecordGAgentPlus :
                 workflowEvent.WorkUnitAgentId);
             
             // OutputData = TaskResult (what the agent PRODUCED)
-            var outputData = workflowEvent.TaskResult ?? string.Empty;
+            var outputData = System.Text.Json.JsonSerializer.Serialize(workflowEvent.TaskResult);
             
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
@@ -289,22 +289,19 @@ public class WorkflowExecutionRecordGAgentPlus :
         
         // ✅ UNIFIED: Unregister from parent coordinator AFTER workflow completion (regardless of success or failure)
         // This ensures all workflow events are received before breaking parent-child relationship
-        try
+         try
         {
-            // Get parent coordinator directly from parent-child relationship
-            var parents = await GetParentsAsync();
-            var parentCoordinator = parents.FirstOrDefault();
-            
-            if (parentCoordinator != default)
+            // Use WorkflowId from the event as the coordinator's ID (as pointed out by user)
+            var coordinatorId = workflowEvent.WorkflowId;
+            if (coordinatorId != Guid.Empty)
             {
-                var coordinator = GrainFactory.GetGrain<IWorkflowCoordinatorGAgentPlus>(parentCoordinator.GetGuidKey());
-                await UnregisterParentAsync(coordinator);
-                Logger.LogInformation("🔌 [ExecutionRecordGAgent] Successfully unregistered from parent coordinator {CoordinatorId} after workflow completion", 
-                    parentCoordinator.GetGuidKey());
+                var parentCoordinator = GrainFactory.GetGrain<IWorkflowCoordinatorGAgentPlus>(coordinatorId);
+                await UnregisterParentAsync(parentCoordinator);
+                Logger.LogInformation("🔌 [ExecutionRecordGAgent] Successfully unregistered from parent coordinator {CoordinatorId} after workflow completion", coordinatorId);
             }
             else
             {
-                Logger.LogWarning("⚠️ [ExecutionRecordGAgent] No parent coordinator found to unregister from");
+                Logger.LogWarning("⚠️ [ExecutionRecordGAgent] No coordinator ID found in workflow event to unregister from");
             }
         }
         catch (Exception ex)
@@ -466,6 +463,7 @@ public class WorkflowExecutionRecordGAgentPlus :
                 state.Status = WorkflowExecutionStatus.Failed;
                 break;
         }
+        base.GAgentTransitionState(state, @event);
     }
 }
 
