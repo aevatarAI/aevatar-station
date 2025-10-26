@@ -9,6 +9,7 @@ using GroupChat.GAgent;
 using GroupChat.GAgent.Feature.Common;
 using Orleans.Providers;
 using Volo.Abp;
+using Microsoft.Extensions.Logging;
 
 namespace Aevatar.Application.Grains.Agents.TestAgent;
 
@@ -62,9 +63,11 @@ public class AgentWorkerTestPlus : BusinessAgentBase<AgentWorkerTestStatePlus, A
 
             // ✅ CRITICAL: Set TaskResult (Agent's output)
             // Message is the input from upstream, TaskResult is this agent's output
-            workflowEvent.TaskResult = $"{State.Name} processed the message successfully";
+            workflowEvent.TaskResult = $"{State.MemberName} processed the message successfully";
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowInProgress;
             workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
+            
+            await Task.CompletedTask;
         }
         catch (Exception ex)
         {
@@ -88,7 +91,7 @@ public class AgentWorkerTestPlus : BusinessAgentBase<AgentWorkerTestStatePlus, A
     }
 }
 
-public interface IAgentWorkerTestPlus : IStateGAgent<AgentWorkerTestStatePlus>
+public interface IAgentWorkerTestPlus : IStateGAgentPlus<AgentWorkerTestStatePlus>
 {
 }
 
