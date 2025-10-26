@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Core.Abstractions;
+using Aevatar.Options;
 using Aevatar.Service;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
+using Orleans;
 using Shouldly;
 using Xunit;
 
@@ -15,20 +18,26 @@ public class WorkflowViewServiceTests
 {
     private readonly Mock<IAgentService> _mockAgentService;
     private readonly Mock<IGAgentFactory<IGAgentPlus>> _mockGAgentFactory;
+    private readonly Mock<IClusterClient> _mockClusterClient;
     private readonly Mock<ILogger<WorkflowViewServicePlus>> _mockLogger;
+    private readonly Mock<IOptionsSnapshot<DebugModeOptions>> _mockDebugModeOptions;
     private readonly WorkflowViewServicePlus _workflowViewService;
     
     public WorkflowViewServiceTests()
     {
         _mockAgentService = new Mock<IAgentService>();
         _mockGAgentFactory = new Mock<IGAgentFactory<IGAgentPlus>>();
+        _mockClusterClient = new Mock<IClusterClient>();
         _mockLogger = new Mock<ILogger<WorkflowViewServicePlus>>();
+        _mockDebugModeOptions = new Mock<IOptionsSnapshot<DebugModeOptions>>();
+        _mockDebugModeOptions.Setup(x => x.Value).Returns(new DebugModeOptions());
         
         _workflowViewService = new WorkflowViewServicePlus(
             _mockAgentService.Object,
             _mockGAgentFactory.Object,
+            _mockClusterClient.Object,
             _mockLogger.Object,
-            null);
+            _mockDebugModeOptions.Object);
     }
 
     [Fact]
@@ -308,13 +317,13 @@ public class WorkflowViewServiceTests
     {
         // Arrange & Act & Assert
         // Note: The actual constructor doesn't do null checks, so these tests expect no exceptions
-        var service1 = new WorkflowViewServicePlus(null, _mockGAgentFactory.Object, _mockLogger.Object, null);
+        var service1 = new WorkflowViewServicePlus(null, _mockGAgentFactory.Object, _mockClusterClient.Object, _mockLogger.Object, _mockDebugModeOptions.Object);
         service1.ShouldNotBeNull();
 
-        var service2 = new WorkflowViewServicePlus(_mockAgentService.Object, null, _mockLogger.Object, null);
+        var service2 = new WorkflowViewServicePlus(_mockAgentService.Object, null, _mockClusterClient.Object, _mockLogger.Object, _mockDebugModeOptions.Object);
         service2.ShouldNotBeNull();
 
-        var service3 = new WorkflowViewServicePlus(_mockAgentService.Object, _mockGAgentFactory.Object, null, null);
+        var service3 = new WorkflowViewServicePlus(_mockAgentService.Object, _mockGAgentFactory.Object, null, _mockLogger.Object, _mockDebugModeOptions.Object);
         service3.ShouldNotBeNull();
     }
 
