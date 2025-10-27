@@ -46,36 +46,27 @@ public class AgentWorkerTestPlus : BusinessAgentBase<AgentWorkerTestStatePlus, A
     /// <summary>
     /// ✅ Override OnBusinessAgentEventForwardingEventHandlerAsync to handle workflow events
     /// This ensures BusinessAgentBase validation runs first
+    /// NO try-catch: Let exceptions propagate naturally to test exception handling
     /// </summary>
     [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
-        try
+        // Assign the WorkUnitAgentId to represent this processing node
+        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
+        
+        // Check if failure is configured - throw exception directly for testing
+        if (!State.FailureSummary.IsNullOrEmpty())
         {
-            // Assign the WorkUnitAgentId to represent this processing node
-            workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
-            
-            // Check if failure is configured
-            if (!State.FailureSummary.IsNullOrEmpty())
-            {
-                throw new UserFriendlyException(State.FailureSummary);
-            }
+            throw new UserFriendlyException(State.FailureSummary);
+        }
 
-            // ✅ CRITICAL: Set TaskResult (Agent's output)
-            // Message is the input from upstream, TaskResult is this agent's output
-            workflowEvent.TaskResult = $"{State.MemberName} processed the message successfully";
-            workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowInProgress;
-            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
-            
-            await Task.CompletedTask;
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "AgentWorkerTestPlus failed to process workflow event");
-            workflowEvent.ErrorMessage = ex.Message;
-            workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowFailed;
-            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Failed;
-        }
+        // ✅ CRITICAL: Set TaskResult (Agent's output)
+        // Message is the input from upstream, TaskResult is this agent's output
+        workflowEvent.TaskResult = $"{State.MemberName} processed the message successfully";
+        workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowInProgress;
+        workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
+        
+        await Task.CompletedTask;
     }
 
     protected override void GAgentTransitionState(AgentWorkerTestStatePlus state, StateLogEventBase<AgentWorkerTestEventLog> @event)
