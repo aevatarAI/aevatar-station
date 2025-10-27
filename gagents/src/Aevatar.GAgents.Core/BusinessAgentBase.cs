@@ -106,32 +106,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
             {
                 return false; // Skip processing if validation fails
             }
-            
-            // ✅ FAST PATH for failure events: Skip dependency checking and input recording
-            // Failure events need to propagate quickly to WorkflowEndAgent and Coordinator
-            // Special agents (like WorkflowEndAgent) that accept failure events will process them immediately
-            bool isFailureEvent = !string.IsNullOrEmpty(workflowEvent?.ErrorMessage);
-            
-            if (isFailureEvent)
-            {
-                Logger.LogDebug("Business agent {AgentId} accepted failure event, skipping dependency check",
-                    this.GetGrainId());
-                
-                // Skip dependency checking for failure events - process immediately
-                // Pre-processing
-                await PreBusinessAgentProcessingAsync(workflowEvent);
-
-                // Call inheriting class handler
-                await OnBusinessAgentEventForwardingEventHandlerAsync(workflowEvent);
-
-                // Post-processing
-                await PostBusinessAgentProcessingAsync(workflowEvent);
-
-                return true;
-            }
-            
             // ✅ Normal success event processing (with dependency checking)
-
             // Record input message from upstream agent (for dependency checking)
             if (!string.IsNullOrEmpty(workflowEvent.Message) && !string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
             {
@@ -164,27 +139,17 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
 
             // Update event with error information
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowFailed;
-            // ✅ Only set ErrorMessage if not already set by derived class
-            if (string.IsNullOrEmpty(workflowEvent.ErrorMessage))
-            {
-                workflowEvent.ErrorMessage = ex.Message;
-            }
+            workflowEvent.ErrorMessage = ex.Message;
+            workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
+            workflowEvent.StepEndTime = DateTime.UtcNow;
+            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Failed;
             
-            // ✅ Update TaskResult to empty on failure (no output produced)
-            workflowEvent.TaskResult = string.Empty;
+            // ✅ P2P MESSAGING: Send failure event directly to coordinator
+            await SendFailureEventToCoordinatorAsync(workflowEvent);
             
-            // ✅ Transfer Message for downstream (keep original input)
-            // workflowEvent.Message remains unchanged - it contains the input that caused the failure
-
             // Clear received messages even on error to avoid stale data
             ClearReceivedMessages();
-            
-            // ✅ Return true to let base class handle event forwarding
-            // Even though processing failed, the failure event should be forwarded to downstream agents
-            // Business agents (like WorkflowEndAgent) will automatically reject failed events via ValidateWorkflowEventAsync
-            // System agents (like WorkflowCoordinator) will process the failure event for recording and coordination
-            Logger.LogInformation("Business agent {AgentId} failed, returning true to let base class forward failure event", this.GetGrainId());
-            return true;
+            return false;
         }
     }
 
@@ -300,15 +265,12 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     {
        // Assign the WorkUnitAgentId to represent this processing node
         workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
+      
         // ✅ Save all received messages as JSON array for accurate InputData tracking
-        // Serializes _receivedMessages list to JSON format for logging and debugging
         workflowEvent.Metadata["inputData"] = JsonSerializer.Serialize(_receivedMessages);
         
         // Update workflow tracking information for processing start
         workflowEvent.StepStartTime = DateTime.UtcNow;
-        
-        // ✅ DESIGN: InputData = serialized _receivedMessages (what the agent RECEIVED from all upstream agents)
-        // JSON format allows tracking multiple input messages for agents with multiple parents
     }
 
     /// <summary>
@@ -448,6 +410,41 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     {
         _receivedMessages.Clear();
         Logger.LogDebug("[BusinessAgentBase] Cleared received messages after processing");
+    }
+
+    /// <summary>
+    /// ✅ P2P MESSAGING: Send WorkflowFailed event directly to coordinator using SendEventToAgentAsync
+    /// This bypasses parent-child event forwarding system for immediate failure notification
+    /// Uses WorkflowEvent.WorkflowId directly (accurate) instead of State.WorkflowCoordinatorId
+    /// </summary>
+    protected virtual async Task SendFailureEventToCoordinatorAsync(WorkflowEvent failureEvent)
+    {
+        try
+        {
+            // ✅ Use WorkflowEvent.WorkflowId directly - it's the coordinator's GrainId
+            if (failureEvent.WorkflowId == Guid.Empty)
+            {
+                Logger.LogWarning("[BusinessAgentBase] WorkflowEvent.WorkflowId is empty - cannot send failure event");
+                return;
+            }
+
+            Logger.LogInformation("[BusinessAgentBase] Sending WorkflowFailed event to coordinator {CoordinatorId} from agent {AgentId}",
+                failureEvent.WorkflowId, this.GetGrainId());
+
+            // ✅ BEST PRACTICE: Use SendEventToAgentAsync for P2P event transmission
+            // Get coordinator grain reference using IGAgentPlus interface (avoids circular dependency)
+            var coordinator = GrainFactory.GetGrain<IGAgentPlus>(failureEvent.WorkflowId);
+            var coordinatorGrainId = coordinator.GetGrainId();
+            await SendEventToAgentAsync(failureEvent, coordinatorGrainId);
+
+            Logger.LogInformation("[BusinessAgentBase] Successfully sent WorkflowFailed event to coordinator via P2P");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[BusinessAgentBase] Failed to send failure event to coordinator {CoordinatorId}",
+                failureEvent.WorkflowId);
+            // Don't rethrow - failure to notify coordinator shouldn't crash the agent
+        }
     }
 
     /// <summary>

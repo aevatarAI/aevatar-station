@@ -287,32 +287,13 @@ public class WorkflowExecutionRecordGAgentPlus :
         
         Logger.LogInformation("✅ [ExecutionRecordGAgent] FinishExecuteWorkflowLogEvent raised and confirmed, Final Status: {FinalStatus}", State.Status);
         
-        // ✅ UNIFIED: Unregister from parent coordinator AFTER workflow completion (regardless of success or failure)
-        // This ensures all workflow events are received before breaking parent-child relationship
-         try
-        {
-            // Use WorkflowId from the event as the coordinator's ID (as pointed out by user)
-            var coordinatorId = workflowEvent.WorkflowId;
-            if (coordinatorId != Guid.Empty)
-            {
-                var parentCoordinator = GrainFactory.GetGrain<IWorkflowCoordinatorGAgentPlus>(coordinatorId);
-                await UnregisterParentAsync(parentCoordinator);
-                Logger.LogInformation("🔌 [ExecutionRecordGAgent] Successfully unregistered from parent coordinator {CoordinatorId} after workflow completion", coordinatorId);
-            }
-            else
-            {
-                Logger.LogWarning("⚠️ [ExecutionRecordGAgent] No coordinator ID found in workflow event to unregister from");
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "⚠️ [ExecutionRecordGAgent] Failed to unregister from parent coordinator, but workflow completion is still valid");
-        }
+        // ✅ UNIFIED: Unregister from parent coordinator after workflow completion
+        await UnregisterFromCoordinatorAsync(workflowEvent.WorkflowId, "completion");
     }
 
     private async Task HandleWorkflowFailedAsync(WorkflowEvent workflowEvent)
     {
-        Logger.LogWarning("ExecutionRecordGAgent handling WorkflowFailed for work unit agent {WorkUnitAgentId}, Error: {ErrorMessage}", 
+        Logger.LogWarning("❌ [ExecutionRecordGAgent] HandleWorkflowFailedAsync for work unit agent {WorkUnitAgentId}, Error: {ErrorMessage}", 
             workflowEvent.WorkUnitAgentId, workflowEvent.ErrorMessage);
         
         // ✅ Capture state snapshot before recording failure
@@ -333,10 +314,44 @@ public class WorkflowExecutionRecordGAgentPlus :
         });
         await ConfirmEvents();
         
-        // ✅ DO NOT unregister from parent coordinator here
-        // Wait for WorkflowCompleted event from EndAgent to signal workflow end
-        // This ensures ExecutionRecord receives all workflow events (including EndAgent's completion)
-        Logger.LogInformation("ExecutionRecordGAgent recorded failure, waiting for WorkflowCompleted to finalize");
+        Logger.LogInformation("❌ [ExecutionRecordGAgent] Workflow failure recorded, Final Status: {FinalStatus}", State.Status);
+        
+        // ✅ UNIFIED: Unregister from parent coordinator after workflow failure
+        // This ensures proper cleanup when workflow fails via P2P failure events
+        await UnregisterFromCoordinatorAsync(workflowEvent.WorkflowId, "failure");
+    }
+
+    /// <summary>
+    /// ✅ UNIFIED: Unregister from parent coordinator after workflow ends (completion or failure)
+    /// Encapsulates the unregister logic in a reusable method
+    /// </summary>
+    /// <param name="coordinatorId">The WorkflowId (same as coordinator's GrainId)</param>
+    /// <param name="reason">Reason for unregistering (for logging: "completion" or "failure")</param>
+    private async Task UnregisterFromCoordinatorAsync(Guid coordinatorId, string reason)
+    {
+        try
+        {
+            if (coordinatorId == Guid.Empty)
+            {
+                Logger.LogWarning("⚠️ [ExecutionRecordGAgent] No coordinator ID provided for unregister on {Reason}", reason);
+                return;
+            }
+
+            Logger.LogInformation("🔌 [ExecutionRecordGAgent] Unregistering from parent coordinator {CoordinatorId} on workflow {Reason}...", 
+                coordinatorId, reason);
+
+            var parentCoordinator = GrainFactory.GetGrain<IWorkflowCoordinatorGAgentPlus>(coordinatorId);
+            await UnregisterParentAsync(parentCoordinator);
+
+            Logger.LogInformation("✅ [ExecutionRecordGAgent] Successfully unregistered from parent coordinator {CoordinatorId} on workflow {Reason}", 
+                coordinatorId, reason);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "⚠️ [ExecutionRecordGAgent] Failed to unregister from parent coordinator {CoordinatorId} on workflow {Reason}, but workflow {Reason} is still valid", 
+                coordinatorId, reason, reason);
+            // Don't rethrow - unregister failure shouldn't prevent workflow completion/failure recording
+        }
     }
 
     protected override void GAgentTransitionState(WorkflowExecutionRecordStatePlus state,
