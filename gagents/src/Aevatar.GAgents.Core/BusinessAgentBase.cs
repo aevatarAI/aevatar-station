@@ -431,10 +431,12 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
             Logger.LogInformation("[BusinessAgentBase] Sending WorkflowFailed event to coordinator {CoordinatorId} from agent {AgentId}",
                 failureEvent.WorkflowId, this.GetGrainId());
 
-            // ✅ BEST PRACTICE: Use SendEventToAgentAsync for P2P event transmission
-            // Get coordinator grain reference using IGAgentPlus interface (avoids circular dependency)
-            var coordinator = GrainFactory.GetGrain<IGAgentPlus>(failureEvent.WorkflowId);
-            var coordinatorGrainId = coordinator.GetGrainId();
+            // ✅ BEST PRACTICE: Directly construct coordinator's GrainId using GrainId.Create
+            // This avoids ambiguity issues with IGAgentPlus (which has multiple implementations)
+            var coordinatorGrainId = GrainId.Create(
+                "Aevatar.GAgents.Workflow.WorkflowCoordinatorGAgentPlus",
+                failureEvent.WorkflowId.ToString("N")); // "N" format = 32 hex digits (no hyphens)
+            
             await SendEventToAgentAsync(failureEvent, coordinatorGrainId);
 
             Logger.LogInformation("[BusinessAgentBase] Successfully sent WorkflowFailed event to coordinator via P2P");
