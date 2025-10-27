@@ -296,7 +296,10 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// Override in derived classes for specific implementation
     /// </summary>
     protected virtual void UpdateWorkflowStatusPre(WorkflowEvent workflowEvent)
+
     {
+       // Assign the WorkUnitAgentId to represent this processing node
+        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
         // ✅ Save all received messages as JSON array for accurate InputData tracking
         // Serializes _receivedMessages list to JSON format for logging and debugging
         workflowEvent.Metadata["inputData"] = JsonSerializer.Serialize(_receivedMessages);

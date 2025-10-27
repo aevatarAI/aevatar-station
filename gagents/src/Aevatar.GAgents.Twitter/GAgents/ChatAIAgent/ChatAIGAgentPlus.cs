@@ -81,9 +81,6 @@ public class ChatAIGAgentPlus :
     {
         _logger.LogInformation("ChatAIGAgent {AgentId} received WorkflowEvent", this.GetPrimaryKey());
 
-        // Assign the WorkUnitAgentId to represent this processing node
-        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
-        
         // Check if there's a message to process with AI
         if (!string.IsNullOrEmpty(workflowEvent.Message))
         {
