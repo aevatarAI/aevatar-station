@@ -369,14 +369,14 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     /// ✅ SIMPLE: Clean up orphaned parent relationships
     /// If a node's parent no longer exists in the topology, remove that parent relationship
     /// </summary>
-    private async Task CleanupStaleParentRelationshipsAsync(WorkflowTopology topology, WorkflowViewConfigDto viewConfigDto)
+    private async Task CleanupStaleParentRelationshipsAsync(WorkflowTopology topology, WorkflowViewConfigDto viewConfigDto, IGAgentPlus endAgent)
     {
         // Get all valid business node GrainIds in current topology
         var validNodeGrainIds = topology.NodeMap.Values
             .Select(n => GrainId.Create(n.AgentType, GuidUtil.GuidToGrainKey(n.AgentId)))
             .ToHashSet();
         
-        // For each node, clean up parents that no longer exist in topology
+        // ✅ STEP 1: Clean up business nodes' orphaned parents
         foreach (var node in topology.NodeMap.Values)
         {
             var nodeGrainId = GrainId.Create(node.AgentType, GuidUtil.GuidToGrainKey(node.AgentId));
@@ -406,6 +406,31 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
                 }
             }
         }
+        
+        // ✅ STEP 2: Clean up EndAgent's orphaned parents (critical fix!)
+        // EndAgent is not in NodeMap, so we need to handle it separately
+        var endAgentParents = await endAgent.GetParentsAsync();
+        var endAgentOrphanedParents = endAgentParents.Where(p => !validNodeGrainIds.Contains(p)).ToList();
+        
+        if (endAgentOrphanedParents.Count > 0)
+        {
+            _logger.LogInformation("🧹 [CleanupOrphanedParents] EndAgent has {Count} orphaned parent(s), cleaning up...", 
+                endAgentOrphanedParents.Count);
+            
+            foreach (var orphanedParentGrainId in endAgentOrphanedParents)
+            {
+                try
+                {
+                    var orphanedParentAgent = await _gAgentFactory.GetGAgentAsync(orphanedParentGrainId);
+                    await orphanedParentAgent.UnregisterAsync(endAgent);
+                    _logger.LogInformation("🧹 [CleanupOrphanedParents]   ✅ Removed orphaned parent from EndAgent: {Parent}", orphanedParentGrainId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "🧹 [CleanupOrphanedParents]   ⚠️ Failed to remove orphaned parent from EndAgent: {Parent}", orphanedParentGrainId);
+                }
+            }
+        }
     }
     
     /// <summary>
@@ -415,8 +440,8 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     {
         var coordinatorGrainId = agents.CoordinatorAgent.GetGrainId();
         
-        // Clean up stale parent relationships for all business nodes
-        await CleanupStaleParentRelationshipsAsync(topology, viewConfigDto);
+        // Clean up stale parent relationships for all business nodes + EndAgent
+        await CleanupStaleParentRelationshipsAsync(topology, viewConfigDto, agents.EndAgent);
         
         // Update StartAgent → Top-level business agents + Coordinator
         var expectedStartChildren = topology.TopLevelNodes
