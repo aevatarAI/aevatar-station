@@ -221,31 +221,24 @@ public class WorkflowExecutionRecordGAgentPlus :
                 WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
                 InputData = inputData,
                 OutputData = outputData,
-                CurrentStateSnapshot = stateSnapshot
+                CurrentStateSnapshot = stateSnapshot,
+                StartTime = workflowEvent.StepStartTime != default ? workflowEvent.StepStartTime : null
             });
         }
         else
         {
-            // ✅ FAILURE: Track work unit failure
-            // - InputData = original input (preserved in Message)
-            // - OutputData = empty (no output on failure)
-            // - FailureSummary = ErrorMessage (exception details)
+            // ✅ FAILURE: Track work unit failure with all context
+            // Only trigger FailExecuteWorkflowLogEvent (not FinishExecuteWorkUnitLogEvent)
             Logger.LogWarning("❌ [ExecutionRecordGAgent] Recording failed work unit for {WorkUnitAgentId}, Error: {ErrorMessage}", 
                 workflowEvent.WorkUnitAgentId, workflowEvent.ErrorMessage);
             
-            RaiseEvent(new FinishExecuteWorkUnitLogEvent
-            {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
-                InputData = inputData,  // Preserve original input from Message
-                OutputData = string.Empty,  // No output on failure
-                CurrentStateSnapshot = stateSnapshot
-            });
-            
-            // Trigger workflow-level failure event with error details
             RaiseEvent(new FailExecuteWorkflowLogEvent
             {
                 WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
-                FailureSummary = workflowEvent.ErrorMessage
+                FailureSummary = workflowEvent.ErrorMessage,
+                InputData = inputData,  // Preserve original input
+                CurrentStateSnapshot = stateSnapshot,  // Capture state at failure
+                StartTime = workflowEvent.StepStartTime != default ? workflowEvent.StepStartTime : null
             });
         }
 
@@ -310,7 +303,8 @@ public class WorkflowExecutionRecordGAgentPlus :
             WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
             FailureSummary = workflowEvent.ErrorMessage ?? "Task failed without specific error message",
             InputData = inputData,
-            CurrentStateSnapshot = stateSnapshot
+            CurrentStateSnapshot = stateSnapshot,
+            StartTime = workflowEvent.StepStartTime != default ? workflowEvent.StepStartTime : null
         });
         await ConfirmEvents();
         
@@ -430,19 +424,17 @@ public class WorkflowExecutionRecordGAgentPlus :
                     {
                         Logger.LogInformation("🔄 [ExecutionRecordGAgent] Updating WorkUnit record - Setting status from {OldStatus} to Completed", workUnit.Status);
                         
-                        // ✅ FIX: Set StartTime and InputData if not already set (first time processing)
+                        // Set StartTime from event, fallback to default if needed
                         if (workUnit.StartTime == default || workUnit.StartTime == DateTime.MinValue)
                         {
-                            workUnit.StartTime = endTime.AddMilliseconds(-100); // Slight offset before end
-                            Logger.LogDebug("🕐 [ExecutionRecordGAgent] Setting StartTime for {WorkUnitGrainId}", finishExecuteWorkUnitLogEvent.WorkUnitGrainId);
+                            workUnit.StartTime = (finishExecuteWorkUnitLogEvent.StartTime.HasValue && finishExecuteWorkUnitLogEvent.StartTime.Value != default)
+                                ? finishExecuteWorkUnitLogEvent.StartTime.Value
+                                : endTime.AddMilliseconds(-100);
                         }
                         
                         if (string.IsNullOrEmpty(workUnit.InputData) && !string.IsNullOrEmpty(finishExecuteWorkUnitLogEvent.InputData))
                         {
                             workUnit.InputData = finishExecuteWorkUnitLogEvent.InputData;
-                            Logger.LogDebug("📥 [ExecutionRecordGAgent] Setting InputData for {WorkUnitGrainId}: {InputData}", 
-                                finishExecuteWorkUnitLogEvent.WorkUnitGrainId, 
-                                finishExecuteWorkUnitLogEvent.InputData.Length > 50 ? finishExecuteWorkUnitLogEvent.InputData.Substring(0, 50) + "..." : finishExecuteWorkUnitLogEvent.InputData);
                         }
                         
                         workUnit.EndTime = endTime;
@@ -472,6 +464,15 @@ public class WorkflowExecutionRecordGAgentPlus :
                     foreach (var workUnit in failingWorkUnits)
                     {
                         Logger.LogInformation("🔄 [ExecutionRecordGAgent] Marking WorkUnit record as failed - Setting status from {OldStatus} to Failed", workUnit.Status);
+                        
+                        // Set StartTime from event, fallback to default if needed
+                        if (workUnit.StartTime == default || workUnit.StartTime == DateTime.MinValue)
+                        {
+                            workUnit.StartTime = (failExecuteWorkflowLogEvent.StartTime.HasValue && failExecuteWorkflowLogEvent.StartTime.Value != default)
+                                ? failExecuteWorkflowLogEvent.StartTime.Value
+                                : endTime.AddMilliseconds(-100);
+                        }
+                        
                         workUnit.EndTime = endTime;
                         workUnit.Status = WorkflowExecutionStatus.Failed;
                         workUnit.FailureSummary = failExecuteWorkflowLogEvent.FailureSummary;
@@ -545,6 +546,8 @@ public class FinishExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
     public string? CurrentStateSnapshot { get; set; }
     [Id(3)]
     public string InputData { get; set; } = string.Empty;
+    [Id(4)]
+    public DateTime? StartTime { get; set; }
 }
 
 [GenerateSerializer]
@@ -558,4 +561,6 @@ public class FailExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
     public string InputData { get; set; } = string.Empty;
     [Id(3)]
     public string? CurrentStateSnapshot { get; set; }
+    [Id(4)]
+    public DateTime? StartTime { get; set; }
 }
