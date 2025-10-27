@@ -213,9 +213,6 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     };
     var serializedConfig = JsonConvert.SerializeObject(viewConfigDto, jsonSerializerSettings);
     agentDto.Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(serializedConfig);
-    
-    _logger.LogInformation("[PublishWorkflow] Updated agentDto.Properties - StartId={StartId}, EndId={EndId}, CoordinatorId={CoordinatorId}",
-        viewConfigDto.WorkflowStartAgentId, viewConfigDto.WorkflowEndAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
         
     // Persist updated properties to CreatorGAgent
     var creatorGAgent = _clusterClient.GetGrain<ICreatorGAgent>(viewAgentId);
@@ -224,8 +221,6 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
         Name = agentDto.Name,
         Properties = serializedConfig
     });
-    
-    _logger.LogInformation("[PublishWorkflow] Persisted updated configuration to CreatorGAgent");
         
         return agentDto;
     }
@@ -268,40 +263,25 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     /// </summary>
     private async Task SetupWorkflowRelationshipsAsync(Guid viewAgentId, WorkflowViewConfigDto viewConfigDto)
     {
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] START - Workflow: {WorkflowName}, ViewAgentId: {ViewAgentId}", 
-            viewConfigDto.Name, viewAgentId);
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Config - NodeCount: {NodeCount}, UnitCount: {UnitCount}", 
-            viewConfigDto.WorkflowNodeList.Count, viewConfigDto.WorkflowNodeUnitList.Count);
+        _logger.LogInformation("🔧 [SetupWorkflowRelationships] START - Workflow: {WorkflowName}, Nodes: {NodeCount}, Connections: {UnitCount}", 
+            viewConfigDto.Name, viewConfigDto.WorkflowNodeList.Count, viewConfigDto.WorkflowNodeUnitList.Count);
         
-        // Step 1: Get all agent references
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 1: Getting agent references...");
+        // Get all agent references
         var agents = await GetWorkflowAgentsAsync(viewAgentId, viewConfigDto);
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 1: Got agents - Start: {StartId}, End: {EndId}, Coordinator: {CoordId}", 
-            agents.StartAgent.GetGrainId(), agents.EndAgent.GetGrainId(), agents.CoordinatorAgent.GetGrainId());
         
-        // Step 2: Analyze workflow topology
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 2: Analyzing topology...");
+        // Analyze workflow topology
         var topology = AnalyzeWorkflowTopology(viewConfigDto);
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 2: Topology - BusinessNodes: {BusinessCount}, LeafNodes: {LeafCount}", 
-            topology.NodeMap.Count, topology.LeafNodes.Count);
         
-        // Step 3: Setup business agent relationships (includes Coordinator relationships, incremental update)
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 3: Setting up business agent topology...");
+        // Setup business agent relationships (includes cleanup + coordinator relationships)
         await SetupBusinessAgentTopologyAsync(agents, topology, viewConfigDto);
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 3: ✅ Business agent topology setup completed");
         
-        // Step 3.5: Setup WorkflowViewAgent → WorkflowStartAgent relationship
-        // This is critical - WorkflowStartAgent must subscribe to WorkflowViewAgent's stream to receive ExecuteWorkflow events
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 3.5: Setting up ViewAgent → StartAgent...");
+        // Setup WorkflowViewAgent → WorkflowStartAgent relationship
         await UpdateAgentChildrenAsync(agents.WorkflowViewAgent, new List<GrainId> { agents.StartAgent.GetGrainId() }, 
             "WorkflowViewAgent", "WorkflowStartAgent");
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 3.5: ✅ ViewAgent → StartAgent completed");
         
-        // Step 4: Setup Coordinator → WorkflowViewAgent relationship
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 4: Setting up Coordinator → ViewAgent...");
+        // Setup Coordinator → WorkflowViewAgent relationship
         await UpdateAgentChildrenAsync(agents.CoordinatorAgent, new List<GrainId> { agents.WorkflowViewAgent.GetGrainId() }, 
             "Coordinator", "WorkflowViewAgent");
-        _logger.LogInformation("🔧 [SetupWorkflowRelationships] Step 4: ✅ Coordinator → ViewAgent completed");
         
         _logger.LogInformation("🔧 [SetupWorkflowRelationships] ✅ COMPLETED - Workflow: {WorkflowName}", viewConfigDto.Name);
     }
@@ -311,52 +291,36 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     /// </summary>
     private async Task WorkflowViewAgentConfigAsync(Guid viewAgentId, WorkflowViewConfigDto viewConfigDto)
     {
-        _logger.LogInformation("[WorkflowViewAgentConfig] Starting for viewAgentId={ViewId}, Input: StartId={StartId}, EndId={EndId}, CoordinatorId={CoordinatorId}",
-            viewAgentId, viewConfigDto.WorkflowStartAgentId, viewConfigDto.WorkflowEndAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
-        
         var agentDto = await _agentService.GetAgentAsync(viewAgentId);
         var workflowViewAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowViewGAgentPlus>(agentDto.GrainId);
         var state = await workflowViewAgent.GetStateAsync();
-        
-        _logger.LogInformation("[WorkflowViewAgentConfig] Current State: StartId={StartId}, EndId={EndId}, CoordinatorId={CoordinatorId}",
-            state.WorkflowStartAgentId, state.WorkflowEndAgentId, state.WorkflowCoordinatorGAgentId);
         
         // Supplement viewConfigDto with State values (if State has valid IDs)
         if (state.WorkflowStartAgentId != Guid.Empty)
         {
             viewConfigDto.WorkflowStartAgentId = state.WorkflowStartAgentId;
-            _logger.LogInformation("[WorkflowViewAgentConfig] Using existing StartAgentId from State: {Id}", state.WorkflowStartAgentId);
         }
         else if (viewConfigDto.WorkflowStartAgentId == Guid.Empty)
         {
             viewConfigDto.WorkflowStartAgentId = Guid.NewGuid();
-            _logger.LogInformation("[WorkflowViewAgentConfig] Generated new StartAgentId: {Id}", viewConfigDto.WorkflowStartAgentId);
         }
         
         if (state.WorkflowEndAgentId != Guid.Empty)
         {
             viewConfigDto.WorkflowEndAgentId = state.WorkflowEndAgentId;
-            _logger.LogInformation("[WorkflowViewAgentConfig] Using existing EndAgentId from State: {Id}", state.WorkflowEndAgentId);
         }
         else if (viewConfigDto.WorkflowEndAgentId == Guid.Empty)
         {
             viewConfigDto.WorkflowEndAgentId = Guid.NewGuid();
-            _logger.LogInformation("[WorkflowViewAgentConfig] Generated new EndAgentId: {Id}", viewConfigDto.WorkflowEndAgentId);
         }
         
         if (state.WorkflowCoordinatorGAgentId != Guid.Empty)
         {
             viewConfigDto.WorkflowCoordinatorGAgentId = state.WorkflowCoordinatorGAgentId;
-            _logger.LogInformation("[WorkflowViewAgentConfig] Using existing CoordinatorId from State: {Id}", state.WorkflowCoordinatorGAgentId);
         }
-        
-        _logger.LogInformation("[WorkflowViewAgentConfig] Before ConfigAsync: StartId={StartId}, EndId={EndId}, CoordinatorId={CoordinatorId}",
-            viewConfigDto.WorkflowStartAgentId, viewConfigDto.WorkflowEndAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
         
         // Persist to WorkflowViewGAgent.State only
         await workflowViewAgent.ConfigAsync(viewConfigDto);
-        
-        _logger.LogInformation("[WorkflowViewAgentConfig] Completed ConfigAsync");
     }
     
     /// <summary>
@@ -451,10 +415,8 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     {
         var coordinatorGrainId = agents.CoordinatorAgent.GetGrainId();
         
-        // ✅ STEP 0: Clean up stale parent relationships for all business nodes
-        _logger.LogInformation("🧹 [SetupBusinessAgentTopology] Step 0: Cleaning up stale parent relationships...");
+        // Clean up stale parent relationships for all business nodes
         await CleanupStaleParentRelationshipsAsync(topology, viewConfigDto);
-        _logger.LogInformation("🧹 [SetupBusinessAgentTopology] Step 0: ✅ Cleanup completed");
         
         // Update StartAgent → Top-level business agents + Coordinator
         var expectedStartChildren = topology.TopLevelNodes
@@ -464,13 +426,9 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
         await UpdateAgentChildrenAsync(agents.StartAgent, expectedStartChildren, "StartAgent", "top-level agents + Coordinator");
         
         // Update business agent topology (business agent → next agents + Coordinator)
-        // Group by source node to handle parallel connections
         var groupedConnections = viewConfigDto.WorkflowNodeUnitList
             .GroupBy(u => u.NodeId)
             .ToList();
-        
-        _logger.LogInformation("📊 [SetupBusinessAgentTopology] Processing {Count} source nodes with connections", groupedConnections.Count);
-        _logger.LogInformation("📊 [SetupBusinessAgentTopology] Total units in config: {TotalUnits}", viewConfigDto.WorkflowNodeUnitList.Count);
         
         foreach (var group in groupedConnections)
         {
@@ -479,10 +437,6 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
             var sourceGrainId = GrainId.Create(sourceNode.AgentType, GuidUtil.GuidToGrainKey(sourceNode.AgentId));
             var sourceAgent = await _gAgentFactory.GetGAgentAsync(sourceGrainId);
             
-            _logger.LogInformation("🔗 [SetupBusinessAgentTopology] Processing source: {SourceNodeName} (AgentId: {SourceAgentId}, GrainId: {SourceGrainId})", 
-                sourceNode.Name, sourceNode.AgentId, sourceGrainId);
-            _logger.LogInformation("🔗 [SetupBusinessAgentTopology]   → Has {TargetCount} target nodes", group.Count());
-            
             // Collect all target agents for this source node (handles parallel connections)
             var targetGrainIds = new List<GrainId>();
             foreach (var unit in group)
@@ -490,21 +444,14 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
                 var targetNode = topology.NodeMap[unit.NextNodeId];
                 var targetGrainId = GrainId.Create(targetNode.AgentType, GuidUtil.GuidToGrainKey(targetNode.AgentId));
                 targetGrainIds.Add(targetGrainId);
-                _logger.LogInformation("🔗 [SetupBusinessAgentTopology]     → Target: {TargetNodeName} (AgentId: {TargetAgentId}, GrainId: {TargetGrainId})", 
-                    targetNode.Name, targetNode.AgentId, targetGrainId);
             }
             
             // Add Coordinator to the children list
             targetGrainIds.Add(coordinatorGrainId);
-            _logger.LogInformation("🔗 [SetupBusinessAgentTopology]     → Added Coordinator (GrainId: {CoordinatorGrainId})", coordinatorGrainId);
-            
-            _logger.LogInformation("🔗 [SetupBusinessAgentTopology]   → Total children to set: {ChildCount}", targetGrainIds.Count);
             
             var targetNames = string.Join(", ", group.Select(u => topology.NodeMap[u.NextNodeId].Name));
             await UpdateAgentChildrenAsync(sourceAgent, targetGrainIds, 
                 $"BusinessAgent({sourceNode.Name})", $"{targetNames} + Coordinator");
-            
-            _logger.LogInformation("🔗 [SetupBusinessAgentTopology]   ✅ Children set for {SourceNodeName}", sourceNode.Name);
         }
         
         // Update Leaf agents → EndAgent + Coordinator
@@ -514,16 +461,6 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
             var leafAgent = await _gAgentFactory.GetGAgentAsync(leafGrainId);
             await UpdateAgentChildrenAsync(leafAgent, new List<GrainId> { agents.EndAgent.GetGrainId(), coordinatorGrainId }, 
                 $"LeafAgent({leafNode.Name})", "EndAgent + Coordinator");
-            
-            // ✅ Verify children were correctly set
-            await Task.Delay(50); // Allow time for event sourcing to persist
-            var verifyChildren = await leafAgent.GetChildrenAsync();
-            _logger.LogInformation("✅ [SetupBusinessAgentTopology] Verified {LeafName} children: {ChildCount}", 
-                leafNode.Name, verifyChildren.Count);
-            foreach (var child in verifyChildren)
-            {
-                _logger.LogInformation("✅ [SetupBusinessAgentTopology]   - Child: {ChildId}", child);
-            }
         }
         
         // Update EndAgent → Coordinator
@@ -537,59 +474,36 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
     private async Task UpdateAgentChildrenAsync(IGAgentPlus parentAgent, List<GrainId> expectedChildGrainIds, 
         string parentName, string childrenDesc)
     {
-        _logger.LogInformation("👥 [UpdateAgentChildren] START - Parent: {ParentName} → Children: {ChildrenDesc}", parentName, childrenDesc);
-        
         var currentChildren = await parentAgent.GetChildrenAsync();
         var currentChildIdSet = currentChildren.ToHashSet();
         var expectedChildIdSet = expectedChildGrainIds.ToHashSet();
         
-        _logger.LogInformation("👥 [UpdateAgentChildren] Current children count: {CurrentCount}", currentChildren.Count);
-        foreach (var currentChild in currentChildren)
-        {
-            _logger.LogInformation("👥 [UpdateAgentChildren]   - Current: {ChildGrainId}", currentChild);
-        }
-        
-        _logger.LogInformation("👥 [UpdateAgentChildren] Expected children count: {ExpectedCount}", expectedChildGrainIds.Count);
-        foreach (var expectedChild in expectedChildGrainIds)
-        {
-            _logger.LogInformation("👥 [UpdateAgentChildren]   + Expected: {ChildGrainId}", expectedChild);
-        }
-        
-        // Find children to add (in expected but not in current)
+        // Find children to add/remove
         var toAdd = expectedChildGrainIds.Where(id => !currentChildIdSet.Contains(id)).ToList();
-        
-        // Find children to remove (in current but not in expected)
         var toRemove = currentChildren.Where(id => !expectedChildIdSet.Contains(id)).ToList();
-        
-        _logger.LogInformation("👥 [UpdateAgentChildren] Changes - ToAdd: {AddCount}, ToRemove: {RemoveCount}", toAdd.Count, toRemove.Count);
         
         // Skip if no changes
         if (toAdd.Count == 0 && toRemove.Count == 0)
         {
-            _logger.LogInformation("👥 [UpdateAgentChildren] ✅ No changes needed for {ParentName}", parentName);
             return;
         }
+        
+        _logger.LogInformation("👥 [UpdateAgentChildren] {ParentName}: +{AddCount}/-{RemoveCount} children", 
+            parentName, toAdd.Count, toRemove.Count);
         
         // Remove outdated children
         foreach (var childGrainIdToRemove in toRemove)
         {
-            _logger.LogInformation("👥 [UpdateAgentChildren]   🗑️ Removing child: {ChildGrainId}", childGrainIdToRemove);
             var childAgent = await _gAgentFactory.GetGAgentAsync(childGrainIdToRemove);
             await parentAgent.UnregisterAsync(childAgent);
-            _logger.LogInformation("👥 [UpdateAgentChildren]   ✅ Removed child: {ChildGrainId}", childGrainIdToRemove);
         }
         
         // Add new children
         foreach (var childGrainIdToAdd in toAdd)
         {
-            _logger.LogInformation("👥 [UpdateAgentChildren]   ➕ Adding child: {ChildGrainId}", childGrainIdToAdd);
             var childAgent = await _gAgentFactory.GetGAgentAsync(childGrainIdToAdd);
             await parentAgent.RegisterAsync(childAgent);
-            _logger.LogInformation("👥 [UpdateAgentChildren]   ✅ Added child: {ChildGrainId}", childGrainIdToAdd);
         }
-        
-        _logger.LogInformation("👥 [UpdateAgentChildren] ✅ COMPLETED - Parent: {ParentName}, Added: {AddCount}, Removed: {RemoveCount}", 
-            parentName, toAdd.Count, toRemove.Count);
     }
     
     /// <summary>
