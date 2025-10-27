@@ -4,7 +4,7 @@ public class WorkflowLogQueryDto
 {
     public string WorkflowId { get; set; } = string.Empty;
     public long? RoundId { get; set; }
-    public string? GrainId { get; set; }
+    public string? GrainIdString { get; set; }
     public string? Level { get; set; }
     public string? MessagePattern { get; set; }
     public int PageIndex { get; set; } = 1;

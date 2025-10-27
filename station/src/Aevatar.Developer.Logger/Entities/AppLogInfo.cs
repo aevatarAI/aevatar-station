@@ -15,7 +15,7 @@ public class AppLogInfo
     [JsonPropertyName("LogCategory")] public string? LogCategory { get; set; }
     [JsonPropertyName("WorkflowId")] public string? WorkflowId { get; set; }
     [JsonPropertyName("RoundId")] public long? RoundId { get; set; }
-    [JsonPropertyName("GrainId")] public string? GrainId { get; set; }
+    [JsonPropertyName("GrainIdString")] public string? GrainId { get; set; }
     
     [JsonPropertyName("SourceContext")] public string? SourceContext { get; set; }
     [JsonPropertyName("Application")] public string? Application { get; set; }
