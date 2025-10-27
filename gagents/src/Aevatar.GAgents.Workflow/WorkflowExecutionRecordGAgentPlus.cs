@@ -315,11 +315,21 @@ public class WorkflowExecutionRecordGAgentPlus :
         Logger.LogWarning("ExecutionRecordGAgent handling WorkflowFailed for work unit agent {WorkUnitAgentId}, Error: {ErrorMessage}", 
             workflowEvent.WorkUnitAgentId, workflowEvent.ErrorMessage);
         
-        // ✅ Record workflow failure
+        // ✅ Capture state snapshot before recording failure
+        var stateSnapshot = await CaptureAgentStateAsync(workflowEvent.WorkUnitAgentId);
+        
+        // ✅ Extract InputData from Metadata or Message (same pattern as HandleWorkflowAsync)
+        var inputData = workflowEvent.Metadata.TryGetValue("inputData", out var savedInput) 
+            ? savedInput?.ToString() ?? string.Empty
+            : (workflowEvent.Message ?? string.Empty);
+        
+        // ✅ Record workflow failure with complete context
         RaiseEvent(new FailExecuteWorkflowLogEvent()
         {
             WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
-            FailureSummary = workflowEvent.ErrorMessage ?? "Task failed without specific error message"
+            FailureSummary = workflowEvent.ErrorMessage ?? "Task failed without specific error message",
+            InputData = inputData,
+            CurrentStateSnapshot = stateSnapshot
         });
         await ConfirmEvents();
         
@@ -450,6 +460,16 @@ public class WorkflowExecutionRecordGAgentPlus :
                         workUnit.EndTime = endTime;
                         workUnit.Status = WorkflowExecutionStatus.Failed;
                         workUnit.FailureSummary = failExecuteWorkflowLogEvent.FailureSummary;
+                        
+                        // ✅ Apply InputData and CurrentStateSnapshot from failure event
+                        if (!string.IsNullOrEmpty(failExecuteWorkflowLogEvent.InputData))
+                        {
+                            workUnit.InputData = failExecuteWorkflowLogEvent.InputData;
+                        }
+                        if (failExecuteWorkflowLogEvent.CurrentStateSnapshot != null)
+                        {
+                            workUnit.CurrentStateSnapshot = failExecuteWorkflowLogEvent.CurrentStateSnapshot;
+                        }
                     }
                     
                     Logger.LogInformation("✅ [ExecutionRecordGAgent] Successfully updated {Count} WorkUnit records for {WorkUnitGrainId} to status: Failed at {EndTime}", 
@@ -519,4 +539,8 @@ public class FailExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
     public string WorkUnitGrainId { get; set; } = string.Empty;
     [Id(1)]
     public string FailureSummary { get; set; } = string.Empty;
+    [Id(2)]
+    public string InputData { get; set; } = string.Empty;
+    [Id(3)]
+    public string? CurrentStateSnapshot { get; set; }
 }
