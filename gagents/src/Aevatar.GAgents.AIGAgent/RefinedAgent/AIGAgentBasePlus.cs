@@ -41,14 +41,35 @@ public abstract partial class
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TConfiguration : ConfigurationBase
 {
-    private readonly IBrainFactory _brainFactory;
-    private readonly IServiceProvider _serviceProvider;
+    private IBrainFactory? _brainFactory;
+    private IOptions<SystemLLMConfigOptions>? _systemLLMOptions;
     private IBrain? _brain;
 
     protected AIGAgentBasePlus()
     {
-        _brainFactory = ServiceProvider.GetRequiredService<IBrainFactory>();
+        // Constructor is empty - dependencies resolved lazily via virtual factory methods
+        // This enables unit testing without Orleans ServiceProvider
     }
+
+    /// <summary>
+    /// Protected virtual factory method for IBrainFactory resolution.
+    /// Override this in test classes to provide mock implementations without Orleans.
+    /// </summary>
+    protected virtual IBrainFactory GetBrainFactory()
+        => ServiceProvider.GetRequiredService<IBrainFactory>();
+
+    /// <summary>
+    /// Protected virtual factory method for SystemLLMConfigOptions resolution.
+    /// Override this in test classes to provide mock implementations without Orleans.
+    /// </summary>
+    protected virtual IOptions<SystemLLMConfigOptions> GetSystemLLMConfigOptions()
+        => ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
+
+    /// <summary>
+    /// Lazy-loaded BrainFactory property using virtual factory method.
+    /// Enables testability by allowing factory method override.
+    /// </summary>
+    protected IBrainFactory BrainFactory => _brainFactory ??= GetBrainFactory();
 
     protected override async Task PerformConfigAsync(TConfiguration configuration)
     {
@@ -58,7 +79,13 @@ public abstract partial class
 
     public async Task<bool> InitializeAsync(InitializeDto initializeDto)
     {
+        if (initializeDto == null)
+        {
+            return false;
+        }
+
         var llmConfig = await GetLLMConfigAsync(initializeDto.LLMConfig);
+        
         if (llmConfig == null)
         {
             return false;
@@ -162,7 +189,7 @@ public abstract partial class
 
     private async Task<bool> InitializeBrainAsync(LLMConfig llmConfig, string systemMessage)
     {
-        _brain = _brainFactory.CreateBrain(llmConfig);
+        _brain = BrainFactory.CreateBrain(llmConfig);
 
         if (_brain == null)
         {
@@ -732,7 +759,7 @@ public abstract partial class
 
     protected virtual Task<LLMConfig?> ResolveSystemConfigAsync(string key)
     {
-        var systemConfigs = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
+        var systemConfigs = _systemLLMOptions ??= GetSystemLLMConfigOptions();
         if (systemConfigs.Value.SystemLLMConfigs?.TryGetValue(key, out var config) == true)
         {
             return Task.FromResult(config)!;
@@ -751,7 +778,7 @@ public abstract partial class
 
         if (llmConfigDto.SystemLLM.IsNullOrEmpty() == false)
         {
-            var systemConfigs = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
+            var systemConfigs = _systemLLMOptions ??= GetSystemLLMConfigOptions();
 
             if (systemConfigs.Value.SystemLLMConfigs == null ||
                 !systemConfigs.Value.SystemLLMConfigs.TryGetValue(llmConfigDto.SystemLLM, out var config))
