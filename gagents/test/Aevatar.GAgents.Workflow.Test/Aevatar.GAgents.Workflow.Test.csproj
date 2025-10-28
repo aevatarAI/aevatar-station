@@ -25,6 +25,8 @@
     <ProjectReference Include="..\..\src\Aevatar.GAgents.Basic\Aevatar.GAgents.Basic.csproj" />
     <ProjectReference Include="..\..\src\Aevatar.GAgents.SocialGAgent\Aevatar.GAgents.SocialGAgent.csproj" />
     <ProjectReference Include="..\..\src\Aevatar.GAgents.ChatAgent\Aevatar.GAgents.ChatAgent.csproj" />
+    <ProjectReference Include="..\..\src\Aevatar.GAgents.Workflow\Aevatar.GAgents.Workflow.csproj" />
+    <ProjectReference Include="..\..\src\Aevatar.GAgents.Workflow.Core\Aevatar.GAgents.Workflow.Core.csproj" />
     <ProjectReference Include="..\Aevatar.GAgents.TestBase\Aevatar.GAgents.TestBase.csproj" />
   </ItemGroup>
 </Project>
