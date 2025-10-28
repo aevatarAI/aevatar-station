@@ -8,6 +8,7 @@ using Aevatar.Application.Grains.Agents.Creator;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.Core;
 using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
+using Aevatar.GAgents.Workflow.Core;
 using Aevatar.Options;
 using Aevatar.Schema;
 using Aevatar.Service;
@@ -130,14 +131,25 @@ public class WorkflowRunServiceTests
         var request = CreateValidWorkflowRunRequest(viewAgentId);
 
         SetupSuccessfulWorkflowExecution(viewAgentId, coordinatorId);
+        
+        // Mock IWorkflowViewGAgentPlus for new execution flow
+        var mockWorkflowViewGAgent = new Mock<IWorkflowViewGAgentPlus>();
+        mockWorkflowViewGAgent.Setup(x => x.ExecuteWorkflowAsync())
+            .ReturnsAsync(Guid.NewGuid()); // Return execution event ID
+        
+        _mockClusterClient.Setup(x => x.GetGrain<IWorkflowViewGAgentPlus>(viewAgentId, null))
+            .Returns(mockWorkflowViewGAgent.Object);
 
         // Act
-        await _workflowRunService.RunWorkflowAsync(request);
+        var result = await _workflowRunService.RunWorkflowAsync(request);
 
         // Assert
+        result.ShouldNotBeNull();
+        result.IsSuccess.ShouldBeTrue();
         _mockAgentService.Verify(x => x.GetAgentAsync(viewAgentId), Times.Once);
         _mockWorkflowViewService.Verify(x => x.PublishWorkflowAsync(viewAgentId), Times.Once);
-        _mockSubscriptionAppService.Verify(x => x.PublishEventAsync(It.IsAny<PublishEventDto>()), Times.Once);
+        // Note: PublishEventAsync is no longer called in new implementation using IWorkflowViewGAgentPlus.ExecuteWorkflowAsync()
+        mockWorkflowViewGAgent.Verify(x => x.ExecuteWorkflowAsync(), Times.Once);
     }
 
     [Fact]
@@ -289,6 +301,14 @@ public class WorkflowRunServiceTests
         };
 
         SetupSuccessfulWorkflowExecution(viewAgentId, coordinatorId);
+        
+        // Mock IWorkflowViewGAgentPlus for execution
+        var mockWorkflowViewGAgent = new Mock<IWorkflowViewGAgentPlus>();
+        mockWorkflowViewGAgent.Setup(x => x.ExecuteWorkflowAsync())
+            .ReturnsAsync(Guid.NewGuid());
+        
+        _mockClusterClient.Setup(x => x.GetGrain<IWorkflowViewGAgentPlus>(viewAgentId, null))
+            .Returns(mockWorkflowViewGAgent.Object);
 
         // Act
         var result = await _workflowRunService.RunWorkflowAsync(request);

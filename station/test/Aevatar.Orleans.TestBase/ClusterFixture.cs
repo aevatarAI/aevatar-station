@@ -143,7 +143,14 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                         Console.WriteLine($"Warning: Could not register IBrainFactory mock: {ex.Message}");
                     }
                 })
-                .AddMemoryStreams("Aevatar")
+                .AddMemoryStreams("Aevatar", b =>
+                {
+                    // Configure PullingAgent for faster test startup
+                    b.ConfigurePullingAgent(ob => ob.Configure(options =>
+                    {
+                        options.GetQueueMsgsTimerPeriod = TimeSpan.FromMilliseconds(100); // Faster polling for tests
+                    }));
+                })
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage")

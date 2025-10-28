@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.Workflow.Core;
+using Aevatar.GAgents.Workflow.Core.States;
 using Aevatar.Options;
 using Aevatar.Service;
 using Microsoft.Extensions.Logging;
@@ -21,6 +23,7 @@ public class WorkflowViewServiceTests
     private readonly Mock<IClusterClient> _mockClusterClient;
     private readonly Mock<ILogger<WorkflowViewServicePlus>> _mockLogger;
     private readonly Mock<IOptionsSnapshot<DebugModeOptions>> _mockDebugModeOptions;
+    private readonly Mock<IWorkflowViewGAgentPlus> _mockWorkflowViewGAgent;
     private readonly WorkflowViewServicePlus _workflowViewService;
     
     public WorkflowViewServiceTests()
@@ -31,6 +34,26 @@ public class WorkflowViewServiceTests
         _mockLogger = new Mock<ILogger<WorkflowViewServicePlus>>();
         _mockDebugModeOptions = new Mock<IOptionsSnapshot<DebugModeOptions>>();
         _mockDebugModeOptions.Setup(x => x.Value).Returns(new DebugModeOptions());
+        _mockWorkflowViewGAgent = new Mock<IWorkflowViewGAgentPlus>();
+        
+        // Setup default state for IWorkflowViewGAgentPlus
+        var defaultState = new WorkflowViewStatePlus
+        {
+            WorkflowStartAgentId = Guid.NewGuid(),
+            WorkflowEndAgentId = Guid.NewGuid(),
+            WorkflowCoordinatorGAgentId = Guid.NewGuid(),
+            Name = "Test Workflow",
+            WorkflowNodeList = new List<Aevatar.GAgents.Workflow.Core.Configs.WorkflowNodeDto>(),
+            WorkflowNodeUnitList = new List<Aevatar.GAgents.Workflow.Core.Configs.WorkflowNodeUnitDto>()
+        };
+        
+        _mockWorkflowViewGAgent.Setup(x => x.GetStateAsync()).ReturnsAsync(defaultState);
+        _mockWorkflowViewGAgent.Setup(x => x.ConfigAsync(It.IsAny<Aevatar.GAgents.Workflow.Core.Configs.WorkflowViewConfigDto>()))
+            .Returns(Task.CompletedTask);
+        
+        // Setup GAgentFactory to return the mock WorkflowViewGAgent
+        _mockGAgentFactory.Setup(x => x.GetGAgentAsync<IWorkflowViewGAgentPlus>(It.IsAny<Guid>(), It.IsAny<ConfigurationBase>()))
+            .ReturnsAsync(_mockWorkflowViewGAgent.Object);
         
         _workflowViewService = new WorkflowViewServicePlus(
             _mockAgentService.Object,
@@ -106,6 +129,7 @@ public class WorkflowViewServiceTests
         var agentDto = new AgentDto
         {
             Id = viewAgentId,
+            GrainId = viewAgentId, // Add GrainId to avoid NullReferenceException
             Name = "Test Workflow",
             Properties = workflowProperties
         };
@@ -113,6 +137,7 @@ public class WorkflowViewServiceTests
         var updatedAgentDto = new AgentDto
         {
             Id = viewAgentId,
+            GrainId = viewAgentId,
             Name = "Test Workflow",
             Properties = workflowProperties
         };
