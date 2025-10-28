@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -14,9 +15,11 @@ using Aevatar.GAgents.Core;
 // using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto; // Removed due to type conflicts with Workflow.Core.Configs
 using Aevatar.GAgents.Workflow.Core;
 using Aevatar.GAgents.Workflow.Core.Configs;
+using Aevatar.Provider;
 using Aevatar.Schema;
 using Aevatar.Subscription;
 using Aevatar.WorkflowRun;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NJsonSchema.Validation;
@@ -47,6 +50,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     private readonly ILogger<WorkflowRunService> _logger;
     private readonly IGAgentManager _gAgentManager;
     private readonly GrainTypeResolver _grainTypeResolver;
+    private readonly IServiceProvider _serviceProvider;
 
     public WorkflowRunService(
         IWorkflowViewService workflowViewService,
@@ -57,7 +61,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         ILogger<WorkflowRunService> logger,
         IClusterClient clusterClient,
         IGAgentManager gAgentManager,
-        GrainTypeResolver grainTypeResolver)
+        GrainTypeResolver grainTypeResolver,
+        IServiceProvider serviceProvider)
     {
         _workflowViewService = workflowViewService;
         _subscriptionAppService = subscriptionAppService;
@@ -68,6 +73,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _clusterClient = clusterClient;
         _gAgentManager = gAgentManager;
         _grainTypeResolver = grainTypeResolver;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<WorkflowRunResultDto> RunWorkflowAsync(WorkflowRunRequestDto request)
@@ -517,7 +523,10 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     {
         try
         {
-            var schema = _schemaProvider.GetTypeSchema(configurationType);
+            // Create dynamic dropdown context
+            var dynamicContext = await CreateSchemaContextAsync();
+            
+            var schema = _schemaProvider.GetTypeSchema(configurationType, dynamicContext);
             if (schema == null)
             {
                 _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);
@@ -537,6 +546,42 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         {
             _logger.LogError(ex, "Failed to generate schema for type {TypeName}", configurationType.Name);
             return "{}";
+        }
+    }
+
+    private async Task<DynamicDropDownContext> CreateSchemaContextAsync()
+    {
+        try
+        {
+            var concurrentData = new ConcurrentDictionary<string, object>();
+            var configurationProviders = _serviceProvider.GetServices<IDynamicConfigurationProvider>().ToList();
+            
+            if (!configurationProviders.Any())
+            {
+                _logger.LogWarning("No configuration providers found");
+                return new DynamicDropDownContext { AdditionalData = new Dictionary<string, object>() };
+            }
+
+            var processingTasks = configurationProviders.Select(async provider =>
+            {
+                try
+                {
+                    await provider.ProcessSchemaAsync(concurrentData, _clusterClient);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process with provider: {ProviderType}", 
+                        provider.GetType().Name);
+                }
+            });
+
+            await Task.WhenAll(processingTasks);
+            return new DynamicDropDownContext { AdditionalData = new Dictionary<string, object>(concurrentData) };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create schema context");
+            return new DynamicDropDownContext { AdditionalData = new Dictionary<string, object>() };
         }
     }
 
