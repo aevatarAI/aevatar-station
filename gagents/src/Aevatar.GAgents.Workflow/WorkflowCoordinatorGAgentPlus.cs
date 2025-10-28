@@ -240,10 +240,20 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
         Logger.LogInformation("[WorkflowCoordinatorGAgent] Workflow started: ExecutionName={ExecutionName}, ExecutionRecordId={ExecutionRecordId}", 
             executionName, executionRecordId);
 
+        // ✅ Filter out StartAgent and EndAgent - they are workflow system agents, not business agents
+        // ExecutionRecord should only track business agents' execution
+        var businessWorkUnits = State.CurrentWorkUnitInfos
+            .Where(w => !w.AgentType.Contains("WorkflowStartAgent") && 
+                       !w.AgentType.Contains("WorkflowEndAgent"))
+            .ToList();
+        
+        Logger.LogDebug("[WorkflowCoordinatorGAgent] Filtered WorkUnitInfos: Total={Total}, Business={Business}", 
+            State.CurrentWorkUnitInfos.Count, businessWorkUnits.Count);
+
         // Compose essential metadata for WorkflowExecutionRecordGAgent
         workflowEvent.Metadata["RoundId"] = State.RoundId;
         workflowEvent.Metadata["Content"] = initContent;
-        workflowEvent.Metadata["WorkUnitInfos"] = State.CurrentWorkUnitInfos.ToList();
+        workflowEvent.Metadata["WorkUnitInfos"] = businessWorkUnits;  // ✅ Only pass business agents
         Logger.LogDebug("[WorkflowCoordinatorGAgent] HandleWorkflowStartAsync end");
     }
 
@@ -333,7 +343,8 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
                     NodeId = s.GrainId, // Use AgentId as NodeId for dynamic discovery
                     NextNodeId = s.NextGrainId ?? string.Empty,
                     UnitStatusEnum = WorkerUnitStatusEnum.Pending,
-                    ExtendedData = s.ExtendedData
+                    ExtendedData = s.ExtendedData,
+                    AgentName = s.AgentName
                 }).ToList();
 
                 if (state.WorkflowStatus is WorkflowCoordinatorStatus.Pending or WorkflowCoordinatorStatus.Failed)
@@ -493,9 +504,14 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
 
                 // Get agent information using proper state access (not parsing!)
                 var (agentName, agentTypeName) = await currentAgent.GetAgentInfoAsync();
+                
+                // ✅ Priority: Use existing Name from State if available, otherwise use newly retrieved name
+                var existingWorkUnit = State.CurrentWorkUnitInfos.FirstOrDefault(w => w.AgentId == currentAgentGrainId.ToString());
+                var finalAgentName = !string.IsNullOrEmpty(existingWorkUnit?.Name) ? existingWorkUnit.Name : agentName;
 
-                Logger.LogDebug("[WorkflowCoordinatorGAgent] Agent {AgentId} → Node {NodeId}: Name='{Name}', Type='{Type}'",
-                    currentAgentId, currentNodeId, agentName, agentTypeName);
+                Logger.LogDebug("[WorkflowCoordinatorGAgent] Agent {AgentId} → Node {NodeId}: Name='{Name}' (from {Source}), Type='{Type}'",
+                    currentAgentId, currentNodeId, finalAgentName, 
+                    existingWorkUnit != null ? "State" : "GetAgentInfoAsync", agentTypeName);
 
                 // Get children of current agent
                 var children = await currentAgent.GetChildrenAsync();
@@ -526,7 +542,7 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
                             NextNodeId = childNodeId.ToString("N"),      // Next workflow node ID as string
                             AgentId = currentAgentGrainId.ToString(),    // Runtime grain ID (full GrainId string)
                             NextAgentId = childId.ToString(),            // Next runtime grain ID (full GrainId string)
-                            Name = agentName,
+                            Name = finalAgentName,  // ✅ Use prioritized name (State first, then GetAgentInfoAsync)
                             AgentType = agentTypeName,
                             UnitStatusEnum = WorkerUnitStatusEnum.Pending,
                             ExtendedData = new Dictionary<string, string>

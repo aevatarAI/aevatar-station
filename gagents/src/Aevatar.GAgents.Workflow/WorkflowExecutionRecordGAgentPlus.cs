@@ -168,27 +168,8 @@ public class WorkflowExecutionRecordGAgentPlus :
             Content = content,
         });
         
-        // ✅ FIX: Also track WorkflowStartAgent as a completed work unit
-        if (!string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
-        {
-            Logger.LogInformation("🚀 [ExecutionRecordGAgent] Marking WorkflowStartAgent work unit as completed: {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
-            
-            // Capture state snapshot
-            var stateSnapshot = await CaptureAgentStateAsync(workflowEvent.WorkUnitAgentId);
-            
-            // ✅ SIMPLIFIED: InputData = Message, OutputData = TaskResult
-            var inputData = workflowEvent.Message ?? string.Empty;
-            var outputData = workflowEvent.TaskResult ?? string.Empty;
-            
-            // Only trigger Finish event - StartTime and InputData will be set in state transition
-            RaiseEvent(new FinishExecuteWorkUnitLogEvent
-            {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
-                InputData = inputData,
-                OutputData = outputData,
-                CurrentStateSnapshot = stateSnapshot
-            });
-        }
+        // ✅ StartAgent is a workflow system agent - no need to track its execution in business records
+        // WorkUnitInfos already filtered to exclude StartAgent/EndAgent in WorkflowCoordinator
         
         await ConfirmEvents();
     }
@@ -247,31 +228,11 @@ public class WorkflowExecutionRecordGAgentPlus :
 
     private async Task HandleWorkflowCompletedAsync(WorkflowEvent workflowEvent)
     {
-        Logger.LogInformation("🎯 [ExecutionRecordGAgent] HandleWorkflowCompletedAsync called for WorkflowId: {WorkflowId}, WorkUnitAgentId: {WorkUnitAgentId}, WorkflowAgentStatus: {AgentStatus}, Current Status: {CurrentStatus}", 
-            workflowEvent.WorkflowId, workflowEvent.WorkUnitAgentId, workflowEvent.WorkflowAgentStatus, State.Status);
+        Logger.LogInformation("🎯 [ExecutionRecordGAgent] HandleWorkflowCompletedAsync called for WorkflowId: {WorkflowId}, WorkflowAgentStatus: {AgentStatus}, Current Status: {CurrentStatus}", 
+            workflowEvent.WorkflowId, workflowEvent.WorkflowAgentStatus, State.Status);
         
-        // ✅ Track WorkflowEndAgent as a completed work unit BEFORE completing overall workflow
-        if (!string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
-        {
-            Logger.LogInformation("🏁 [ExecutionRecordGAgent] Recording WorkflowEndAgent work unit: {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
-            
-            // Capture state snapshot
-            var stateSnapshot = await CaptureAgentStateAsync(workflowEvent.WorkUnitAgentId);
-            
-            // ✅ DESIGN: InputData = original input saved in Metadata["inputData"]
-            var inputData = workflowEvent.Metadata.TryGetValue("inputData", out var savedInput) 
-                ? savedInput?.ToString() ?? string.Empty
-                : (workflowEvent.Message ?? string.Empty);
-            var outputData = workflowEvent.TaskResult ?? string.Empty;
-            
-            RaiseEvent(new FinishExecuteWorkUnitLogEvent
-            {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
-                InputData = inputData,
-                OutputData = outputData,
-                CurrentStateSnapshot = stateSnapshot
-            });
-        }
+        // ✅ EndAgent is a workflow system agent - no need to track its execution in business records
+        // WorkUnitInfos already filtered to exclude StartAgent/EndAgent in WorkflowCoordinator
         
         // ✅ UNIFIED: Always raise FinishExecuteWorkflowLogEvent when workflow ends
         // Status will be preserved (Failed) or set to Completed based on previous events
