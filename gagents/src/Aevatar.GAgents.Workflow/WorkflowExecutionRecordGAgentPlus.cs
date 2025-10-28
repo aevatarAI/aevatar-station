@@ -327,6 +327,7 @@ public class WorkflowExecutionRecordGAgentPlus :
                 }
 
                 state.Status = WorkflowExecutionStatus.Failed;
+                state.EndTime = DateTime.UtcNow;
                 break;
         }
     }

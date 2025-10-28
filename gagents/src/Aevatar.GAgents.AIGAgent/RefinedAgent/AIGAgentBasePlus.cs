@@ -765,7 +765,7 @@ public abstract partial class
             return Task.FromResult(config)!;
         }
 
-        return null;
+        return Task.FromResult<LLMConfig?>(null);
     }
 
     protected virtual Task<LLMConfig?> GetLLMConfigAsync(LLMConfigDto llmConfigDto)

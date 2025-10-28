@@ -104,6 +104,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
             Logger.LogError(ex, "[WorkflowCoordinatorGAgent] Error processing WorkflowEvent: {WorkflowEventType}", 
                 workflowEvent.WorkflowEventType);
             workflowEvent.ErrorMessage = ex.Message;
+            throw;
         }
     }
 

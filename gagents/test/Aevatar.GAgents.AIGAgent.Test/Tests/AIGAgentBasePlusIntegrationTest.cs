@@ -1,4 +1,5 @@
 using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.AI.Options;
 using Aevatar.GAgents.AIGAgent.Agent;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AIGAgent.State;
@@ -121,6 +122,136 @@ public class AIGAgentBasePlusIntegrationTest : AevatarAIGAgentTestBase
         var finalState = await agent.GetStateAsync();
         finalState.LLMConfigKey.ShouldBe(firstState.LLMConfigKey);
         finalState.SystemLLM.ShouldBe(firstState.SystemLLM);
+    }
+
+    #endregion
+
+    #region GetLLMConfigAsync Integration Tests
+
+    [Fact]
+    public async Task GetLLMConfigAsync_Should_ReturnSystemConfig_When_LLMConfigKeyIsSet()
+    {
+        // Arrange - Use existing configuration from appsettings.json
+        var agentId = Guid.NewGuid();
+        var agent = _grainFactory.GetGrain<ITestAIGAgentBasePlus>(agentId);
+        var systemLLMKey = "OpenAI"; // This exists in test configuration
+
+        // Act - Set LLMConfigKey using proper event sourcing
+        await agent.SetLLMConfigKeyAsync(systemLLMKey);
+
+        var resolvedConfig = await agent.GetLLMConfigAsync();
+
+        // Assert
+        resolvedConfig.ShouldNotBeNull();
+        resolvedConfig.ModelName.ShouldBe("gpt-4o"); // From appsettings.json
+        resolvedConfig.ProviderEnum.ShouldBe(LLMProviderEnum.Azure);
+    }
+
+    [Fact]
+    public async Task GetLLMConfigAsync_Should_ReturnCorrectConfig_When_LLMConfigKeyIsDeepSeek()
+    {
+        // Arrange - Use existing configuration from appsettings.json
+        var agentId = Guid.NewGuid();
+        var agent = _grainFactory.GetGrain<ITestAIGAgentBasePlus>(agentId);
+        var systemLLMKey = "DeepSeek"; // This exists in test configuration
+
+        // Act - Set LLMConfigKey using proper event sourcing
+        await agent.SetLLMConfigKeyAsync(systemLLMKey);
+
+        var resolvedConfig = await agent.GetLLMConfigAsync();
+
+        // Assert
+        resolvedConfig.ShouldNotBeNull();
+        resolvedConfig.ModelName.ShouldBe("DeepSeek-R1"); // From appsettings.json
+        resolvedConfig.ProviderEnum.ShouldBe(LLMProviderEnum.Azure);
+    }
+
+    [Fact]
+    public async Task GetLLMConfigAsync_Should_FallbackToResolvedLLM_When_BothKeysAreNull()
+    {
+        // Arrange - Use self-provided LLM config to test fallback
+        var selfConfig = new SelfLLMConfig
+        {
+            ProviderEnum = LLMProviderEnum.Google,
+            ModelId = ModelIdEnum.Gemini,
+            ModelName = "gemini-pro",
+            Endpoint = "https://ai.google.dev",
+            ApiKey = "google-key"
+        };
+
+        var agentId = Guid.NewGuid();
+        var agent = _grainFactory.GetGrain<ITestAIGAgentBasePlus>(agentId);
+
+        await agent.SetLLMConfigKeyAsync("");
+
+        // Act - Initialize with self-provided config (sets LLM property directly)
+        await agent.InitializeAsync(new InitializeDto
+        {
+            Instructions = "Test instructions",
+            LLMConfig = new LLMConfigDto
+            {
+                SelfLLMConfig = selfConfig,
+                SystemLLM = ""
+            }
+        });
+
+        var resolvedConfig = await agent.GetLLMConfigAsync();
+
+        // Assert
+        resolvedConfig.ShouldNotBeNull();
+        resolvedConfig.ModelName.ShouldBe("gemini-pro");
+        resolvedConfig.ApiKey.ShouldBe("google-key");
+        resolvedConfig.ProviderEnum.ShouldBe(LLMProviderEnum.Google);
+    }
+
+    [Fact]
+    public async Task GetLLMConfigAsync_Should_ReturnNull_When_SystemConfigNotFound()
+    {
+        // Arrange
+        var agentId = Guid.NewGuid();
+        var agent = _grainFactory.GetGrain<ITestAIGAgentBasePlus>(agentId);
+
+        // Act - Set non-existent system LLM key using proper event sourcing
+        await agent.SetLLMConfigKeyAsync("NonExistentConfig");
+
+        var resolvedConfig = await agent.GetLLMConfigAsync();
+
+        // Assert
+        resolvedConfig.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetLLMConfigAsync_Should_UsePriorityOrder_When_MultipleConfigsSet()
+    {
+        // Arrange - Test priority: LLMConfigKey (OpenAI) over SystemLLM (DeepSeek) over LLM (self-config)
+        var fallbackConfig = new LLMConfig
+        {
+            ProviderEnum = LLMProviderEnum.Google,
+            ModelIdEnum = ModelIdEnum.Gemini,
+            ModelName = "priority-3-config",
+            Endpoint = "https://priority3.com",
+            ApiKey = "priority-3-key"
+        };
+
+        var agentId = Guid.NewGuid();
+        var agent = _grainFactory.GetGrain<ITestAIGAgentBasePlus>(agentId);
+
+        // Act - Set up multiple configs using non-brain-initializing methods
+        // 1. First set LLM config (Priority 3 - lowest) 
+        await agent.SetLLMAsync(fallbackConfig, null);
+
+        // 2. Then set SystemLLM (Priority 2 - middle) 
+        await agent.SetSystemLLMAsync("DeepSeek");
+
+        // 3. Finally set LLMConfigKey (Priority 1 - highest)
+        await agent.SetLLMConfigKeyAsync("OpenAI");
+
+        var resolvedConfig = await agent.GetLLMConfigAsync();
+
+        // Assert - Should return Priority 1 (LLMConfigKey = OpenAI)
+        resolvedConfig.ShouldNotBeNull();
+        resolvedConfig.ModelName.ShouldBe("gpt-4o"); // From OpenAI config in appsettings.json
+        resolvedConfig.ProviderEnum.ShouldBe(LLMProviderEnum.Azure);
     }
 
     #endregion

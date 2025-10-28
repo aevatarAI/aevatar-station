@@ -19,5 +19,6 @@
     <ItemGroup>
         <ProjectReference Include="..\Aevatar.GAgents.GroupChat.GroupMember\Aevatar.GAgents.GroupChat.GroupMember.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.Core\Aevatar.GAgents.Core.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.Workflow\Aevatar.GAgents.Workflow.csproj" />
     </ItemGroup>
 </Project>
