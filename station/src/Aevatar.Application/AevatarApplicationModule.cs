@@ -82,6 +82,7 @@ public class AevatarApplicationModule : AbpModule
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         Configure<AgentDefaultValuesOptions>(configuration.GetSection("AgentDefaults"));
+        Configure<WorkflowAgentFilterOptions>(configuration.GetSection("WorkflowAgentFilter"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         context.Services.AddTransient<IHostCopyManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();

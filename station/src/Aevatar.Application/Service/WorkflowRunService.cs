@@ -15,12 +15,14 @@ using Aevatar.GAgents.Core;
 // using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto; // Removed due to type conflicts with Workflow.Core.Configs
 using Aevatar.GAgents.Workflow.Core;
 using Aevatar.GAgents.Workflow.Core.Configs;
+using Aevatar.Options;
 using Aevatar.Provider;
 using Aevatar.Schema;
 using Aevatar.Subscription;
 using Aevatar.WorkflowRun;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using NJsonSchema.Validation;
 using Orleans;
@@ -51,6 +53,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     private readonly IGAgentManager _gAgentManager;
     private readonly GrainTypeResolver _grainTypeResolver;
     private readonly IServiceProvider _serviceProvider;
+    private readonly WorkflowAgentFilterOptions _filterOptions;
 
     public WorkflowRunService(
         IWorkflowViewService workflowViewService,
@@ -62,7 +65,8 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         IClusterClient clusterClient,
         IGAgentManager gAgentManager,
         GrainTypeResolver grainTypeResolver,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IOptions<WorkflowAgentFilterOptions> filterOptions)
     {
         _workflowViewService = workflowViewService;
         _subscriptionAppService = subscriptionAppService;
@@ -74,6 +78,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _gAgentManager = gAgentManager;
         _grainTypeResolver = grainTypeResolver;
         _serviceProvider = serviceProvider;
+        _filterOptions = filterOptions.Value;
     }
 
     public async Task<WorkflowRunResultDto> RunWorkflowAsync(WorkflowRunRequestDto request)
@@ -119,6 +124,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
     /// <summary>
     /// Get all workflow agents that inherit from BusinessAgentBase
+    /// Infrastructure agents are filtered by IsBusinessAgentType using WorkflowAgentFilterOptions
     /// </summary>
     public async Task<List<AgentTypeDto>> GetAllWorkflowAgents()
     {
@@ -500,6 +506,15 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     /// </summary>
     private bool IsBusinessAgentType(Type type)
     {
+        // Get the fully qualified type name for exact matching
+        var fullTypeName = $"{type.Namespace}.{type.Name}";
+        
+        // Check if the type is in the excluded list (infrastructure agents)
+        if (_filterOptions.ExcludedAgentTypes.Contains(fullTypeName))
+        {
+            return false;
+        }
+        
         // Check if the type inherits from BusinessAgentBase class
         var currentType = type.BaseType;
         while (currentType != null)
