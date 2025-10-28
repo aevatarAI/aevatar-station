@@ -129,7 +129,7 @@ public class WorkflowViewServiceTests
         var agentDto = new AgentDto
         {
             Id = viewAgentId,
-            GrainId = viewAgentId, // Add GrainId to avoid NullReferenceException
+            GrainId = Orleans.Runtime.GrainId.Create("WorkflowViewGAgentPlus", viewAgentId.ToString()), // Add GrainId to avoid NullReferenceException
             Name = "Test Workflow",
             Properties = workflowProperties
         };
@@ -137,7 +137,7 @@ public class WorkflowViewServiceTests
         var updatedAgentDto = new AgentDto
         {
             Id = viewAgentId,
-            GrainId = viewAgentId,
+            GrainId = Orleans.Runtime.GrainId.Create("WorkflowViewGAgentPlus", viewAgentId.ToString()),
             Name = "Test Workflow",
             Properties = workflowProperties
         };
