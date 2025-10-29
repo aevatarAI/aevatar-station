@@ -236,14 +236,13 @@ public class WorkflowRunServiceTests
         SetupValidWorkflowConfiguration(viewAgentId);
         SetupPublishWorkflowSuccess(viewAgentId, coordinatorId);
 
-        // Setup coordinator agent with no events (not ready)
-        var mockAgent = new Mock<Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent>();
-        // For simplicity, we'll throw an exception to simulate agent not ready
-        mockAgent.Setup(x => x.GetAgentAsync())
-            .ThrowsAsync(new InvalidOperationException("Agent not ready"));
+        // Setup IWorkflowViewGAgentPlus to throw exception simulating coordinator not ready
+        var mockWorkflowViewGAgent = new Mock<IWorkflowViewGAgentPlus>();
+        mockWorkflowViewGAgent.Setup(x => x.ExecuteWorkflowAsync())
+            .ThrowsAsync(new InvalidOperationException("The coordinator agent is not ready to start workflow."));
         
-        _mockClusterClient.Setup(x => x.GetGrain<Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent>(coordinatorId, null))
-            .Returns(mockAgent.Object);
+        _mockClusterClient.Setup(x => x.GetGrain<IWorkflowViewGAgentPlus>(viewAgentId, null))
+            .Returns(mockWorkflowViewGAgent.Object);
 
         // Act
         var result = await _workflowRunService.RunWorkflowAsync(request);
@@ -394,6 +393,14 @@ public class WorkflowRunServiceTests
         SetupWorkflowConfiguration(viewAgentId, workflowConfig);
         SetupPublishWorkflowSuccess(viewAgentId, coordinatorId);
         SetupSuccessfulCoordinatorExecution(coordinatorId);
+
+        // Mock IWorkflowViewGAgentPlus for successful execution
+        var mockWorkflowViewGAgent = new Mock<IWorkflowViewGAgentPlus>();
+        mockWorkflowViewGAgent.Setup(x => x.ExecuteWorkflowAsync())
+            .ReturnsAsync(Guid.NewGuid()); // Return execution event ID
+        
+        _mockClusterClient.Setup(x => x.GetGrain<IWorkflowViewGAgentPlus>(viewAgentId, null))
+            .Returns(mockWorkflowViewGAgent.Object);
 
         // Act
         var result = await _workflowRunService.RunWorkflowAsync(request);
@@ -653,18 +660,13 @@ public class WorkflowRunServiceTests
         SetupValidWorkflowConfiguration(viewAgentId);
         SetupPublishWorkflowSuccess(viewAgentId, coordinatorId);
 
-        // Setup coordinator agent that never has the required event
-        var mockAgent = new Mock<Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent>();
-        var mockAgentState = new CreatorGAgentState
-        {
-            EventInfoList = new List<EventDescription>() // Empty event list
-        };
-
-        mockAgent.Setup(x => x.GetAgentAsync())
-            .ReturnsAsync(mockAgentState);
-
-        _mockClusterClient.Setup(x => x.GetGrain<Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent>(coordinatorId, null))
-            .Returns(mockAgent.Object);
+        // Setup IWorkflowViewGAgentPlus to throw exception simulating max retries reached
+        var mockWorkflowViewGAgent = new Mock<IWorkflowViewGAgentPlus>();
+        mockWorkflowViewGAgent.Setup(x => x.ExecuteWorkflowAsync())
+            .ThrowsAsync(new InvalidOperationException("The coordinator agent is not ready to start workflow."));
+        
+        _mockClusterClient.Setup(x => x.GetGrain<IWorkflowViewGAgentPlus>(viewAgentId, null))
+            .Returns(mockWorkflowViewGAgent.Object);
 
         // Act
         var result = await _workflowRunService.RunWorkflowAsync(request);

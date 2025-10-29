@@ -103,7 +103,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             return new WorkflowRunResultDto
             {
                 IsSuccess = false,
-                WorkflowId = request.ViewAgentId,
+                WorkflowId = publishedAgent.Item2.WorkflowCoordinatorGAgentId,
                 Message = $"Workflow execution failed: {ex.Message}",
                 PublishedAgent = publishedAgent.Item1
             };
