@@ -6,7 +6,7 @@ using Orleans;
 namespace Aevatar.GAgents.Core;
 
 /// <summary>
-/// ✅ CORE: Base state for business agents with workflow coordination capabilities
+/// Base state for business agents with workflow coordination capabilities
 /// Located in GAgents.Core alongside BusinessAgentBase
 /// </summary>
 [GenerateSerializer]

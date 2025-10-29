@@ -12,7 +12,7 @@ namespace Aevatar.GAgents.AIGAgent.State;
 [GenerateSerializer]
 public abstract class AIGAgentStateBasePlus : BusinessAgentState
 {
-    // ✅ CORRECTED: AI-specific state fields starting from Id(0) - Orleans handles inheritance properly
+    // AI-specific state fields starting from Id(0)
     [Id(0)] public LLMConfig? LLM { get; set; }
     [Id(1)] public string? SystemLLM { get; set; } = "OpenAI";
     [Id(2)] public string PromptTemplate { get; set; } = "Role: {MemberName}\nInstructions: {Instructions}\nContext: {Context}\nInput: {Input}\nResponse:";

@@ -52,22 +52,19 @@ public abstract partial class
     }
 
     /// <summary>
-    /// Protected virtual factory method for IBrainFactory resolution.
-    /// Override this in test classes to provide mock implementations without Orleans.
+    /// Factory method for IBrainFactory resolution.
     /// </summary>
     protected virtual IBrainFactory GetBrainFactory()
         => ServiceProvider.GetRequiredService<IBrainFactory>();
 
     /// <summary>
-    /// Protected virtual factory method for SystemLLMConfigOptions resolution.
-    /// Override this in test classes to provide mock implementations without Orleans.
+    /// Factory method for SystemLLMConfigOptions resolution.
     /// </summary>
     protected virtual IOptions<SystemLLMConfigOptions> GetSystemLLMConfigOptions()
         => ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
 
     /// <summary>
-    /// Lazy-loaded BrainFactory property using virtual factory method.
-    /// Enables testability by allowing factory method override.
+    /// Lazy-loaded BrainFactory property.
     /// </summary>
     protected IBrainFactory BrainFactory => _brainFactory ??= GetBrainFactory();
 
@@ -91,16 +88,16 @@ public abstract partial class
             return false;
         }
 
-        // Use centralized configuration approach for system LLMs
+        // Use centralized configuration for system LLMs
         if (!initializeDto.LLMConfig.SystemLLM.IsNullOrWhiteSpace())
         {
-            // Store reference only, don't persist resolved config
+            // Store reference only
             var centralizedConfigEvent = CreateCentralizedLLMConfigEvent(initializeDto.LLMConfig);
             RaiseEvent(centralizedConfigEvent);
         }
         else
         {
-            // For self-provided configs, use the existing approach
+            // For self-provided configs
             var addLlmEventLog = await AddLLMAsync(llmConfig!, initializeDto.LLMConfig.SystemLLM);
             if (addLlmEventLog != null)
             {
@@ -117,7 +114,7 @@ public abstract partial class
             RaiseEvent(new SetEnableMCPToolsStateLogEvent { EnableMCPTools = true });
         }
 
-        // Configure selected GAgents if provided
+        // Configure GAgent tools if provided
         if (initializeDto.ToolGAgentTypes.Count != 0 || initializeDto.ToolGAgents.Count != 0)
         {
             RaiseEvent(new SetEnableGAgentToolsStateLogEvent { EnableGAgentTools = true });
@@ -140,7 +137,7 @@ public abstract partial class
         {
             var result = await InitializeBrainAsync(llmConfig, initializeDto.Instructions);
 
-            // Register selected GAgent tools if any were specified
+            // Register GAgent tools if specified
             if (result && (initializeDto.ToolGAgentTypes.Count != 0 || initializeDto.ToolGAgents.Count != 0))
             {
                 var toolGAgents = initializeDto.ToolGAgentTypes
@@ -149,7 +146,7 @@ public abstract partial class
                 await UpdateKernelWithGAgentToolsAsync(toolGAgents);
             }
 
-            // Configure MCP servers if provided in initialization
+            // Configure MCP servers if provided
             if (result && initializeDto.MCPServers.Count != 0)
             {
                 await ConfigureMCPServersAsync(initializeDto.MCPServers);
@@ -160,8 +157,8 @@ public abstract partial class
         catch (Exception ex)
         {
             Logger.LogError(ex,
-                "Failed to initialize brain during InitializeAsync. This may be due to invalid configuration.");
-            return false; // Return false to indicate initialization failed
+                "Failed to initialize brain during InitializeAsync");
+            return false;
         }
     }
 

@@ -34,7 +34,7 @@ public class InputGAgentPlus : BusinessAgentBase<InputGAgentStatePlus, InputGAge
     }
     
     /// <summary>
-    /// ✅ UPDATED: Override OnBusinessAgentEventForwardingEventHandlerAsync instead of OnEventForwardingEventHandlerAsync
+    /// Override OnBusinessAgentEventForwardingEventHandlerAsync for input handling
     /// This ensures BusinessAgentBase validation runs first
     /// </summary>
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)

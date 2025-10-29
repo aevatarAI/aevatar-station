@@ -40,7 +40,7 @@ public class WorkflowEndConfigDto : ConfigurationBase
 }
 
 /// <summary>
-/// ✅ WORKFLOW: WorkflowEndAgent for workflow completion
+/// WorkflowEndAgent for workflow completion
 /// Inherits from BusinessAgentBase to handle WorkflowEvent completion
 /// Simply marks workflow as complete - WorkflowCoordinator has all the information
 /// </summary>
@@ -52,7 +52,7 @@ public class WorkflowEndAgent : BusinessAgentBase<WorkflowEndState, WorkflowEndA
         => Task.FromResult("Workflow End Agent that marks workflow completion - WorkflowCoordinator maintains all workflow information");
 
     /// <summary>
-    /// ✅ TASK 14: Override BusinessAgentBase event handler for workflow completion
+    /// Override BusinessAgentBase event handler for workflow completion
     /// Handles WorkflowEvent and sets WorkflowEventType.WorkflowCompleted
     /// </summary>
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)

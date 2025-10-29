@@ -45,9 +45,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
     #region WorkflowEvent Handling
 
     /// <summary>
-    /// ✅ UPDATED: Override OnBusinessAgentEventForwardingEventHandlerAsync instead of OnEventForwardingEventHandlerAsync
-    /// This ensures BusinessAgentBase validation runs first
-    /// Replaces all previous BusinessEvent and [EventHandler] methods
+    /// Override OnBusinessAgentEventForwardingEventHandlerAsync for workflow coordination
     /// </summary>
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
@@ -112,7 +110,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
     {
         Logger.LogDebug("[WorkflowCoordinatorGAgent] HandleWorkflowTaskCompletedAsync start");
 
-        // NEW: Direct AgentId correlation (replaces Term-based system per design document)
+        // Direct AgentId correlation
         var agentId = workflowEvent.AgentId;
         var workUnitInfo = State.CurrentWorkUnitInfos
             .FirstOrDefault(w => w.AgentId == agentId);
@@ -163,7 +161,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
         //     return;
         // }
 
-        // NEW: Dynamically discover and build workflow topology from actual agent relationships
+        // Dynamically discover and build workflow topology from actual agent relationships
         await DiscoverAndBuildWorkflowTopologyAsync(workflowEvent.AgentId, workflowEvent.AgentName);
 
         // Extract initial content from metadata
@@ -413,9 +411,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
     }
 
     /// <summary>
-    /// NEW: Dynamically discover workflow topology from actual agent relationships
-    /// Traverses from start agent through all children to build complete workflow graph
-    /// CORRECTED: NodeId is a new Guid (workflow node), NOT the same as AgentId (grain)
+    /// Dynamically discover workflow topology from actual agent relationships
     /// </summary>
     private async Task DiscoverAndBuildWorkflowTopologyAsync(Guid startAgentId, string startAgentType)
     {
@@ -707,10 +703,10 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
 
     #endregion
 
-    #region Task 16: Service-Direct Workflow Coordination
+    #region Service-Direct Workflow Coordination
 
     /// <summary>
-    /// ✅ TASK 16: Get start node agent IDs for service-direct workflow execution
+    /// Get start node agent IDs for service-direct workflow execution
     /// Uses existing GetTopUpStreamGrainIds() method to find start nodes (no incoming connections)
     /// </summary>
     public async Task<List<string>> GetStartNodeAgentIdsAsync()

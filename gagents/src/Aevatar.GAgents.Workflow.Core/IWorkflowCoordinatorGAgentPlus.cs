@@ -7,7 +7,7 @@ namespace Aevatar.GAgents.Workflow.Core;
 public interface IWorkflowCoordinatorGAgentPlus : IStateGAgentPlus<WorkflowCoordinatorStatePlus>, IBusinessAgentBase
 {
     /// <summary>
-    /// ✅ TASK 16: Get start node agent IDs for service-direct workflow execution
+    /// Get start node agent IDs for service-direct workflow execution
     /// </summary>
     Task<List<string>> GetStartNodeAgentIdsAsync();
     

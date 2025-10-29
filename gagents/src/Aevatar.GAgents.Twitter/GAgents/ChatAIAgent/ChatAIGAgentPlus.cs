@@ -70,7 +70,7 @@ public class ChatAIGAgentPlus :
     }
 
     /// <summary>
-    /// ✅ UPDATED: Override OnBusinessAgentEventForwardingEventHandlerAsync instead of OnEventForwardingEventHandlerAsync
+    /// Override OnBusinessAgentEventForwardingEventHandlerAsync for Twitter chat AI functionality
     /// This ensures BusinessAgentBase validation runs first
     /// Simplified: just check if there's a message to process with AI
     /// </summary>
@@ -131,7 +131,7 @@ public class ChatAIGAgentPlus :
                 ? aiResponse.Response
                 : "I'm having trouble processing your request.";
 
-            // ✅ FIXED: Use event sourcing to update state
+            // Use event sourcing to update state
             RaiseEvent(new ChatResponseEvent
             {
                 Response = responseContent,
