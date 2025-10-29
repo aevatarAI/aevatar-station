@@ -227,7 +227,7 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
 
     public async Task<AgentDto> CreateDefaultWorkflowAsync()
     {
-        var emptyWorkflowViewGAgent = await _gAgentFactory.GetGAgentAsync<WorkflowViewGAgentPlus>(Guid.Empty);
+        var emptyWorkflowViewGAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowViewGAgentPlus>(Guid.Empty);
         string workflowAgentType;
         try
         {
