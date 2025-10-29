@@ -13,7 +13,7 @@ env:
 
 jobs:
   test-framework:
-    runs-on: ubuntu-22.04
+    runs-on: aismart-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
           name: coverage-framework
           path: coverage-framework/
   test-signalr:
-    runs-on: ubuntu-22.04
+    runs-on: aismart-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
           name: coverage-signalr
           path: coverage-signalr/
   test-station:
-    runs-on: ubuntu-22.04
+    runs-on: aismart-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
           name: coverage-station
           path: coverage-station/
   test-gagents:
-    runs-on: ubuntu-22.04
+    runs-on: aismart-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,7 +101,7 @@ jobs:
           path: coverage-gagents/
 
   upload-coverage:
-    runs-on: ubuntu-22.04
+    runs-on: aismart-runner
     needs: [test-framework, test-signalr, test-station, test-gagents]
     permissions:
       pull-requests: write
