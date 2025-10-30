@@ -18,6 +18,7 @@ using Xunit;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class GAgentExecutorIntegrationTests : AevatarAIGAgentTestBase
 {
     private readonly IGAgentExecutor _executor;

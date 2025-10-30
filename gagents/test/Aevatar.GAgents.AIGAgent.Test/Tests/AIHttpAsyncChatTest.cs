@@ -5,6 +5,7 @@ using Shouldly;
 
 namespace Aevatar.GAgents.AIGAgent.Test.GAgents.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class AIHttpAsyncChatTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

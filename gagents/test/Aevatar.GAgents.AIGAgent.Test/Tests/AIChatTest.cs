@@ -13,6 +13,7 @@ using Volo.Abp.BlobStoring;
 
 namespace Aevatar.GAgents.AIGAgent.Test.GAgents.Tests;
 
+[Collection(ClusterCollection.Name)]
 public sealed class AIChatTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

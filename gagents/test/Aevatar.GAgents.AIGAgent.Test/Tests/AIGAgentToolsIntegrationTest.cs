@@ -10,6 +10,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// This file contains integration tests for both MCP and GAgent tools working together.
 /// Tests real-world scenarios where both tool types are used in combination
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

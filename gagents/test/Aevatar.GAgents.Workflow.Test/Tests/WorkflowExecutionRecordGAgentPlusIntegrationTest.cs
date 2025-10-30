@@ -18,6 +18,7 @@ namespace Aevatar.GAgents.Workflow.Test.Tests;
 /// These tests duplicate the functionality from the legacy WorkflowExecutionRecordGAgent tests
 /// but adapted for the BusinessAgentBase-based Plus version.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class WorkflowExecutionRecordGAgentPlusIntegrationTest : AevatarWorkflowTestBase
 {
     private readonly IGrainFactory _grainFactory;

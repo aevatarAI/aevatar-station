@@ -22,6 +22,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// <summary>
 /// Detailed tests for GAgentToolPlugin functionality
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public sealed class GAgentToolPluginTest : AevatarAIGAgentTestBase
 {
     private readonly ITestOutputHelper _testOutputHelper;

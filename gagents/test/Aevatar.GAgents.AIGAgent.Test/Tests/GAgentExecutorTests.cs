@@ -6,6 +6,7 @@ using System.Text.Json;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
+[Collection(ClusterCollection.Name)]
 public sealed class GAgentExecutorTests : AevatarAIGAgentTestBase
 {
     private readonly IGAgentExecutor _executor;

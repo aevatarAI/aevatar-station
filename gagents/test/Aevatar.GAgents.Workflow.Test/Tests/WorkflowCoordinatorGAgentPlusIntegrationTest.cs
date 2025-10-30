@@ -17,6 +17,7 @@ namespace Aevatar.GAgents.Workflow.Test.Tests;
 /// Integration tests for WorkflowCoordinatorGAgentPlus using Orleans TestCluster infrastructure.
 /// Tests the BusinessAgentBase-based workflow coordinator functionality.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestBase
 {
     private readonly IGrainFactory _grainFactory;

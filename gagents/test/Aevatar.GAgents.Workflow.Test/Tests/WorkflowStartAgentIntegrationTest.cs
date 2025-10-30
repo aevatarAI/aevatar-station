@@ -9,6 +9,7 @@ namespace Aevatar.GAgents.Workflow.Test.Tests;
 /// Integration tests for WorkflowStartAgent focusing only on agent-specific functionality.
 /// Does NOT test base class methods from BusinessAgentBase.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class WorkflowStartAgentIntegrationTest : AevatarWorkflowTestBase
 {
     private readonly IGrainFactory _grainFactory;

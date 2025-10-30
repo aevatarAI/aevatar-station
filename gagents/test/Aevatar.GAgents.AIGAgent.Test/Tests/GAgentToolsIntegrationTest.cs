@@ -17,6 +17,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// <summary>
 /// Integration tests for GAgent tools functionality
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public sealed class GAgentToolsIntegrationTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

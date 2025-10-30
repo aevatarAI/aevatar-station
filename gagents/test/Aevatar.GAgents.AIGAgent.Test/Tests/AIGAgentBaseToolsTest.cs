@@ -9,6 +9,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// This file contains comprehensive unit tests for AIGAgentBase Tools functionality.
 /// Tests GAgent tool registration, selection, and execution flows.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

@@ -7,6 +7,7 @@ using Shouldly;
 
 namespace Aevatar.GAgents.AIGAgent.Test.GAgents.Tests;
 
+[Collection(ClusterCollection.Name)]
 public sealed class AIStreamChatTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

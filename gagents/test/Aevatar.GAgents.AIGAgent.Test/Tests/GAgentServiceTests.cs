@@ -6,6 +6,7 @@ using Shouldly;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class GAgentServiceTests : AevatarAIGAgentTestBase
 {
     private readonly IGAgentService _gAgentService;

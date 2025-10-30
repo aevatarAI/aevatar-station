@@ -10,6 +10,7 @@ using Shouldly;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class LLMConfigurationMigrationTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

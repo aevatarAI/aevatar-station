@@ -10,6 +10,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// This file contains comprehensive unit tests for AIGAgentBase MCP functionality.
 /// Tests MCP server configuration, tool discovery, and tool calling flows.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class AIGAgentBaseMCPTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

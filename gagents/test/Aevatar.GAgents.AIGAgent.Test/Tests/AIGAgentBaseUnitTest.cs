@@ -12,6 +12,7 @@ using Shouldly;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class AIGAgentBaseUnitTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

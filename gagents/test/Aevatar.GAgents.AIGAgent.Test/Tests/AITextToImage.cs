@@ -9,6 +9,7 @@ using Shouldly;
 
 namespace Aevatar.GAgents.AIGAgent.Test.GAgents.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class AITextToImage : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

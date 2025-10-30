@@ -16,6 +16,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// These tests use the full Orleans TestCluster infrastructure to test methods
 /// that require Orleans Grain functionality (State, event sourcing, etc.)
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class ChatAIGAgentPlusIntegrationTest : AevatarAIGAgentTestBase
 {
     private readonly IGrainFactory _grainFactory;
