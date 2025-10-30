@@ -20,10 +20,5 @@
         <ProjectReference Include="..\Aevatar.GAgents.GroupChat.GroupMember\Aevatar.GAgents.GroupChat.GroupMember.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.Core\Aevatar.GAgents.Core.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.Workflow\Aevatar.GAgents.Workflow.csproj" />
-        <ProjectReference Include="..\Aevatar.GAgents.Core\Aevatar.GAgents.Core.csproj" />
-<<<<<<< HEAD
-=======
-        <ProjectReference Include="..\Aevatar.GAgents.Workflow\Aevatar.GAgents.Workflow.csproj" />
->>>>>>> origin/dev
     </ItemGroup>
 </Project>

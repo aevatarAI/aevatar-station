@@ -255,15 +255,9 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
         if (string.IsNullOrEmpty(workflowEvent.ErrorMessage))
         {
             workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
-            // Only set TaskResult if it's empty (agent should have set it)
-            if (string.IsNullOrEmpty(workflowEvent.TaskResult))
-            {
-                workflowEvent.TaskResult = workflowEvent.Message ?? string.Empty;
-            }
 
-            Logger.LogDebug("✅ Agent {AgentId} completed successfully: {WorkflowEventType}, Status: {WorkflowStatus}, TaskResult: {TaskResult}",
-                this.GetGrainId(), workflowEvent.WorkflowEventType, workflowEvent.WorkflowAgentStatus, 
-                workflowEvent.TaskResult?.Length > 50 ? workflowEvent.TaskResult.Substring(0, 50) + "..." : workflowEvent.TaskResult);
+            Logger.LogDebug("✅ Agent {AgentId} completed successfully: {WorkflowEventType}, Status: {WorkflowStatus}",
+                this.GetGrainId(), workflowEvent.WorkflowEventType, workflowEvent.WorkflowAgentStatus);
         }
         else
         {
@@ -297,8 +291,8 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
                 return false;
             }
 
-            Logger.LogDebug("[BusinessAgentBase] All dependencies ready for WorkflowId: {WorkflowId}, AgentId: {AgentId}",
-                workflowEvent.WorkflowId, workflowEvent.AgentId);
+            Logger.LogDebug("[BusinessAgentBase] All dependencies ready for WorkflowId: {WorkflowId}, WorkUnitAgentId: {WorkUnitAgentId}",
+                workflowEvent.WorkflowId, workflowEvent.WorkUnitAgentId);
             
             return true;
         }
@@ -322,8 +316,8 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
                 // Use private field - no state persistence needed
                 _receivedMessages.Add(workflowEvent.Message);
 
-                Logger.LogDebug("[BusinessAgentBase] Recorded input message from agent {FromAgentId} for WorkflowId: {WorkflowId}. Total messages: {Count}",
-                    workflowEvent.AgentId, workflowEvent.WorkflowId, _receivedMessages.Count);
+                Logger.LogDebug("[BusinessAgentBase] Recorded input message from agent {FromWorkUnitAgentId} for WorkflowId: {WorkflowId}. Total messages: {Count}",
+                    workflowEvent.WorkUnitAgentId, workflowEvent.WorkflowId, _receivedMessages.Count);
             }
         }
         catch (Exception ex)

@@ -33,6 +33,18 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
         return Task.FromResult(true);
     }
 
+    /// <summary>
+    /// Gets the agent information (name and type) from class name prefix
+    /// </summary>
+    public Task<(string Name, string Type)> GetAgentInfoAsync()
+    {
+        // Agent name = class name prefix + grain ID
+        var agentName = $"{GetType().Name}-{this.GetGrainId().GetGuidKey():N}";
+        var agentType = GetType().FullName ?? GetType().Name;
+
+        return Task.FromResult((agentName, agentType));
+    }
+
     public override Task<string> GetDescriptionAsync()
     {
         var status = State.WorkflowStatus.ToString();

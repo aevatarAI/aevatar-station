@@ -33,11 +33,6 @@ public class WorkflowExecutionRecordGAgentPlus :
             "Now directly inherits from GAgentBasePlus - not a business processor, purely a system recorder."
         );
     }
-    
-    protected override bool AreAllDependenciesReadyAsync(WorkflowEvent workflowEvent)
-    {
-        return true;
-    }
 
     /// <summary>
     /// Capture the current state snapshot of a target GAgent
