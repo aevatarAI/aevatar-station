@@ -22,12 +22,14 @@ public class PrepareResourceContextTests : AevatarAIGAgentTestBase
     public async Task PrepareResourceContextAsync_Should_Register_MCP_And_ToolGAgent_Functions()
     {
         // Arrange: create resources (MCP agent and Tool GAgent)
+        // Use "filesystem" which is a predefined mock server in MockMcpClientProvider
         var mcpConfig = new MCP.Options.MCPGAgentConfig
         {
             ServerConfig = new MCP.Options.MCPServerConfig
             {
-                ServerName = "test-mcp-server",
-                Command = "mock-cmd"
+                ServerName = "filesystem",  // Use mock filesystem server
+                Command = "npx",  // Mock command (will be intercepted by MockMcpClientProvider)
+                Description = "Mock filesystem server for testing"
             }
         };
 
