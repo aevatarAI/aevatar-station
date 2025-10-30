@@ -11,7 +11,7 @@ public class AevatarMongoDbFixture : IDisposable
         MongoDbRunner = MongoRunner.Run(new MongoRunnerOptions
         {
             UseSingleNodeReplicaSet = true,
-            KillMongoProcessesWhenCurrentProcessExits = true
+            KillMongoProcessesWhenCurrentProcessExits = true,
             AdditionalArguments = "--bind_ip_all"
         });
     }
