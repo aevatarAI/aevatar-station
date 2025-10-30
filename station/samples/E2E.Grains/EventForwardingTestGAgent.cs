@@ -106,7 +106,7 @@ public interface IEventForwardingTestAgent : IGAgentPlus
 /// Test agent that tracks event forwarding using Plus enhanced functionality
 /// </summary>
 [KeepAlive] 
-[SiloNamePatternPlacement("User")]
+[SiloNamePatternPlacement("Projector")]
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public class EventForwardingTestAgent : GAgentBasePlus<EventForwardingTestAgentState, EventForwardingTestAgentStateLogEvent, TestEvent, ConfigurationBase>, IEventForwardingTestAgent

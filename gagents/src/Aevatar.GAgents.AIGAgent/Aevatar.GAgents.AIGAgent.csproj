@@ -23,6 +23,7 @@
         <ProjectReference Include="..\Aevatar.GAgents.Executor\Aevatar.GAgents.Executor.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.SemanticKernel\Aevatar.GAgents.SemanticKernel.csproj" />
         <ProjectReference Include="..\Aevatar.GAgents.MCP.Core\Aevatar.GAgents.MCP.Core.csproj" />
+        <ProjectReference Include="..\Aevatar.GAgents.Core\Aevatar.GAgents.Core.csproj" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\..\..\framework\src\Aevatar.Core.Abstractions\Aevatar.Core.Abstractions.csproj" />
