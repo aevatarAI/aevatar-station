@@ -90,13 +90,6 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
             await RegisterAsync(startAgent);
             Logger.LogDebug("[WorkflowViewGAgent] Successfully registered WorkflowStartAgent as child");
         }
-        
-        // Extract agent type name from GrainId string (format: "Type/Key")
-        var startAgentGrainIdStr = startAgentGrainId.ToString();
-        var agentTypeName = startAgentGrainIdStr.Contains('/') 
-            ? startAgentGrainIdStr.Split('/')[0] 
-            : typeof(IWorkflowStartAgent).FullName!;
-        
         // Create simplified WorkflowEvent
         var workflowEvent = new WorkflowEvent
         {

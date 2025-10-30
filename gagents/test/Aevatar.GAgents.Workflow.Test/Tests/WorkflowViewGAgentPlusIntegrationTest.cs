@@ -3,25 +3,28 @@ using Aevatar.GAgents.TestBase;
 using Aevatar.GAgents.Workflow.Core;
 using Aevatar.GAgents.Workflow.Core.Configs;
 using Aevatar.GAgents.Workflow.Core.States;
+using Orleans;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace Aevatar.GAgents.Workflow.Test;
+namespace Aevatar.GAgents.Workflow.Test.Tests;
 
 /// <summary>
-/// Comprehensive unit tests for WorkflowViewGAgentPlus
+/// Integration tests for WorkflowViewGAgentPlus using Orleans TestCluster infrastructure.
 /// Tests cover: configuration, RoundId management, workflow execution, 
 /// cycle detection, node management, and state transitions
 /// </summary>
 [Collection(ClusterCollection.Name)]
-public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
+public sealed class WorkflowViewGAgentPlusIntegrationTest : AevatarWorkflowTestBase
 {
     private readonly ITestOutputHelper _testOutputHelper;
+    private readonly IGrainFactory _grainFactory;
 
-    public WorkflowViewGAgentPlusTests(ITestOutputHelper testOutputHelper)
+    public WorkflowViewGAgentPlusIntegrationTest(ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
+        _grainFactory = GetRequiredService<IGrainFactory>();
     }
     
     /// <summary>
@@ -29,13 +32,13 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     /// </summary>
     private IWorkflowViewGAgentPlus GetWorkflowViewGAgent(Guid id)
     {
-        return Cluster.GrainFactory.GetGrain<IWorkflowViewGAgentPlus>(id);
+        return _grainFactory.GetGrain<IWorkflowViewGAgentPlus>(id);
     }
 
     #region Configuration Tests
 
     [Fact]
-    public async Task InitializeWithValidConfiguration_ShouldSetupCorrectly()
+    public async Task InitializeWithValidConfiguration_Should_SetupCorrectly()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -57,7 +60,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task InitializeWithEmptyConfiguration_ShouldHandleGracefully()
+    public async Task InitializeWithEmptyConfiguration_Should_HandleGracefully()
     {
         // Arrange
         var config = new WorkflowViewConfigDto();
@@ -74,7 +77,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task ReconfigureWithDifferentWorkflowCoordinatorId_ShouldPreserveOriginalId()
+    public async Task ReconfigureWithDifferentWorkflowCoordinatorId_Should_PreserveOriginalId()
     {
         // Arrange
         var initialConfig = CreateValidConfiguration();
@@ -108,7 +111,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task ImmutableSystemIds_ShouldPreserveExistingValues()
+    public async Task ImmutableSystemIds_Should_PreserveExistingValues()
     {
         // Arrange
         var initialConfig = CreateValidConfiguration();
@@ -139,7 +142,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     #region RoundId Tests
 
     [Fact]
-    public async Task GetCurrentRoundId_InitialState_ShouldReturnZero()
+    public async Task GetCurrentRoundId_InitialState_Should_ReturnZero()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -155,7 +158,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task ExecuteWorkflow_ShouldIncrementRoundId()
+    public async Task ExecuteWorkflow_Should_IncrementRoundId()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -175,7 +178,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task MultipleExecutions_ShouldIncrementRoundIdSequentially()
+    public async Task MultipleExecutions_Should_IncrementRoundIdSequentially()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -199,7 +202,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     #region Workflow Execution Tests
 
     [Fact]
-    public async Task ExecuteWorkflow_WithValidState_ShouldPublishEvent()
+    public async Task ExecuteWorkflow_WithValidState_Should_PublishEvent()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -218,7 +221,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task ExecuteWorkflow_WithoutStartAgent_ShouldThrowException()
+    public async Task ExecuteWorkflow_WithoutStartAgent_Should_ThrowException()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -240,7 +243,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     #region Cycle Detection Tests
 
     [Fact]
-    public async Task ValidDAG_ShouldNotDetectCycle()
+    public async Task ValidDAG_Should_NotDetectCycle()
     {
         // Arrange - Create a valid DAG: A -> B -> C
         var nodeA = CreateNode("NodeA");
@@ -270,7 +273,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task SelfLoop_ShouldDetectCycle()
+    public async Task SelfLoop_Should_DetectCycle()
     {
         // Arrange - Create self-loop: A -> A
         var nodeA = CreateNode("NodeA");
@@ -298,7 +301,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task ComplexCycle_ShouldDetectCycle()
+    public async Task ComplexCycle_Should_DetectCycle()
     {
         // Arrange - Create cycle: A -> B -> C -> A
         var nodeA = CreateNode("NodeA");
@@ -335,7 +338,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     #region Node Management Tests
 
     [Fact]
-    public async Task AddNodes_ShouldUpdateState()
+    public async Task AddNodes_Should_UpdateState()
     {
         // Arrange
         var initialConfig = CreateValidConfiguration();
@@ -358,7 +361,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task UpdateNodes_ShouldModifyProperties()
+    public async Task UpdateNodes_Should_ModifyProperties()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -397,7 +400,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task RemoveNodes_ShouldCleanupState()
+    public async Task RemoveNodes_Should_CleanupState()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -421,7 +424,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task InvalidNodeId_InEdges_ShouldThrowException()
+    public async Task InvalidNodeId_InEdges_Should_ThrowException()
     {
         // Arrange
         var config = CreateValidConfiguration();
@@ -446,7 +449,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     #region Validation Tests
 
     [Fact]
-    public async Task InvalidNodeData_ShouldThrowException()
+    public async Task InvalidNodeData_Should_ThrowException()
     {
         // Arrange - Create node with empty name
         var config = CreateValidConfiguration();
@@ -470,7 +473,7 @@ public sealed class WorkflowViewGAgentPlusTests : AevatarWorkflowTestBase
     }
 
     [Fact]
-    public async Task EmptyNodeId_ShouldThrowException()
+    public async Task EmptyNodeId_Should_ThrowException()
     {
         // Arrange
         var config = CreateValidConfiguration();
