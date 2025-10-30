@@ -321,7 +321,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
         // Check initial state (before any processing)
         var initialEvent = await agent.GetInitialWorkflowEventAsync();
         initialEvent.ShouldNotBeNull();
-        initialEvent.AgentId.ShouldNotBe(agentId); // Should be the original AgentId from input
+        initialEvent.WorkUnitAgentId.ShouldNotBe(agentId); // Should be the original AgentId from input
         initialEvent.AgentName.ShouldBe(""); // Should be empty string initially
         initialEvent.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Pending); // Default status
         // StepStartTime has default value from when WorkflowEvent was created
@@ -346,7 +346,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
         afterPostProcessing.ShouldNotBeNull();
         
         // Verify post-processing updates
-        afterPostProcessing.AgentId.ShouldBe(agentId);
+        afterPostProcessing.WorkUnitAgentId.ShouldBe(agentId);
         afterPostProcessing.AgentName.ShouldBe(typeof(TestBusinessAgent).FullName);
         afterPostProcessing.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Completed);
         afterPostProcessing.StepEndTime.ShouldNotBeNull();
@@ -412,7 +412,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
         afterBusiness.WorkflowEventType.ShouldBe(WorkflowEventType.WorkflowInProgress);
         
         // 4. After post-processing
-        afterPost.AgentId.ShouldBe(agentId);
+        afterPost.WorkUnitAgentId.ShouldBe(agentId);
         afterPost.AgentName.ShouldBe(typeof(TestBusinessAgent).FullName);
         afterPost.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Completed);
         afterPost.StepEndTime.ShouldNotBeNull();
@@ -633,7 +633,7 @@ public class TestBusinessAgent : BusinessAgentBase<TestBusinessAgentState, TestB
             WorkflowId = source.WorkflowId,
             WorkflowEventType = source.WorkflowEventType,
             Message = source.Message,
-            AgentId = source.AgentId,
+            AgentId = source.WorkUnitAgentId,
             AgentName = source.AgentName,
             StepStartTime = source.StepStartTime,
             StepEndTime = source.StepEndTime,

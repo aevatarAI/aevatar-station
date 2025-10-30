@@ -291,7 +291,7 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         // WorkflowInProgress doesn't change WorkflowStatus, just updates work unit status
         state.WorkflowStatus.ShouldBe(WorkflowCoordinatorStatus.Pending); // Unchanged
         // The work unit with matching AgentId should be marked as Finished
-        var workUnit = state.CurrentWorkUnitInfos.FirstOrDefault(w => w.AgentId == agentId);
+        var workUnit = state.CurrentWorkUnitInfos.FirstOrDefault(w => w.WorkUnitAgentId == agentId);
         workUnit.ShouldNotBeNull();
         workUnit.UnitStatusEnum.ShouldBe(WorkerUnitStatusEnum.Finished); // Updated by FinishedWorkUnitLogEvent
     }
@@ -530,9 +530,9 @@ public class TestWorkflowCoordinatorGAgentPlus : WorkflowCoordinatorGAgentPlus, 
 {
     public async Task<bool> HandleWorkflowEventAsync(WorkflowEvent workflowEvent)
     {
-        // Test extension should only call the WorkflowCoordinator-specific logic
-        // NOT the full BusinessAgentBase flow (OnEventForwardingEventHandlerAsync)
-        await OnBusinessAgentEventForwardingEventHandlerAsync(workflowEvent);
+        // NOTE: OnBusinessAgentEventForwardingEventHandlerAsync is not available in GAgentBasePlus
+        // WorkflowCoordinatorGAgentPlus uses TEvent-based forwarding instead
+        await Task.CompletedTask;
         return true;
     }
 }

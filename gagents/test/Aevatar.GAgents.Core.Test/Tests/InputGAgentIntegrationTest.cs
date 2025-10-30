@@ -90,7 +90,7 @@ public class InputGAgentPlusIntegrationTest : AevatarGAgentTestBase<AevatarGAgen
         capturedEvent.Message.ShouldBe("Workflow input message"); // InputGAgent sets message to State.Input
         capturedEvent.WorkflowEventType.ShouldBe(WorkflowEventType.WorkflowInProgress);
         capturedEvent.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Completed);
-        capturedEvent.WorkUnitAgentId.ShouldBe(agentId); // InputGAgent sets this
+        capturedEvent.WorkUnitAgentId.ShouldBe(agentId.ToString()); // InputGAgent sets this
     }
 
     #endregion
@@ -165,7 +165,7 @@ public class TestInputGAgentPlus : InputGAgentPlus, ITestInputGAgentPlus
             WorkflowId = source.WorkflowId,
             WorkflowEventType = source.WorkflowEventType,
             Message = source.Message,
-            AgentId = source.AgentId,
+            AgentId = source.WorkUnitAgentId,
             AgentName = source.AgentName,
             StepStartTime = source.StepStartTime,
             StepEndTime = source.StepEndTime,
