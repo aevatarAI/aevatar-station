@@ -3,6 +3,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.Test.Mocks;
 using Aevatar.GAgents.Executor;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 

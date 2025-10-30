@@ -8,6 +8,7 @@ using Orleans;
 using Orleans.Providers;
 using Shouldly;
 using Xunit;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 

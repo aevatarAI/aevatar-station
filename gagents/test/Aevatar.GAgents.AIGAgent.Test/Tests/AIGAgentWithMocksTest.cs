@@ -13,6 +13,7 @@ using Aevatar.GAgents.AIGAgent.Test.Mocks;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using Xunit;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
@@ -33,7 +34,7 @@ public class AIGAgentWithMocksTest : AevatarAIGAgentTestBase
     {
         // Assert
         _brainFactory.ShouldNotBeNull();
-        _brainFactory.ShouldBeOfType<MockBrainFactory>();
+        _brainFactory.ShouldBeOfType<Aevatar.GAgents.TestBase.MockBrainFactory>();
     }
 
     //[Fact]
@@ -91,7 +92,7 @@ public class AIGAgentWithMocksTest : AevatarAIGAgentTestBase
     public async Task Should_ConfigureMockResponse_When_CustomResponseSet()
     {
         // Arrange
-        var mockFactory = (MockBrainFactory)_brainFactory;
+        var mockFactory = (Aevatar.GAgents.TestBase.MockBrainFactory)_brainFactory;
         var chatAgent = await _agentFactory.GetGAgentAsync<IChatAIGAgent>(Guid.NewGuid());
         
         await chatAgent.InitializeAsync(new InitializeDto()

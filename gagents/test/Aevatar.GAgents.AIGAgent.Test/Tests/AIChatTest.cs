@@ -10,6 +10,7 @@ using Microsoft.SemanticKernel.ChatCompletion;
 using Moq;
 using Shouldly;
 using Volo.Abp.BlobStoring;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.GAgents.Tests;
 

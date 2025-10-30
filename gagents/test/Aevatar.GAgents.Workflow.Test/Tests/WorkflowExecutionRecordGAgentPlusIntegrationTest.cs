@@ -10,6 +10,7 @@ using Orleans.Providers;
 using Shouldly;
 using Xunit;
 using Newtonsoft.Json;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.Workflow.Test.Tests;
 

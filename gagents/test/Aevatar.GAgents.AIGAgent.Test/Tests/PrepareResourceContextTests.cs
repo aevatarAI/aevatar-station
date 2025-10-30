@@ -4,6 +4,7 @@ using Aevatar.GAgents.AIGAgent.Test;
 using Aevatar.GAgents.AIGAgent.Test.GAgents;
 using Aevatar.GAgents.AIGAgent.Test.TestAgents;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Tests;
 

@@ -2,6 +2,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AIGAgent.Test.TestAgents;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
