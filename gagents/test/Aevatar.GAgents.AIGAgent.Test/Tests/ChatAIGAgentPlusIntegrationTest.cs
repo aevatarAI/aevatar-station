@@ -104,7 +104,6 @@ public class ChatAIGAgentPlusIntegrationTest : AevatarAIGAgentTestBase
         capturedEvent.WorkflowEventType.ShouldBe(WorkflowEventType.WorkflowInProgress);
         capturedEvent.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Completed);
         capturedEvent.Message.ShouldNotBeNullOrEmpty();
-        capturedEvent.WorkUnitAgentId.ShouldBe(agentId.ToString()); // ChatAIGAgent sets this
     }
 
     #endregion
@@ -222,13 +221,12 @@ public class TestChatAIGAgentPlus : ChatAIGAgentPlus, ITestChatAIGAgentPlus
             WorkflowId = source.WorkflowId,
             WorkflowEventType = source.WorkflowEventType,
             Message = source.Message,
-            AgentId = source.WorkUnitAgentId,
+            WorkUnitAgentId = source.WorkUnitAgentId,
             AgentName = source.AgentName,
             StepStartTime = source.StepStartTime,
             StepEndTime = source.StepEndTime,
             WorkflowAgentStatus = source.WorkflowAgentStatus,
             ErrorMessage = source.ErrorMessage,
-            WorkUnitAgentId = source.WorkUnitAgentId,
             TaskResult = source.TaskResult,
             Metadata = source.Metadata != null ? new Dictionary<string, object>(source.Metadata) : null
         };

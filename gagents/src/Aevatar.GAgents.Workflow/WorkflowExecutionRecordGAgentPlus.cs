@@ -324,38 +324,6 @@ public class WorkflowExecutionRecordGAgentPlus :
                     state.Status = WorkflowExecutionStatus.Completed;
                 }
                 break;
-            case StartExecuteWorkUnitLogEvent startExecuteWorkUnitLogEvent:
-                var startingWorkUnits = state.WorkUnitRecords.Where(o =>
-                    o.WorkUnitGrainId == startExecuteWorkUnitLogEvent.WorkUnitGrainId).ToList();
-                
-                if (startingWorkUnits.Any())
-                {
-                    Logger.LogInformation("🚀 [ExecutionRecordGAgent] Processing StartExecuteWorkUnitLogEvent for WorkUnit {WorkUnitGrainId} - Found {Count} matching records to start", 
-                        startExecuteWorkUnitLogEvent.WorkUnitGrainId, startingWorkUnits.Count);
-                    
-                    var startTime = DateTime.UtcNow;
-                    foreach (var workUnit in startingWorkUnits)
-                    {
-                        Logger.LogInformation("🔄 [ExecutionRecordGAgent] Starting WorkUnit record - Setting status from {OldStatus} to Running", workUnit.Status);
-                        workUnit.WorkUnitGrainId = startExecuteWorkUnitLogEvent.WorkUnitGrainId;
-                        workUnit.StartTime = startTime;
-                        if (workUnit.Status == WorkflowExecutionStatus.Pending)
-                        {
-                            workUnit.Status = WorkflowExecutionStatus.Running;
-                        }
-                        workUnit.InputData = startExecuteWorkUnitLogEvent.InputData;
-                        workUnit.CurrentStateSnapshot = startExecuteWorkUnitLogEvent.CurrentStateSnapshot;
-                    }
-                    
-                    Logger.LogInformation("✅ [ExecutionRecordGAgent] Successfully updated {Count} WorkUnit records for {WorkUnitGrainId} to status: Running at {StartTime}", 
-                        startingWorkUnits.Count, startExecuteWorkUnitLogEvent.WorkUnitGrainId, startTime);
-                }
-                else
-                {
-                    Logger.LogWarning("⚠️ [ExecutionRecordGAgent] No WorkUnit records found for {WorkUnitGrainId} in WorkUnitRecords for start event", startExecuteWorkUnitLogEvent.WorkUnitGrainId);
-                }
-                break;
-
             case FinishExecuteWorkUnitLogEvent finishExecuteWorkUnitLogEvent:
                 var matchingWorkUnits = state.WorkUnitRecords.Where(o =>
                     o.WorkUnitGrainId == finishExecuteWorkUnitLogEvent.WorkUnitGrainId).ToList();
@@ -469,17 +437,6 @@ public class StartExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
 public class FinishExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
 {
 
-}
-
-[GenerateSerializer]
-public class StartExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
-{
-    [Id(0)]
-    public string WorkUnitGrainId { get; set; } = string.Empty;
-    [Id(1)]
-    public string InputData { get; set; } = string.Empty;
-    [Id(2)]
-    public string? CurrentStateSnapshot { get; set; }
 }
 
 [GenerateSerializer]

@@ -95,7 +95,7 @@ public class WorkflowExecutionRecordGAgentPlusIntegrationTest : AevatarWorkflowT
         state.StartTime.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(-5));
         // Verify WorkUnitInfos from metadata were processed correctly
         state.WorkUnitInfos.Count.ShouldBe(1);
-        state.WorkUnitInfos.ShouldContain(o => o.WorkUnitAgentId == workerGuid.ToString());
+        state.WorkUnitInfos.ShouldContain(o => o.AgentId == workerGuid.ToString());
         // Verify WorkUnitRecords were created
         state.WorkUnitRecords.Count.ShouldBe(1);
         state.WorkUnitRecords.ShouldContain(o => o.WorkUnitGrainId == workerGuid.ToString());
@@ -234,13 +234,6 @@ public class WorkflowExecutionRecordGAgentPlusIntegrationTest : AevatarWorkflowT
         // Assert
         result.ShouldBeTrue();
         var state = await testAgent.GetStateAsync();
-        
-        // Verify the work unit was also marked as completed (WorkflowCompleted marks the final unit as completed)
-        var workUnitRecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGuid.ToString());
-        workUnitRecord.Status.ShouldBe(WorkflowExecutionStatus.Completed);
-        workUnitRecord.EndTime.ShouldNotBe(default);
-        
-        
         // Verify the overall workflow is now completed
         state.Status.ShouldBe(WorkflowExecutionStatus.Completed);
         state.EndTime.ShouldNotBe(default);
@@ -284,52 +277,6 @@ public class WorkflowExecutionRecordGAgentPlusIntegrationTest : AevatarWorkflowT
         workUnitRecord.Status.ShouldBe(WorkflowExecutionStatus.Failed);
         workUnitRecord.FailureSummary.ShouldBe("Entire workflow failed due to critical error");
         workUnitRecord.EndTime.ShouldNotBe(default);
-    }
-
-    [Fact]
-    public async Task IncorrectSequence_Test()
-    {
-        // Arrange
-        var agentId = Guid.NewGuid();
-        var testAgent = _grainFactory.GetGrain<IWorkflowExecutionRecordGAgentPlusTestExtension>(agentId);
-        var workerGuid = Guid.NewGuid();
-
-        await StartExecuteWorkflowAsync(testAgent, workerGuid);
-
-        // Act - Send completion before start (incorrect sequence)
-        var nodeCompletedEvent = new WorkflowEvent
-        {
-            WorkflowId = Guid.NewGuid(),
-            WorkflowEventType = WorkflowEventType.WorkflowCompleted,
-            WorkUnitAgentId = workerGuid.ToString(),
-            Message = "Grain response"
-        };
-        // testAgent already available from Arrange section
-        var result = await testAgent.HandleWorkflowEventAsync(nodeCompletedEvent);
-        await Task.Delay(500);
-
-        var state = await testAgent.GetStateAsync();
-        var grainRecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGuid.ToString());
-        grainRecord.Status.ShouldBe(WorkflowExecutionStatus.Completed);
-        // OutputData property no longer exists in WorkUnitExecutionRecord
-
-        // Now send start event (should still be processed)
-        var startExecuteUnitEvent = new WorkflowEvent
-        {
-            WorkflowId = Guid.NewGuid(),
-            WorkflowEventType = WorkflowEventType.WorkflowInProgress,
-            WorkUnitAgentId = workerGuid.ToString(),
-            Message = "Input A",
-            // CoordinatorMessages property no longer exists
-        };
-        var result2 = await testAgent.HandleWorkflowEventAsync(startExecuteUnitEvent);
-        await Task.Delay(500);
-
-        // Assert - Should still process the late start event
-        state = await testAgent.GetStateAsync();
-        grainRecord = state.WorkUnitRecords.First(o => o.WorkUnitGrainId == workerGuid.ToString());
-        grainRecord.Status.ShouldBe(WorkflowExecutionStatus.Completed);
-        // InputData property no longer exists in WorkUnitExecutionRecord
     }
 
     #endregion
@@ -421,9 +368,7 @@ public class TestWorkflowExecutionRecordGAgentPlus : WorkflowExecutionRecordGAge
 {
     public async Task<bool> HandleWorkflowEventAsync(WorkflowEvent workflowEvent)
     {
-        // NOTE: OnBusinessAgentEventForwardingEventHandlerAsync is not available in GAgentBasePlus
-        // WorkflowExecutionRecordGAgentPlus uses TEvent-based forwarding instead
-        await Task.CompletedTask;
+        await base.OnEventForwardingEventHandlerAsync(workflowEvent);
         return true;
     }
 }

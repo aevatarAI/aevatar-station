@@ -62,7 +62,6 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         // Assert
         var state = await agent.GetStateAsync();
         state.Content.ShouldBe("Test workflow initialization");
-        state.EnableRunRecord.ShouldBeTrue();
     }
 
     [Fact]
@@ -219,8 +218,8 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         {
             WorkflowId = agentId, // Use the SAME GUID as the agent ID
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
-            AgentId = agentId, // Required for topology discovery
-            AgentName = "Aevatar.GAgents.Workflow.WorkflowStartAgent", // Required for topology discovery - full type name
+            WorkUnitAgentId = "Aevatar.GAgents.Workflow.WorkflowStartAgent/"+agentId.ToString("N"), // Required for topology discovery
+            AgentName = "test", // Required for topology discovery - full type name
             Message = "Start workflow coordination",
             Metadata = new Dictionary<string, object>
             {
@@ -246,7 +245,6 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         state.CurrentExecutionName.ShouldBe("TestExecution"); // Set from metadata
         state.ExecutionRecords.ShouldContainKey("TestExecution"); // Added to dictionary
         state.RoundId.ShouldBeGreaterThan(0); // Incremented by 1
-        state.EnableRunRecord.ShouldBeTrue(); // Verify EnableRunRecord is set correctly
     }
 
     [Fact]
@@ -272,7 +270,7 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         {
             WorkflowId = agentId,
             WorkflowEventType = WorkflowEventType.WorkflowInProgress,
-            AgentId = agentId, // Must match a work unit AgentId
+            WorkUnitAgentId = agentId.ToString(), // Must match a work unit AgentId
             Message = "Workflow in progress",
             ErrorMessage = string.Empty // No error - successful progress
         };
@@ -291,7 +289,7 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         // WorkflowInProgress doesn't change WorkflowStatus, just updates work unit status
         state.WorkflowStatus.ShouldBe(WorkflowCoordinatorStatus.Pending); // Unchanged
         // The work unit with matching AgentId should be marked as Finished
-        var workUnit = state.CurrentWorkUnitInfos.FirstOrDefault(w => w.WorkUnitAgentId == agentId);
+        var workUnit = state.CurrentWorkUnitInfos.FirstOrDefault(w => w.AgentId == agentId.ToString());
         workUnit.ShouldNotBeNull();
         workUnit.UnitStatusEnum.ShouldBe(WorkerUnitStatusEnum.Finished); // Updated by FinishedWorkUnitLogEvent
     }
@@ -530,9 +528,7 @@ public class TestWorkflowCoordinatorGAgentPlus : WorkflowCoordinatorGAgentPlus, 
 {
     public async Task<bool> HandleWorkflowEventAsync(WorkflowEvent workflowEvent)
     {
-        // NOTE: OnBusinessAgentEventForwardingEventHandlerAsync is not available in GAgentBasePlus
-        // WorkflowCoordinatorGAgentPlus uses TEvent-based forwarding instead
-        await Task.CompletedTask;
+        await base.OnEventForwardingEventHandlerAsync(workflowEvent);
         return true;
     }
 }

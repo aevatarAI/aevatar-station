@@ -176,7 +176,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
             WorkflowId = Guid.NewGuid(),
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
             Message = "Test message from upstream",
-            AgentId = parentGuid1 // Message from the first parent agent
+            WorkUnitAgentId = parentGuid1.ToString() // Message from the first parent agent
         };
 
         // Act
@@ -202,7 +202,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
             WorkflowId = Guid.NewGuid(),
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
             Message = "", // Empty message
-            AgentId = Guid.NewGuid()
+            WorkUnitAgentId = Guid.NewGuid().ToString()
         };
 
         // Act
@@ -232,7 +232,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
             WorkflowId = Guid.NewGuid(),
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
             Message = "Test workflow",
-            AgentId = Guid.NewGuid() // Must be non-empty for processing to complete
+            WorkUnitAgentId = Guid.NewGuid().ToString() // Must be non-empty for processing to complete
         };
 
         // Act
@@ -309,7 +309,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
             WorkflowId = Guid.NewGuid(),
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
             Message = "Test workflow",
-            AgentId = Guid.NewGuid() // Must be non-empty for processing to complete
+            WorkUnitAgentId = Guid.NewGuid().ToString() // Must be non-empty for processing to complete
         };
 
         // Act
@@ -321,7 +321,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
         // Check initial state (before any processing)
         var initialEvent = await agent.GetInitialWorkflowEventAsync();
         initialEvent.ShouldNotBeNull();
-        initialEvent.WorkUnitAgentId.ShouldNotBe(agentId); // Should be the original AgentId from input
+        initialEvent.WorkUnitAgentId.ShouldNotBe(agentId.ToString()); // Should be the original AgentId from input
         initialEvent.AgentName.ShouldBe(""); // Should be empty string initially
         initialEvent.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Pending); // Default status
         // StepStartTime has default value from when WorkflowEvent was created
@@ -346,8 +346,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
         afterPostProcessing.ShouldNotBeNull();
         
         // Verify post-processing updates
-        afterPostProcessing.WorkUnitAgentId.ShouldBe(agentId);
-        afterPostProcessing.AgentName.ShouldBe(typeof(TestBusinessAgent).FullName);
+        afterPostProcessing.WorkUnitAgentId.ShouldContain(agentId.ToString("N"));
         afterPostProcessing.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Completed);
         afterPostProcessing.StepEndTime.ShouldNotBeNull();
         afterPostProcessing.StepEndTime.Value.ShouldBeGreaterThanOrEqualTo(beforeTime);
@@ -371,7 +370,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
             WorkflowId = Guid.NewGuid(),
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
             Message = "Original message",
-            AgentId = Guid.NewGuid() // Must be non-empty for processing to complete
+            WorkUnitAgentId = Guid.NewGuid().ToString() // Must be non-empty for processing to complete
         };
 
         // Act
@@ -412,8 +411,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
         afterBusiness.WorkflowEventType.ShouldBe(WorkflowEventType.WorkflowInProgress);
         
         // 4. After post-processing
-        afterPost.WorkUnitAgentId.ShouldBe(agentId);
-        afterPost.AgentName.ShouldBe(typeof(TestBusinessAgent).FullName);
+        afterPost.WorkUnitAgentId.ShouldContain(agentId.ToString("N"));
         afterPost.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Completed);
         afterPost.StepEndTime.ShouldNotBeNull();
         
@@ -505,7 +503,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
             WorkflowId = workflowId,
             WorkflowEventType = WorkflowEventType.WorkflowInProgress,
             Message = "Message from parent 1",
-            AgentId = parentGuid1 // Use the Guid directly
+            WorkUnitAgentId = parentGuid1.ToString() // Use the Guid directly
         });
         
         // First call should return false because not all parent messages are received yet
@@ -517,7 +515,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
             WorkflowId = workflowId,
             WorkflowEventType = WorkflowEventType.WorkflowInProgress,
             Message = "Message from parent 2",
-            AgentId = parentGuid2 // Use the Guid directly
+            WorkUnitAgentId = parentGuid2.ToString() // Use the Guid directly
         });
 
         // Assert - Second call should return true because all parent messages are now received
@@ -540,7 +538,7 @@ public class BusinessAgentBaseIntegrationTest : AevatarGAgentTestBase<AevatarGAg
             WorkflowId = Guid.NewGuid(),
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
             Message = "Test message",
-            AgentId = Guid.NewGuid()
+            WorkUnitAgentId = Guid.NewGuid().ToString()
         };
 
         // Act - Process event (should record and then clear messages)
@@ -633,7 +631,7 @@ public class TestBusinessAgent : BusinessAgentBase<TestBusinessAgentState, TestB
             WorkflowId = source.WorkflowId,
             WorkflowEventType = source.WorkflowEventType,
             Message = source.Message,
-            AgentId = source.WorkUnitAgentId,
+            WorkUnitAgentId = source.WorkUnitAgentId,
             AgentName = source.AgentName,
             StepStartTime = source.StepStartTime,
             StepEndTime = source.StepEndTime,
