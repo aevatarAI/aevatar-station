@@ -21,7 +21,6 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
 {
     protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
     {
-        // WorkflowCoordinatorGAgent is a system agent, not a business agent
         await base.OnGAgentActivateAsync(cancellationToken);
     }
     
@@ -88,7 +87,7 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
             // Always raise WorkflowEventReceivedLogEvent first
             RaiseEvent(new WorkflowEventReceivedLogEvent
             {
-                WorkflowId = workflowEvent.WorkflowId, // Use original WorkflowId from WorkflowViewAgent
+                WorkflowId = workflowEvent.WorkflowId,
                 AgentId = this.GetGrainId().GetGuidKey(),
                 EventType = workflowEvent.WorkflowEventType,
                 AgentName = this.GetType().FullName,
@@ -727,27 +726,10 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
 
     private async Task<Guid> RegisterExecutionRecordAsync(string executionName, string content)
     {
-        // ✅ FIXED: For Plus system, ALWAYS enable execution recording
-        // The State.EnableRunRecord check is unreliable due to event sourcing timing
-        // Configuration is already enforced at WorkflowViewServicePlus level
         
         var id = Guid.NewGuid();
-        Logger.LogInformation("[WorkflowCoordinatorGAgent] Creating ExecutionRecordAgent with ID: {ExecutionRecordId}", id);
-        
         var executionRecordAgent = GrainFactory.GetGrain<IWorkflowExecutionRecordGAgentPlus>(id);
-        Logger.LogInformation("[WorkflowCoordinatorGAgent] Got ExecutionRecordAgent grain, about to call RegisterAsync");
-        
         await RegisterAsync(executionRecordAgent);
-        Logger.LogInformation("[WorkflowCoordinatorGAgent] RegisterAsync completed for ExecutionRecordAgent");
-        
-        // Verify registration
-        var children = await GetChildrenAsync();
-        var hasChild = children.Any(c => c == executionRecordAgent.GetGrainId());
-        Logger.LogInformation("[WorkflowCoordinatorGAgent] Verification: Children count={Count}, HasExecutionRecord={HasChild}", 
-            children.Count, hasChild);
-        
-        Logger.LogInformation("[WorkflowCoordinatorGAgent] Registered ExecutionRecordAgent: {ExecutionRecordId}, ExecutionName: {ExecutionName}", 
-            id, executionName);
         
         // Note: ExecutionRecords dictionary will be populated by WorkflowStartLogEvent
         return id;
@@ -767,10 +749,10 @@ public class WorkflowCoordinatorGAgentPlus : GAgentBasePlus<WorkflowCoordinatorS
 
     #endregion
 
-    #region Task 16: Service-Direct Workflow Coordination
+    #region Service-Direct Workflow Coordination
 
     /// <summary>
-    /// ✅ TASK 16: Get start node agent IDs for service-direct workflow execution
+    /// Get start node agent IDs for service-direct workflow execution
     /// Uses existing GetTopUpStreamGrainIds() method to find start nodes (no incoming connections)
     /// </summary>
     public async Task<List<string>> GetStartNodeAgentIdsAsync()

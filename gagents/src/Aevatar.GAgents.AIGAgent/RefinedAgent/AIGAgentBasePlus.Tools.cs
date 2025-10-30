@@ -22,8 +22,7 @@ using Orleans.Runtime;
 namespace Aevatar.GAgents.AIGAgent.Agent;
 
 /// <summary>
-/// Partial class for AIGAgentBasePlus that adds GAgent tool registration capabilities
-/// Uses unified Event class for event forwarding
+/// Adds GAgent tool registration capabilities with event forwarding
 /// </summary>
 public abstract partial class
     AIGAgentBasePlus<TState, TStateLogEvent, TConfiguration> where TState : AIGAgentStateBasePlus, new()
@@ -394,18 +393,15 @@ public abstract partial class
     }
 
     /// <summary>
-    /// Generates a safe function name for MCP tools that won't exceed 64 characters
+    /// Generates a safe function name for MCP tools
     /// </summary>
     private string GenerateMCPFunctionName(string serverName, string toolName)
     {
-        // For MCP tools, we need to consider the total length including plugin name
         // OpenAI checks the full "plugin.function" name which must be <= 64 chars
-        // Plugin name format: MCP_{serverName} (with replacements)
-        // So we need to ensure: len("MCP_" + serverName + "." + functionName) <= 64
+        // Ensure: len("MCP_" + serverName + "." + functionName) <= 64
 
         const int maxTotalLength = 64;
 
-        // Clean server name for plugin name
         var cleanServerName = serverName
             .Replace("/", "_")
             .Replace(".", "_")

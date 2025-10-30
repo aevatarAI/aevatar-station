@@ -17,12 +17,6 @@ namespace Aevatar.GAgents.Workflow;
 public class WorkflowExecutionRecordGAgentPlus :
     GAgentBasePlus<WorkflowExecutionRecordStatePlus, WorkflowExecutionRecordLogEvent, WorkflowEvent, ConfigurationBase>, Core.IWorkflowExecutionRecordGAgentPlus
 {
-    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
-    {
-        // WorkflowExecutionRecordGAgent is a system agent (recorder), not a business agent
-        await base.OnGAgentActivateAsync(cancellationToken);
-    }
-    
     /// <summary>
     /// Returns true to indicate this is a workflow system agent
     /// (Not a business processing agent)
@@ -31,7 +25,6 @@ public class WorkflowExecutionRecordGAgentPlus :
     {
         return Task.FromResult(true);
     }
-
     public override Task<string> GetDescriptionAsync()
     {
         return Task.FromResult(
@@ -39,6 +32,11 @@ public class WorkflowExecutionRecordGAgentPlus :
             "Receives workflow lifecycle events via automatic TEvent forwarding from coordinator parent. " +
             "Now directly inherits from GAgentBasePlus - not a business processor, purely a system recorder."
         );
+    }
+    
+    protected override bool AreAllDependenciesReadyAsync(WorkflowEvent workflowEvent)
+    {
+        return true;
     }
 
     /// <summary>
@@ -193,9 +191,7 @@ public class WorkflowExecutionRecordGAgentPlus :
             // ✅ SUCCESS: Track work unit completion with both input and output data
             Logger.LogInformation("✅ [ExecutionRecordGAgent] Recording successful work unit completion for {WorkUnitAgentId}", 
                 workflowEvent.WorkUnitAgentId);
-            
-            // OutputData = TaskResult (what the agent PRODUCED)
-            var outputData = System.Text.Json.JsonSerializer.Serialize(workflowEvent.TaskResult);
+            var outputData = System.Text.Json.JsonSerializer.Serialize(workflowEvent.Message);
             
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
@@ -233,9 +229,6 @@ public class WorkflowExecutionRecordGAgentPlus :
         
         // ✅ EndAgent is a workflow system agent - no need to track its execution in business records
         // WorkUnitInfos already filtered to exclude StartAgent/EndAgent in WorkflowCoordinator
-        
-        // ✅ UNIFIED: Always raise FinishExecuteWorkflowLogEvent when workflow ends
-        // Status will be preserved (Failed) or set to Completed based on previous events
         RaiseEvent(new FinishExecuteWorkflowLogEvent());
         await ConfirmEvents();
         
@@ -291,10 +284,6 @@ public class WorkflowExecutionRecordGAgentPlus :
                 Logger.LogWarning("⚠️ [ExecutionRecordGAgent] No coordinator ID provided for unregister on {Reason}", reason);
                 return;
             }
-
-            Logger.LogInformation("🔌 [ExecutionRecordGAgent] Unregistering from parent coordinator {CoordinatorId} on workflow {Reason}...", 
-                coordinatorId, reason);
-
             var parentCoordinator = GrainFactory.GetGrain<IWorkflowCoordinatorGAgentPlus>(coordinatorId);
             await UnregisterParentAsync(parentCoordinator);
 
@@ -330,6 +319,7 @@ public class WorkflowExecutionRecordGAgentPlus :
                     }).ToList();
                 break;
             case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
+                Logger.LogInformation("[ExecutionRecordGAgent] Processing FinishExecuteWorkflowLogEvent - Setting status from {OldStatus} to Completed", state.Status);
                 state.EndTime = DateTime.UtcNow;
                 
                 // ✅ Only set status to Completed if not already Failed
@@ -458,6 +448,7 @@ public class WorkflowExecutionRecordGAgentPlus :
                 }
 
                 state.Status = WorkflowExecutionStatus.Failed;
+                state.EndTime = DateTime.UtcNow;
                 break;
         }
         base.GAgentTransitionState(state, @event);

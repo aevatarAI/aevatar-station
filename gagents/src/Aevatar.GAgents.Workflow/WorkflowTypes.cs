@@ -6,7 +6,7 @@ using Aevatar.GAgents.Core; // Import WorkflowEvent types from Core
 namespace Aevatar.GAgents.Workflow;
 
 /// <summary>
-/// ✅ WORKFLOW: Workflow lifecycle event for point-to-point coordination
+/// Workflow lifecycle event for point-to-point coordination
 /// Located in GAgents.Workflow alongside workflow coordination logic
 /// Uses types from GAgents.Core for consistency
 /// </summary>

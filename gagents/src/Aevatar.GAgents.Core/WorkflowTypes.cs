@@ -19,8 +19,6 @@ public enum WorkflowEventType
 
 /// <summary>
 /// Workflow status enumeration for overall workflow state
-/// Used by: workflow coordinators, workflow start/end agents
-/// Located in GAgents.Core to avoid circular dependencies
 /// </summary>
 [GenerateSerializer]
 public enum WorkflowStatus
@@ -33,8 +31,6 @@ public enum WorkflowStatus
 
 /// <summary>
 /// Workflow agent status enumeration for individual workflow nodes
-/// Used by: workflow nodes, business agents
-/// Located in GAgents.Core to avoid circular dependencies
 /// </summary>
 [GenerateSerializer]
 public enum WorkflowAgentStatus
@@ -45,8 +41,7 @@ public enum WorkflowAgentStatus
 }
 
 /// <summary>
-/// ✅ CORE: Workflow lifecycle event for point-to-point coordination
-/// Located in GAgents.Core to avoid circular dependencies with Workflow projects
+/// Workflow lifecycle event for point-to-point coordination
 /// </summary>
 [GenerateSerializer]
 public class WorkflowEvent : EventBase
@@ -55,6 +50,7 @@ public class WorkflowEvent : EventBase
     [Id(0)] public Guid WorkflowId { get; set; }
     // Removed [Id(1)] AgentId and [Id(3)] AgentTypeName - replaced by WorkUnitAgentId
     [Id(2)] public WorkflowEventType WorkflowEventType { get; set; }
+    [Id(3)] public string AgentName { get; set; } = string.Empty;
     [Id(4)] public string TaskResult { get; set; } = string.Empty;
     [Id(5)] public WorkflowAgentStatus WorkflowAgentStatus { get; set; }
     [Id(6)] public string ErrorMessage { get; set; } = string.Empty;

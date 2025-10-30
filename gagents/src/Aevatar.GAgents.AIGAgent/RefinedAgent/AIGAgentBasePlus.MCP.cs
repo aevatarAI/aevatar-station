@@ -23,8 +23,7 @@ namespace Aevatar.GAgents.AIGAgent.Agent;
 
 // ReSharper disable InconsistentNaming
 /// <summary>
-/// Partial class for AIGAgentBasePlus that adds MCP (Model Context Protocol) tool capabilities
-/// Uses unified Event class for event forwarding
+/// Adds MCP (Model Context Protocol) tool capabilities with event forwarding
 /// </summary>
 public abstract partial class
     AIGAgentBasePlus<TState, TStateLogEvent, TConfiguration>
@@ -476,11 +475,10 @@ public abstract partial class
     }
 
     /// <summary>
-    /// Create array type KernelParameterMetadata to ensure OpenAI can understand correctly
+    /// Create array type KernelParameterMetadata for OpenAI compatibility
     /// </summary>
     private KernelParameterMetadata CreateArrayParameterMetadata(string name, MCPParameterInfo paramInfo)
     {
-        // Generate description containing complete JSON Schema
         var schema = GenerateSchemaForParameter(paramInfo);
         var schemaJson = JsonSerializer.Serialize(schema, new System.Text.Json.JsonSerializerOptions
         {

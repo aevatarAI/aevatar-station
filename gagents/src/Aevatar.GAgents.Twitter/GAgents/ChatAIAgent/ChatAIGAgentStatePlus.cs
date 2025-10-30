@@ -6,13 +6,13 @@ using Aevatar.GAgents.AIGAgent.State;
 namespace Aevatar.GAgents.Twitter.GAgents.ChatAIAgent;
 
 /// <summary>
-/// ✅ CORRECTED: ChatAIGAgentState now inherits from AIGAgentStateBase
+/// ChatAIGAgentState inherits from AIGAgentStateBase
 /// This provides BusinessAgentState + AI capabilities in the correct hierarchy
 /// </summary>
 [GenerateSerializer]
 public class ChatAIGAgentStatePlus : AIGAgentStateBasePlus
 {
-    // ✅ CORRECTED: ChatAI-specific state fields starting from Id(0) - Orleans handles inheritance properly
+    // ChatAI-specific state fields starting from Id(0)
     [Id(0)]
     public string LastResponse { get; set; } = "";
     

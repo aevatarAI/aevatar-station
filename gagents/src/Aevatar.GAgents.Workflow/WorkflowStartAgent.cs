@@ -41,7 +41,7 @@ public class WorkflowStartConfigDto : ConfigurationBase
 }
 
 /// <summary>
-/// ✅ WORKFLOW: WorkflowStartAgent for workflow initiation
+/// WorkflowStartAgent for workflow initiation
 /// Inherits from BusinessAgentBase to handle WorkflowEvent forwarding
 /// Simply forwards events to child agents in the workflow chain
 /// </summary>
@@ -49,20 +49,11 @@ public class WorkflowStartConfigDto : ConfigurationBase
 [SiloNamePatternPlacement("Projector")]
 public class WorkflowStartAgent : BusinessAgentBase<WorkflowStartState, WorkflowStartAgentLogEvent, WorkflowStartConfigDto>, IWorkflowStartAgent
 {
-    protected override async Task OnGAgentActivateAsync(CancellationToken cancellationToken)
-    {
-        // ✅ WorkflowStartAgent is a business agent and should be included in topology discovery
-        // DO NOT set _isWorkflowAgent = true here
-        this._isWorkflowAgent = false;
-        
-        await base.OnGAgentActivateAsync(cancellationToken);
-    }
-
     public override Task<string> GetDescriptionAsync()
         => Task.FromResult("Workflow Start Agent that initiates workflows by forwarding events to child agents");
 
     /// <summary>
-    /// ✅ TASK 14: Override BusinessAgentBase event handler for workflow start processing
+    /// Override BusinessAgentBase event handler for workflow start processing
     /// Handles WorkflowEvent and sets WorkflowEventType.WorkflowStarted
     /// </summary>
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
@@ -72,7 +63,7 @@ public class WorkflowStartAgent : BusinessAgentBase<WorkflowStartState, Workflow
         
         // Update existing event fields for this step
         workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowStarted;
-        workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;  // ✅ FIX: Mark as completed like other agents
+        workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;  // Mark as completed like other agents
         
         // Process initial message using existing EventBase.Message field (text pipeline)
         var initialMessage = workflowEvent.Message;

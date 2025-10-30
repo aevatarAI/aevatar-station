@@ -8,9 +8,7 @@ namespace Aevatar.GAgents.Core;
 
 
 /// <summary>
-/// ✅ ENHANCED: BusinessAgentBase for WorkflowEvent handling
-/// Inherits from GAgentBase with WorkflowEvent as TEvent type parameter
-/// Supports automatic GAgentBase event forwarding with WorkflowEvent
+/// BusinessAgentBase for WorkflowEvent handling with automatic event forwarding
 /// </summary>
 public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> :
     GAgentBasePlus<TState, TStateLogEvent, WorkflowEvent, TConfiguration>, IBusinessAgentBase
@@ -19,13 +17,12 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     where TConfiguration : ConfigurationBase
 {
     /// <summary>
-    /// Indicates whether this agent is a workflow agent (coordinator, execution record, etc.)
-    /// Workflow agents should be excluded from workflow topology discovery
+    /// Indicates whether this agent is a workflow agent
     /// </summary>
     protected bool _isWorkflowAgent = false;
 
     /// <summary>
-    /// Gets whether this agent is a workflow agent (Orleans interface method)
+    /// Gets whether this agent is a workflow agent
     /// </summary>
     public Task<bool> GetIsWorkflowAgentAsync()
     {
@@ -33,7 +30,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// Gets the agent information (name and type) from class name prefix - proper way instead of parsing descriptions
+    /// Gets the agent information (name and type) from class name prefix
     /// </summary>
     public Task<(string Name, string Type)> GetAgentInfoAsync()
     {
@@ -90,8 +87,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// </summary>
     protected List<string> _receivedMessages = new();
     /// <summary>
-    /// ✅ SEALED: Event forwarding handler for WorkflowEvent routing
-    /// Ensures validation runs first before inheriting class handlers
+    /// Event forwarding handler for WorkflowEvent routing with validation
     /// </summary>
     protected sealed override async Task<bool> OnEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
@@ -100,20 +96,18 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
 
         try
         {
-            // ✅ Validation first (before fast-path check)
-            // This allows derived classes (e.g., WorkflowEndAgent) to override validation and accept failure events
+            // Validation
             if (!await ValidateWorkflowEventAsync(workflowEvent))
             {
                 return false; // Skip processing if validation fails
             }
-            // ✅ Normal success event processing (with dependency checking)
             // Record input message from upstream agent (for dependency checking)
             if (!string.IsNullOrEmpty(workflowEvent.Message) && !string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
             {
                 await RecordInputMessageAsync(workflowEvent);
             }
 
-            // Check dependencies after recording input
+            // Check dependencies after pre-processing
             if (!AreAllDependenciesReadyAsync(workflowEvent))
             {
                 Logger.LogWarning("Business agent {AgentId} dependencies not ready for WorkflowEvent: {WorkflowEventType}",
@@ -154,9 +148,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ NEW: Virtual method for inheriting classes to override
-    /// Called after BusinessAgentBase validation passes
-    /// Override this method in inheriting classes instead of OnEventForwardingEventHandlerAsync
+    /// Virtual method for inheriting classes to override after validation passes
     /// </summary>
     protected virtual Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
@@ -165,8 +157,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ NEW: Pre-processing method executed before OnBusinessAgentEventForwardingEventHandlerAsync
-    /// Handles input message recording and dependency checks
+    /// Pre-processing method for input message recording and dependency checks
     /// </summary>
     protected virtual async Task PreBusinessAgentProcessingAsync(WorkflowEvent workflowEvent)
     {
@@ -192,41 +183,24 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ NEW: Post-processing method executed after OnBusinessAgentEventForwardingEventHandlerAsync
-    /// Handles status updates and cleanup
+    /// Post-processing method for status updates and cleanup
     /// </summary>
     protected virtual async Task PostBusinessAgentProcessingAsync(WorkflowEvent workflowEvent)
     {
         // Update workflow status
         UpdateWorkflowStatusPost(workflowEvent);
-        
-        // ✅ FIX: Only transfer TaskResult to Message if NO error occurred
-        // This prevents error messages from propagating as normal data
-        if (string.IsNullOrEmpty(workflowEvent.ErrorMessage))
-        {
-            // SUCCESS: Transfer TaskResult to Message for downstream agents
-            workflowEvent.Message = workflowEvent.TaskResult ?? workflowEvent.Message;
-            
-            Logger.LogInformation("✅ Business agent {AgentId} completed successfully, forwarding Message: {Message}",
-                this.GetGrainId(), 
-                workflowEvent.Message?.Length > 50 ? workflowEvent.Message.Substring(0, 50) + "..." : workflowEvent.Message);
-        }
-        else
-        {
-            // FAILURE: Keep Message as is (original InputData), don't propagate error as normal data
-            Logger.LogWarning("❌ Business agent {AgentId} failed with error: {ErrorMessage}, NOT forwarding TaskResult",
-                this.GetGrainId(), workflowEvent.ErrorMessage);
-        }
 
-        // Clear received messages after processing
+        Logger.LogInformation("Business agent {AgentId} completed WorkflowEvent processing: {WorkflowEventType}",
+            this.GetGrainId(), workflowEvent.WorkflowEventType);
+
+        // Clear received messages after successful processing
         ClearReceivedMessages();
 
         await Task.CompletedTask;
     }
 
     /// <summary>
-    /// ✅ NEW: Simple validation method for WorkflowEvent
-    /// Override in derived classes for specific validation logic
+    /// Validation method for WorkflowEvent
     /// </summary>
     protected virtual async Task<bool> ValidateWorkflowEventAsync(WorkflowEvent workflowEvent)
     {
@@ -257,15 +231,11 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ NEW: Updates workflow status when processing starts (Pre processing)
-    /// Override in derived classes for specific implementation
+    /// Updates workflow status when processing starts
     /// </summary>
     protected virtual void UpdateWorkflowStatusPre(WorkflowEvent workflowEvent)
 
     {
-       // Assign the WorkUnitAgentId to represent this processing node
-        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
-      
         // ✅ Save all received messages as JSON array for accurate InputData tracking
         workflowEvent.Metadata["inputData"] = JsonSerializer.Serialize(_receivedMessages);
         
@@ -274,18 +244,17 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ NEW: Updates workflow status when processing completes (Post processing)
-    /// Override in derived classes for specific implementation
+    /// Updates workflow status when processing completes
     /// </summary>
     protected virtual void UpdateWorkflowStatusPost(WorkflowEvent workflowEvent)
     {
+        // Assign the WorkUnitAgentId to represent this processing node
+        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
+        workflowEvent.StepEndTime = DateTime.UtcNow;
         // ✅ FIX: Only set Completed status if no error occurred
         if (string.IsNullOrEmpty(workflowEvent.ErrorMessage))
         {
-            // SUCCESS: Update workflow tracking information for processing completion
             workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
-            workflowEvent.StepEndTime = DateTime.UtcNow;
-            
             // Only set TaskResult if it's empty (agent should have set it)
             if (string.IsNullOrEmpty(workflowEvent.TaskResult))
             {
@@ -299,10 +268,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
         else
         {
             // ✅ FAILURE: Set Failed status when error occurred
-            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Failed;
-            workflowEvent.StepEndTime = DateTime.UtcNow;
-            // Keep TaskResult as is (may contain error-friendly message or be empty)
-            
+            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Failed;            
             Logger.LogWarning("❌ Agent {AgentId} failed: {WorkflowEventType}, Status: {WorkflowStatus}, ErrorMessage: {ErrorMessage}",
                 this.GetGrainId(), workflowEvent.WorkflowEventType, workflowEvent.WorkflowAgentStatus, 
                 workflowEvent.ErrorMessage);
@@ -310,9 +276,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ SIMPLIFIED: Virtual method for dependency readiness checks
-    /// Focuses on input message dependencies - basic validation is handled elsewhere
-    /// Override in derived classes to implement specific dependency logic
+    /// Virtual method for dependency readiness checks
     /// </summary>
     protected virtual bool AreAllDependenciesReadyAsync(WorkflowEvent workflowEvent)
     {
@@ -333,8 +297,8 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
                 return false;
             }
 
-            Logger.LogDebug("[BusinessAgentBase] All dependencies ready for WorkflowId: {WorkflowId}, WorkUnitAgentId: {WorkUnitAgentId}",
-                workflowEvent.WorkflowId, workflowEvent.WorkUnitAgentId);
+            Logger.LogDebug("[BusinessAgentBase] All dependencies ready for WorkflowId: {WorkflowId}, AgentId: {AgentId}",
+                workflowEvent.WorkflowId, workflowEvent.AgentId);
             
             return true;
         }
@@ -347,7 +311,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ NEW: Record input message from upstream agent in private field
+    /// Record input message from upstream agent
     /// </summary>
     protected virtual Task RecordInputMessageAsync(WorkflowEvent workflowEvent)
     {
@@ -355,11 +319,11 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
         {
             if (!string.IsNullOrEmpty(workflowEvent.Message))
             {
-                // ✅ CORRECT: Use private field - no state persistence needed
+                // Use private field - no state persistence needed
                 _receivedMessages.Add(workflowEvent.Message);
 
-                Logger.LogDebug("[BusinessAgentBase] Recorded input message from agent {FromWorkUnitAgentId} for WorkflowId: {WorkflowId}. Total messages: {Count}",
-                    workflowEvent.WorkUnitAgentId, workflowEvent.WorkflowId, _receivedMessages.Count);
+                Logger.LogDebug("[BusinessAgentBase] Recorded input message from agent {FromAgentId} for WorkflowId: {WorkflowId}. Total messages: {Count}",
+                    workflowEvent.AgentId, workflowEvent.WorkflowId, _receivedMessages.Count);
             }
         }
         catch (Exception ex)
@@ -372,8 +336,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ NEW: Check if all required input messages are received
-    /// Expected count = number of parent agents
+    /// Check if all required input messages are received
     /// </summary>
     protected virtual bool AreAllInputMessagesReceived(Guid workflowId)
     {
@@ -404,7 +367,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ NEW: Clear received messages after processing
+    /// Clear received messages after processing
     /// </summary>
     protected virtual void ClearReceivedMessages()
     {
@@ -450,13 +413,13 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ CRITICAL: Handle state transitions using proper event sourcing
+    /// Handle state transitions using event sourcing
     /// </summary>
     protected override void GAgentTransitionState(TState state, StateLogEventBase<TStateLogEvent> @event)
     {
         // No business agent specific events currently - just call base
 
-        // CRITICAL: Call base implementation to handle parent/child relationships and other standard events
+        // Call base implementation to handle parent/child relationships and other standard events
         base.GAgentTransitionState(state, @event);
     }
 

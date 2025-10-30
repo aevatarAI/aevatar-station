@@ -20,8 +20,7 @@ using Orleans;
 namespace Aevatar.GAgents.AIGAgent.Agent;
 
 /// <summary>
-/// Partial class for AIGAgentBasePlus that adds tool-aware chat capabilities
-/// Uses unified Event class for event forwarding
+/// Adds tool-aware chat capabilities with event forwarding
 /// </summary>
 public abstract partial class
     AIGAgentBasePlus<TState, TStateLogEvent, TConfiguration>
@@ -256,7 +255,7 @@ public abstract partial class
     }
 
     /// <summary>
-    /// Creates OpenAI execution settings with proper max tokens configuration
+    /// Creates OpenAI execution settings with max tokens configuration
     /// </summary>
     protected OpenAIPromptExecutionSettings CreateCompatibleExecutionSettings(
         ExecutionPromptSettings? promptSettings = null,

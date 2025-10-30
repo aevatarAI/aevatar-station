@@ -17,7 +17,7 @@ using Aevatar.GAgents.Core;
 namespace Aevatar.GAgents.AIGAgent.Agent;
 
 /// <summary>
-/// ✅ CORRECTED: AIGAgentBasePlus inherits from BusinessAgentBase for layered architecture
+/// AIGAgentBasePlus inherits from BusinessAgentBase for layered architecture
 /// Uses unified Event class for event forwarding
 /// </summary>
 public abstract partial class

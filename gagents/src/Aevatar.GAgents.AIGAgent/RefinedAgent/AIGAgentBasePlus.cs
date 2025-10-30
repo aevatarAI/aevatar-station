@@ -41,14 +41,32 @@ public abstract partial class
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TConfiguration : ConfigurationBase
 {
-    private readonly IBrainFactory _brainFactory;
-    private readonly IServiceProvider _serviceProvider;
+    private IBrainFactory? _brainFactory;
+    private IOptions<SystemLLMConfigOptions>? _systemLLMOptions;
     private IBrain? _brain;
 
     protected AIGAgentBasePlus()
     {
-        _brainFactory = ServiceProvider.GetRequiredService<IBrainFactory>();
+        // Constructor is empty - dependencies resolved lazily via virtual factory methods
+        // This enables unit testing without Orleans ServiceProvider
     }
+
+    /// <summary>
+    /// Factory method for IBrainFactory resolution.
+    /// </summary>
+    protected virtual IBrainFactory GetBrainFactory()
+        => ServiceProvider.GetRequiredService<IBrainFactory>();
+
+    /// <summary>
+    /// Factory method for SystemLLMConfigOptions resolution.
+    /// </summary>
+    protected virtual IOptions<SystemLLMConfigOptions> GetSystemLLMConfigOptions()
+        => ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
+
+    /// <summary>
+    /// Lazy-loaded BrainFactory property.
+    /// </summary>
+    protected IBrainFactory BrainFactory => _brainFactory ??= GetBrainFactory();
 
     protected override async Task PerformConfigAsync(TConfiguration configuration)
     {
@@ -58,22 +76,28 @@ public abstract partial class
 
     public async Task<bool> InitializeAsync(InitializeDto initializeDto)
     {
+        if (initializeDto == null)
+        {
+            return false;
+        }
+
         var llmConfig = await GetLLMConfigAsync(initializeDto.LLMConfig);
+        
         if (llmConfig == null)
         {
             return false;
         }
 
-        // Use centralized configuration approach for system LLMs
+        // Use centralized configuration for system LLMs
         if (!initializeDto.LLMConfig.SystemLLM.IsNullOrWhiteSpace())
         {
-            // Store reference only, don't persist resolved config
+            // Store reference only
             var centralizedConfigEvent = CreateCentralizedLLMConfigEvent(initializeDto.LLMConfig);
             RaiseEvent(centralizedConfigEvent);
         }
         else
         {
-            // For self-provided configs, use the existing approach
+            // For self-provided configs
             var addLlmEventLog = await AddLLMAsync(llmConfig!, initializeDto.LLMConfig.SystemLLM);
             if (addLlmEventLog != null)
             {
@@ -90,7 +114,7 @@ public abstract partial class
             RaiseEvent(new SetEnableMCPToolsStateLogEvent { EnableMCPTools = true });
         }
 
-        // Configure selected GAgents if provided
+        // Configure GAgent tools if provided
         if (initializeDto.ToolGAgentTypes.Count != 0 || initializeDto.ToolGAgents.Count != 0)
         {
             RaiseEvent(new SetEnableGAgentToolsStateLogEvent { EnableGAgentTools = true });
@@ -113,7 +137,7 @@ public abstract partial class
         {
             var result = await InitializeBrainAsync(llmConfig, initializeDto.Instructions);
 
-            // Register selected GAgent tools if any were specified
+            // Register GAgent tools if specified
             if (result && (initializeDto.ToolGAgentTypes.Count != 0 || initializeDto.ToolGAgents.Count != 0))
             {
                 var toolGAgents = initializeDto.ToolGAgentTypes
@@ -122,7 +146,7 @@ public abstract partial class
                 await UpdateKernelWithGAgentToolsAsync(toolGAgents);
             }
 
-            // Configure MCP servers if provided in initialization
+            // Configure MCP servers if provided
             if (result && initializeDto.MCPServers.Count != 0)
             {
                 await ConfigureMCPServersAsync(initializeDto.MCPServers);
@@ -133,8 +157,8 @@ public abstract partial class
         catch (Exception ex)
         {
             Logger.LogError(ex,
-                "Failed to initialize brain during InitializeAsync. This may be due to invalid configuration.");
-            return false; // Return false to indicate initialization failed
+                "Failed to initialize brain during InitializeAsync");
+            return false;
         }
     }
 
@@ -162,7 +186,7 @@ public abstract partial class
 
     private async Task<bool> InitializeBrainAsync(LLMConfig llmConfig, string systemMessage)
     {
-        _brain = _brainFactory.CreateBrain(llmConfig);
+        _brain = BrainFactory.CreateBrain(llmConfig);
 
         if (_brain == null)
         {
@@ -732,13 +756,13 @@ public abstract partial class
 
     protected virtual Task<LLMConfig?> ResolveSystemConfigAsync(string key)
     {
-        var systemConfigs = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
+        var systemConfigs = _systemLLMOptions ??= GetSystemLLMConfigOptions();
         if (systemConfigs.Value.SystemLLMConfigs?.TryGetValue(key, out var config) == true)
         {
             return Task.FromResult(config)!;
         }
 
-        return null;
+        return Task.FromResult<LLMConfig?>(null);
     }
 
     protected virtual Task<LLMConfig?> GetLLMConfigAsync(LLMConfigDto llmConfigDto)
@@ -751,7 +775,7 @@ public abstract partial class
 
         if (llmConfigDto.SystemLLM.IsNullOrEmpty() == false)
         {
-            var systemConfigs = ServiceProvider.GetRequiredService<IOptions<SystemLLMConfigOptions>>();
+            var systemConfigs = _systemLLMOptions ??= GetSystemLLMConfigOptions();
 
             if (systemConfigs.Value.SystemLLMConfigs == null ||
                 !systemConfigs.Value.SystemLLMConfigs.TryGetValue(llmConfigDto.SystemLLM, out var config))

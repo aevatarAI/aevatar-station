@@ -18,7 +18,7 @@ using Aevatar.GAgents.Core;
 namespace Aevatar.GAgents.AIGAgent.Agent;
 
 /// <summary>
-/// ✅ CORRECTED: AIGAgentBasePlus now inherits from BusinessAgentBase to get business functionality + AI capabilities
+/// AIGAgentBasePlus inherits from BusinessAgentBase for business functionality + AI capabilities
 /// This creates the proper hierarchy: BusinessAgentBase (business logic) -> AIGAgentBasePlus (business + AI)
 /// Uses unified Event class for event forwarding
 /// </summary>

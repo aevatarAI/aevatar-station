@@ -34,7 +34,7 @@ public class InputGAgentPlus : BusinessAgentBase<InputGAgentStatePlus, InputGAge
     }
     
     /// <summary>
-    /// ✅ UPDATED: Override OnBusinessAgentEventForwardingEventHandlerAsync instead of OnEventForwardingEventHandlerAsync
+    /// Override OnBusinessAgentEventForwardingEventHandlerAsync for input handling
     /// This ensures BusinessAgentBase validation runs first
     /// </summary>
     [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
@@ -42,9 +42,7 @@ public class InputGAgentPlus : BusinessAgentBase<InputGAgentStatePlus, InputGAge
     {
         try
         {
-            // ✅ CRITICAL FIX: Set TaskResult (Agent's output), not Message
-            // Message is the input from upstream, TaskResult is this agent's output
-            workflowEvent.TaskResult = State.Input ?? "No input configured";
+            workflowEvent.Message = State.Input ?? "No input configured";
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowInProgress;
             workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
         }
