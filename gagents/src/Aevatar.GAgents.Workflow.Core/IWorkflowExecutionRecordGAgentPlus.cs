@@ -4,6 +4,6 @@ using Aevatar.GAgents.Core;
 
 namespace Aevatar.GAgents.Workflow.Core;
 
-public interface IWorkflowExecutionRecordGAgentPlus : IStateGAgentPlus<WorkflowExecutionRecordStatePlus>, IBusinessAgentBase
+public interface IWorkflowExecutionRecordGAgentPlus : IStateGAgentPlus<WorkflowExecutionRecordStatePlus>
 {
 }
