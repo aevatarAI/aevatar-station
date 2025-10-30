@@ -12,6 +12,7 @@ public class AevatarMongoDbFixture : IDisposable
         {
             UseSingleNodeReplicaSet = true,
             KillMongoProcessesWhenCurrentProcessExits = true
+            AdditionalArguments = "--bind_ip_all"
         });
     }
 
