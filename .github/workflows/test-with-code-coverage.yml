@@ -28,23 +28,6 @@ jobs:
         run: cd framework && dotnet restore --verbosity quiet
       - name: Build
         run: cd framework && dotnet build --no-restore /clp:ErrorsOnly /p:GeneratePackageOnBuild=false --verbosity quiet
-      - name: Install MongoDB
-        run: |
-          # Import MongoDB GPG key
-          wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | sudo apt-key add -
-
-          # Add MongoDB repo
-          echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/6.0 multiverse" \
-            | sudo tee /etc/apt/sources.list.d/mongodb-org-6.0.list
-
-          # Update packages
-          sudo apt-get update
-
-          # Install MongoDB server
-          sudo apt-get install -y mongodb-org-server
-
-          # Verify installation
-          mongod --version      
       - name: Test
         run: |
           cd framework && dotnet test --no-restore --no-build --logger trx --settings CodeCoverage.runsettings --results-directory ../coverage-framework --collect:"XPlat Code Coverage"
