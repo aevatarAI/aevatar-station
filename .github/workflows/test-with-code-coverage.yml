@@ -5,6 +5,7 @@ on:
     branches:
       - 'main'
       - 'dev'
+      - 'fix/ci-test-improvements'
   pull_request:
     types: [ opened, synchronize, reopened ]
 
