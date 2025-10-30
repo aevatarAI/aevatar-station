@@ -25,8 +25,8 @@ public class AevatarWorkflowTestModule : AbpModule
         Configure<AzureOpenAIEmbeddingsConfig>(configuration.GetSection("AIServices:AzureOpenAIEmbeddings"));
         Configure<RagConfig>(configuration.GetSection("Rag"));
 
-        context.Services.AddSemanticKernel()
-            .AddQdrantVectorStore()
-            .AddAzureOpenAITextEmbedding();
+        // Note: AddSemanticKernel, AddQdrantVectorStore, and AddAzureOpenAITextEmbedding
+        // are already registered in ClusterFixture (Orleans silo configuration).
+        // DO NOT register them again here to avoid service resolution conflicts and deadlocks.
     }
 }

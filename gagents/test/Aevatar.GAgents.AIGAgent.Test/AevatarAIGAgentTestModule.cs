@@ -21,25 +21,8 @@ public class AevatarAIGAgentTestModule : AbpModule
     {
         context.Services.AddSingleton<IBlobContainer, MockBlobContainer>();
 
-        // Register GAgentExecutor related services
-        context.Services.AddSingleton<IGAgentExecutor>(provider =>
-        {
-            var clusterClient = provider.GetRequiredService<IClusterClient>();
-            var gAgentService = provider.GetRequiredService<IGAgentService>();
-            return new GAgentExecutor(clusterClient, gAgentService);
-        });
-
-        context.Services.AddSingleton<IGAgentService>(provider =>
-        {
-            var gAgentManager = provider.GetRequiredService<IGAgentManager>();
-            var clusterClient = provider.GetRequiredService<IClusterClient>();
-            return new GAgentService(gAgentManager, clusterClient, provider.GetRequiredService<ILogger<GAgentService>>());
-        });
-
-        context.Services.AddSingleton<IGAgentFactory>(provider =>
-        {
-            var clusterClient = provider.GetRequiredService<IClusterClient>();
-            return new GAgentFactory(clusterClient);
-        });
+        // Note: IGAgentExecutor, IGAgentService, IGAgentFactory, and IGAgentManager
+        // are already registered in AevatarGAgentTestBaseModule and ClusterFixture.
+        // DO NOT register them again here to avoid service resolution conflicts.
     }
 }
