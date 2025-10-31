@@ -5,6 +5,7 @@ on:
     branches:
       - 'main'
       - 'dev'
+      - 'feature/new-workflow-ci'
   pull_request:
     types: [ opened, synchronize, reopened ]
 
