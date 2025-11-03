@@ -37,7 +37,7 @@ public class InputGAgentPlus : BusinessAgentBase<InputGAgentStatePlus, InputGAge
     /// Override OnBusinessAgentEventForwardingEventHandlerAsync for input handling
     /// This ensures BusinessAgentBase validation runs first
     /// </summary>
-    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] { "WorkflowId", "GrainIdString" })]
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
         try

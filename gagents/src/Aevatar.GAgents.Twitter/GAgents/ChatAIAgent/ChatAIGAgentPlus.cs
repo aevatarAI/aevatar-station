@@ -76,7 +76,7 @@ public class ChatAIGAgentPlus :
     /// Simplified: just check if there's a message to process with AI
     /// Exception handling is delegated to BusinessAgentBase
     /// </summary>
-    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] { WorkflowIdProperty, RoundIdProperty, GrainIdProperty })]
+    [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] { "WorkflowId", "GrainIdString" })]
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
         _logger.LogInformation("ChatAIGAgent {AgentId} received WorkflowEvent", this.GetPrimaryKey());

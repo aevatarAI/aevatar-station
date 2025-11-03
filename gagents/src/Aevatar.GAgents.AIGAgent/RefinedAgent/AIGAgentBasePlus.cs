@@ -36,7 +36,7 @@ public abstract class
 
 public abstract partial class
     AIGAgentBasePlus<TState, TStateLogEvent, TConfiguration> : 
-    BusinessAgentBase<TState, TStateLogEvent, TConfiguration>, IAIGAgent
+    WorkUnitBase<TState, TStateLogEvent, TConfiguration>, IAIGAgent
     where TState : AIGAgentStateBasePlus, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TConfiguration : ConfigurationBase

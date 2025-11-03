@@ -2,7 +2,6 @@ using Orleans.Concurrency;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 
 namespace Aevatar.GAgents.Core;
 
@@ -42,48 +41,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// Initialize GrainIdString property for Interceptor logging during agent activation
-    /// </summary>
-    protected override Task OnGAgentActivateAsync(CancellationToken cancellationToken)
-    {
-        // Initialize GrainIdString for Interceptor attribute logging
-        GrainIdString = this.GetGrainId().ToString();
-        
-        Logger.LogDebug("[BusinessAgentBase] Initialized GrainIdString property: {GrainIdString}", GrainIdString);
-        
-        return base.OnGAgentActivateAsync(cancellationToken);
-    }
-
-    /// <summary>
-    /// Workflow context property constants for interceptor logging
-    /// </summary>
-    protected const string WorkflowLogCategory = "WORKFLOW";
-    protected const string WorkflowIdProperty = "WorkflowId";
-    protected const string RoundIdProperty = "RoundId";
-    protected const string GrainIdProperty = "GrainIdString";
-
-    /// <summary>
-    /// Workflow ID for this agent instance, used by InterceptorAttribute for workflow logging
-    /// Initialized from WorkflowEvent.WorkflowId during event processing
-    /// </summary>
-    public virtual string? WorkflowId { get; protected set; }
-
-    /// <summary>
-    /// Round identifier for current workflow execution cycle. Used by InterceptorAttribute as contextual field.
-    /// Currently not used in Plus workflow system, but maintained for compatibility with old workflow logging
-    /// </summary>
-    public virtual long? RoundId { get; protected set; }
-
-    /// <summary>
-    /// Grain ID string for this agent instance, used by InterceptorAttribute for workflow logging
-    /// Initialized from Orleans GrainId during agent activation
-    /// Property name uses "GrainIdString" to avoid conflict with Orleans.Runtime.GrainId type
-    /// </summary>
-    public virtual string? GrainIdString { get; protected set; }
-
-    /// <summary>
-    /// ✅ NEW: Private field to track received messages from upstream agents
-    /// Cleared after processing to avoid state persistence
+    /// Track received messages from upstream agents
     /// </summary>
     protected List<string> _receivedMessages = new();
     /// <summary>
@@ -138,7 +96,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
             workflowEvent.StepEndTime = DateTime.UtcNow;
             workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Failed;
             
-            // ✅ P2P MESSAGING: Send failure event directly to coordinator
+            // P2P MESSAGING: Send failure event directly to coordinator
             await SendFailureEventToCoordinatorAsync(workflowEvent);
             
             // Clear received messages even on error to avoid stale data
@@ -161,21 +119,6 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// </summary>
     protected virtual async Task PreBusinessAgentProcessingAsync(WorkflowEvent workflowEvent)
     {
-        // Initialize WorkflowId property for Interceptor logging
-        if (workflowEvent.WorkflowId != Guid.Empty)
-        {
-            WorkflowId = workflowEvent.WorkflowId.ToString();
-        }
-
-        // Initialize RoundId property for Interceptor logging from Metadata
-        if (workflowEvent.Metadata.TryGetValue("RoundId", out var roundIdObj))
-        {
-            if (long.TryParse(roundIdObj?.ToString(), out var parsedRoundId))
-            {
-                RoundId = parsedRoundId;
-            }
-        }
-
         // Update workflow status
         UpdateWorkflowStatusPre(workflowEvent);
 
@@ -234,11 +177,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// Updates workflow status when processing starts
     /// </summary>
     protected virtual void UpdateWorkflowStatusPre(WorkflowEvent workflowEvent)
-
     {
-        // ✅ Save all received messages as JSON array for accurate InputData tracking
-        workflowEvent.Metadata["inputData"] = JsonSerializer.Serialize(_receivedMessages);
-        
         // Update workflow tracking information for processing start
         workflowEvent.StepStartTime = DateTime.UtcNow;
     }
@@ -248,25 +187,14 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     /// </summary>
     protected virtual void UpdateWorkflowStatusPost(WorkflowEvent workflowEvent)
     {
-        // Assign the WorkUnitAgentId to represent this processing node
-        workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
+        // Update workflow tracking information for processing completion
+        workflowEvent.AgentId = this.GetGrainId().GetGuidKey();
+        workflowEvent.AgentTypeName = this.GetType().FullName ?? string.Empty;
+        workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
         workflowEvent.StepEndTime = DateTime.UtcNow;
-        // ✅ FIX: Only set Completed status if no error occurred
-        if (string.IsNullOrEmpty(workflowEvent.ErrorMessage))
-        {
-            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
 
-            Logger.LogDebug("✅ Agent {AgentId} completed successfully: {WorkflowEventType}, Status: {WorkflowStatus}",
-                this.GetGrainId(), workflowEvent.WorkflowEventType, workflowEvent.WorkflowAgentStatus);
-        }
-        else
-        {
-            // ✅ FAILURE: Set Failed status when error occurred
-            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Failed;            
-            Logger.LogWarning("❌ Agent {AgentId} failed: {WorkflowEventType}, Status: {WorkflowStatus}, ErrorMessage: {ErrorMessage}",
-                this.GetGrainId(), workflowEvent.WorkflowEventType, workflowEvent.WorkflowAgentStatus, 
-                workflowEvent.ErrorMessage);
-        }
+        Logger.LogDebug("Updated WorkflowEvent and agent state status for agent {AgentId}: {WorkflowEventType}, WorkflowStatus: {WorkflowStatus}",
+            this.GetGrainId(), workflowEvent.WorkflowEventType, State.WorkflowAgentStatus);
     }
 
     /// <summary>
@@ -291,8 +219,8 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
                 return false;
             }
 
-            Logger.LogDebug("[BusinessAgentBase] All dependencies ready for WorkflowId: {WorkflowId}, WorkUnitAgentId: {WorkUnitAgentId}",
-                workflowEvent.WorkflowId, workflowEvent.WorkUnitAgentId);
+            Logger.LogDebug("[BusinessAgentBase] All dependencies ready for WorkflowId: {WorkflowId}, AgentId: {AgentId}",
+                workflowEvent.WorkflowId, workflowEvent.AgentId);
             
             return true;
         }
@@ -316,8 +244,8 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
                 // Use private field - no state persistence needed
                 _receivedMessages.Add(workflowEvent.Message);
 
-                Logger.LogDebug("[BusinessAgentBase] Recorded input message from agent {FromWorkUnitAgentId} for WorkflowId: {WorkflowId}. Total messages: {Count}",
-                    workflowEvent.WorkUnitAgentId, workflowEvent.WorkflowId, _receivedMessages.Count);
+                Logger.LogDebug("[BusinessAgentBase] Recorded input message from agent {FromAgentId} for WorkflowId: {WorkflowId}. Total messages: {Count}",
+                    workflowEvent.AgentId, workflowEvent.WorkflowId, _receivedMessages.Count);
             }
         }
         catch (Exception ex)
@@ -370,7 +298,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     }
 
     /// <summary>
-    /// ✅ P2P MESSAGING: Send WorkflowFailed event directly to coordinator using SendEventToAgentAsync
+    /// P2P MESSAGING: Send WorkflowFailed event directly to coordinator using SendEventToAgentAsync
     /// This bypasses parent-child event forwarding system for immediate failure notification
     /// Uses WorkflowEvent.WorkflowId directly (accurate) instead of State.WorkflowCoordinatorId
     /// </summary>
@@ -378,7 +306,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     {
         try
         {
-            // ✅ Use WorkflowEvent.WorkflowId directly - it's the coordinator's GrainId
+            // Use WorkflowEvent.WorkflowId directly - it's the coordinator's GrainId
             if (failureEvent.WorkflowId == Guid.Empty)
             {
                 Logger.LogWarning("[BusinessAgentBase] WorkflowEvent.WorkflowId is empty - cannot send failure event");
@@ -388,7 +316,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
             Logger.LogInformation("[BusinessAgentBase] Sending WorkflowFailed event to coordinator {CoordinatorId} from agent {AgentId}",
                 failureEvent.WorkflowId, this.GetGrainId());
 
-            // ✅ BEST PRACTICE: Directly construct coordinator's GrainId using GrainId.Create
+            // BEST PRACTICE: Directly construct coordinator's GrainId using GrainId.Create
             // This avoids ambiguity issues with IGAgentPlus (which has multiple implementations)
             var coordinatorGrainId = GrainId.Create(
                 "Aevatar.GAgents.Workflow.WorkflowCoordinatorGAgentPlus",

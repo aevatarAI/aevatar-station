@@ -220,8 +220,8 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         {
             WorkflowId = agentId, // Use the SAME GUID as the agent ID
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
-            WorkUnitAgentId = "Aevatar.GAgents.Workflow.WorkflowStartAgent/"+agentId.ToString("N"), // Required for topology discovery
-            AgentName = "test", // Required for topology discovery - full type name
+            AgentId = agentId, // Required for topology discovery
+            AgentTypeName = "Aevatar.GAgents.Workflow.WorkflowStartAgent", // Required for topology discovery - full type name
             Message = "Start workflow coordination",
             Metadata = new Dictionary<string, object>
             {
@@ -272,7 +272,7 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         {
             WorkflowId = agentId,
             WorkflowEventType = WorkflowEventType.WorkflowInProgress,
-            WorkUnitAgentId = agentId.ToString(), // Must match a work unit AgentId
+            AgentId = agentId, // Must match a work unit AgentId
             Message = "Workflow in progress",
             ErrorMessage = string.Empty // No error - successful progress
         };
@@ -291,7 +291,7 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         // WorkflowInProgress doesn't change WorkflowStatus, just updates work unit status
         state.WorkflowStatus.ShouldBe(WorkflowCoordinatorStatus.Pending); // Unchanged
         // The work unit with matching AgentId should be marked as Finished
-        var workUnit = state.CurrentWorkUnitInfos.FirstOrDefault(w => w.AgentId == agentId.ToString());
+        var workUnit = state.CurrentWorkUnitInfos.FirstOrDefault(w => w.AgentId == agentId);
         workUnit.ShouldNotBeNull();
         workUnit.UnitStatusEnum.ShouldBe(WorkerUnitStatusEnum.Finished); // Updated by FinishedWorkUnitLogEvent
     }
@@ -530,7 +530,9 @@ public class TestWorkflowCoordinatorGAgentPlus : WorkflowCoordinatorGAgentPlus, 
 {
     public async Task<bool> HandleWorkflowEventAsync(WorkflowEvent workflowEvent)
     {
-        await base.OnEventForwardingEventHandlerAsync(workflowEvent);
+        // Test extension should only call the WorkflowCoordinator-specific logic
+        // NOT the full BusinessAgentBase flow (OnEventForwardingEventHandlerAsync)
+        await OnBusinessAgentEventForwardingEventHandlerAsync(workflowEvent);
         return true;
     }
 }

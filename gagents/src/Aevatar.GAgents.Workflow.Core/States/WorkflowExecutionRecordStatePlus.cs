@@ -46,4 +46,6 @@ public class WorkUnitExecutionRecord
     public string? CurrentStateSnapshot { get; set; }
     [Id(8)]
     public string AgentName { get; set; } = string.Empty;
+    [Id(9)]
+    public string AgentTypeName { get; set; } = string.Empty;
 }
