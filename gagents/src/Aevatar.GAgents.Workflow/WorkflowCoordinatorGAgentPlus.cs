@@ -266,7 +266,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
         }
 
         RaiseEvent(new SetWorkflowCoordinatorLogEvent
-            { WorkflowUnit = configuration.WorkflowUnitList, BlackBoardId = State.BlackboardId, InitContent = configuration.InitContent, EnableExecutionRecord = configuration.EnableExecutionRecord});
+            { WorkflowUnit = configuration.WorkflowUnitList, InitContent = configuration.InitContent, EnableExecutionRecord = configuration.EnableExecutionRecord });
 
         await ConfirmEvents();
 
@@ -285,7 +285,8 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
                     NodeId = Guid.Parse(s.GrainId), // Use AgentId as NodeId for dynamic discovery
                     NextNodeId = string.IsNullOrEmpty(s.NextGrainId) ? Guid.Empty : Guid.Parse(s.NextGrainId),
                     UnitStatusEnum = WorkerUnitStatusEnum.Pending,
-                    ExtendedData = s.ExtendedData
+                    ExtendedData = s.ExtendedData,
+                    Name = s.AgentName  
                 }).ToList();
 
                 if (state.WorkflowStatus is WorkflowCoordinatorStatus.Pending or WorkflowCoordinatorStatus.Failed)
@@ -298,7 +299,6 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
                     state.BackupWorkUnitInfos = nodeList;
                 }
 
-                state.BlackboardId = setWorkflowCoordinatorLogEvent.BlackBoardId;
                 state.Content = setWorkflowCoordinatorLogEvent.InitContent;
                 state.EnableRunRecord = setWorkflowCoordinatorLogEvent.EnableExecutionRecord;
                 break;
@@ -315,7 +315,6 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
                     state.BackupWorkUnitInfos = setWorkflowCoordinatorDirectLogEvent.WorkUnitInfos;
                 }
 
-                state.BlackboardId = setWorkflowCoordinatorDirectLogEvent.BlackBoardId;
                 state.Content = setWorkflowCoordinatorDirectLogEvent.InitContent;
                 state.EnableRunRecord = setWorkflowCoordinatorDirectLogEvent.EnableExecutionRecord;
                 break;
@@ -401,17 +400,9 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
     #region Dynamic Topology Discovery
 
     /// <summary>
-    /// All dependencies are ready for WorkflowCoordinatorGAgent
-    /// </summary>
-    /// <param name="workflowEvent"></param>
-    /// <returns></returns>
-    protected override bool AreAllDependenciesReadyAsync(WorkflowEvent workflowEvent)
-    {
-        return true;
-    }
-
-    /// <summary>
-    /// Dynamically discover workflow topology from actual agent relationships
+    /// NEW: Dynamically discover workflow topology from actual agent relationships
+    /// Traverses from start agent through all children to build complete workflow graph
+    /// CORRECTED: NodeId is a new Guid (workflow node), NOT the same as AgentId (grain)
     /// </summary>
     private async Task DiscoverAndBuildWorkflowTopologyAsync(Guid startAgentId, string startAgentType)
     {
@@ -456,9 +447,14 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
 
                 // Get agent information using proper state access (not parsing!)
                 var (agentName, agentTypeName) = await currentAgent.GetAgentInfoAsync();
+                
+                // ✅ Priority: Use existing Name from State if available, otherwise use newly retrieved name
+                var existingWorkUnit = State.CurrentWorkUnitInfos.FirstOrDefault(w => w.AgentId == currentAgentId);
+                var finalAgentName = !string.IsNullOrEmpty(existingWorkUnit?.Name) ? existingWorkUnit.Name : agentName;
 
-                Logger.LogDebug("[WorkflowCoordinatorGAgent] Agent {AgentId} → Node {NodeId}: Name='{Name}', Type='{Type}'",
-                    currentAgentId, currentNodeId, agentName, agentTypeName);
+                Logger.LogDebug("[WorkflowCoordinatorGAgent] Agent {AgentId} → Node {NodeId}: Name='{Name}' (from {Source}), Type='{Type}'",
+                    currentAgentId, currentNodeId, finalAgentName, 
+                    existingWorkUnit != null ? "State" : "GetAgentInfoAsync", agentTypeName);
 
                 // Get children of current agent
                 var children = await currentAgent.GetChildrenAsync();
@@ -510,7 +506,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
                     // Terminal agent (no children) - create end node
                     discoveredWorkUnits.Add(new WorkUnitInfo
                     {
-                        NodeId = currentNodeId,         // Workflow node ID (NEW Guid)
+                        NodeId = currentNodeId,         // Workflow node ID (Guid)
                         NextNodeId = Guid.Empty,        // No next workflow node
                         AgentId = currentAgentId,       // Runtime grain ID
                         NextAgentId = Guid.Empty,       // No next runtime grain
@@ -537,7 +533,7 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
                 // Create fallback work unit for this agent
                 discoveredWorkUnits.Add(new WorkUnitInfo
                 {
-                    NodeId = agentToNodeMap[currentAgentId],  // NEW workflow node ID
+                    NodeId = agentToNodeMap[currentAgentId],  // NEW workflow node ID (Guid)
                     NextNodeId = Guid.Empty,
                     AgentId = currentAgentId,                 // Runtime grain ID
                     NextAgentId = Guid.Empty,
@@ -560,7 +556,6 @@ public class WorkflowCoordinatorGAgentPlus : BusinessAgentBase<WorkflowCoordinat
         RaiseEvent(new SetWorkflowCoordinatorDirectLogEvent
         {
             WorkUnitInfos = discoveredWorkUnits,
-            BlackBoardId = State.BlackboardId,
             InitContent = State.Content,
             EnableExecutionRecord = State.EnableRunRecord
         });
@@ -790,18 +785,16 @@ public class WorkflowCoordinatorLogEvent : StateLogEventBase<WorkflowCoordinator
 public class SetWorkflowCoordinatorLogEvent : WorkflowCoordinatorLogEvent
 {
     [Id(0)] public List<WorkflowUnitDto> WorkflowUnit { get; set; } = new();
-    [Id(1)] public Guid BlackBoardId { get; set; }
-    [Id(2)] public string? InitContent { get; set; } = null;
-    [Id(3)] public bool EnableExecutionRecord { get; set; }
+    [Id(1)] public string? InitContent { get; set; } = null;
+    [Id(2)] public bool EnableExecutionRecord { get; set; }
 }
 
 [GenerateSerializer]
 public class SetWorkflowCoordinatorDirectLogEvent : WorkflowCoordinatorLogEvent
 {
     [Id(0)] public List<WorkUnitInfo> WorkUnitInfos { get; set; } = new();
-    [Id(1)] public Guid BlackBoardId { get; set; }
-    [Id(2)] public string? InitContent { get; set; } = null;
-    [Id(3)] public bool EnableExecutionRecord { get; set; }
+    [Id(1)] public string? InitContent { get; set; } = null;
+    [Id(2)] public bool EnableExecutionRecord { get; set; }
 }
 
 [GenerateSerializer]

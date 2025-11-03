@@ -2,6 +2,7 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AIGAgent.Test.TestAgents;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
@@ -9,6 +10,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// This file contains comprehensive unit tests for AIGAgentBase Tools functionality.
 /// Tests GAgent tool registration, selection, and execution flows.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class AIGAgentBaseToolsTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

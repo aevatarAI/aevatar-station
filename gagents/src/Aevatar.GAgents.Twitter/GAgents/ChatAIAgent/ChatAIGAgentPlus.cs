@@ -18,6 +18,7 @@ using WorkflowChatMessage = GroupChat.GAgent.Feature.Common.ChatMessage;
 using Aevatar.Core.Placement;
 using GroupChat.GAgent.Feature.Blackboard;
 using Aevatar.GAgents.AIGAgent.Agent;
+using Aevatar.Core.Interception;
 
 namespace Aevatar.GAgents.Twitter.GAgents.ChatAIAgent;
 
@@ -73,7 +74,9 @@ public class ChatAIGAgentPlus :
     /// Override OnBusinessAgentEventForwardingEventHandlerAsync for Twitter chat AI functionality
     /// This ensures BusinessAgentBase validation runs first
     /// Simplified: just check if there's a message to process with AI
+    /// Exception handling is delegated to BusinessAgentBase
     /// </summary>
+    [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] { "WorkflowId", "GrainIdString" })]
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
         _logger.LogInformation("ChatAIGAgent {AgentId} received WorkflowEvent", this.GetPrimaryKey());
@@ -81,8 +84,6 @@ public class ChatAIGAgentPlus :
         try
         {
             // Assign the WorkUnitAgentId to represent this processing node
-            workflowEvent.WorkUnitAgentId = this.GetPrimaryKey();
-            
             // Check if there's a message to process with AI
             if (!string.IsNullOrEmpty(workflowEvent.Message))
             {
@@ -151,9 +152,13 @@ public class ChatAIGAgentPlus :
         {
             _logger.LogError(ex, "ChatAIGAgent {AgentId} failed to process chat task", this.GetPrimaryKey());
 
+            // ✅ Set error information before re-throwing
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowFailed;
-            workflowEvent.ErrorMessage = ex.Message;
-            workflowEvent.Message = "I encountered an error processing your request.";
+            workflowEvent.ErrorMessage = ex.Message; // Technical error for FailureSummary
+            // DON'T update Message - keep original input intact
+            
+            // Re-throw to let BusinessAgentBase handle the failure
+            throw;
         }
     }
 

@@ -15,9 +15,11 @@ using Orleans.Runtime;
 using Orleans.Streams;
 using Shouldly;
 using Xunit;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class GAgentExecutorIntegrationTests : AevatarAIGAgentTestBase
 {
     private readonly IGAgentExecutor _executor;

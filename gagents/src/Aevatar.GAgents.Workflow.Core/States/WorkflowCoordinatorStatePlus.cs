@@ -11,7 +11,6 @@ namespace Aevatar.GAgents.Workflow.Core.States;
 [GenerateSerializer]
 public class WorkflowCoordinatorStatePlus : BusinessAgentState
 {
-    [Id(0)] public Guid BlackboardId { get; set; }
     // REMOVED: [Id(1)] public long Term { get; set; } = 0;                 // Unnecessary complexity 
     [Id(2)] public List<WorkUnitInfo> CurrentWorkUnitInfos { get; set; } = new List<WorkUnitInfo>();    // Enhanced with UI data
     // REMOVED: [Id(3)] public Dictionary<long, string> TermToWorkUnitGrainId { get; set; }  // Unnecessary mapping
@@ -33,7 +32,7 @@ public class WorkflowCoordinatorStatePlus : BusinessAgentState
     /// </summary>
     [Id(12)] public string? CurrentExecutionName { get; set; }
 
-    // Updated method using AgentId instead of GrainId (signature changed from design document)
+    // Updated method using AgentId as Guid
     public WorkUnitInfo? GetWorkUnit(Guid agentId)
     {
         return CurrentWorkUnitInfos.FirstOrDefault(w => w.AgentId == agentId);
@@ -73,7 +72,7 @@ public class WorkflowCoordinatorStatePlus : BusinessAgentState
         return CurrentWorkUnitInfos.Where(w => downStreamAgentIds.Contains(w.AgentId) == false).Select(s => s.AgentId).ToList();
     }
 
-    // Updated existing method to work with new consolidated fields (signature changed from design document)
+    // Updated existing method to work with new consolidated fields
     public List<Guid> GetDownStreamGrainIds(Guid currentAgentId)
     {
         var downStream = CurrentWorkUnitInfos.FindAll(f => f.AgentId == currentAgentId);

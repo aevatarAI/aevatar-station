@@ -11,12 +11,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Orleans.Runtime;
 using Shouldly;
 using Xunit;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
 /// <summary>
 /// Integration tests for GAgent tools functionality
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public sealed class GAgentToolsIntegrationTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

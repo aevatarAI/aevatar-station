@@ -4,9 +4,11 @@ using Aevatar.GAgents.AIGAgent.Test.GAgents.ChatGAgents;
 using Aevatar.GAgents.AIGAgent.Test.GAgents.ChatWithHistoryGAgent;
 using Microsoft.Extensions.AI;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.GAgents.Tests;
 
+[Collection(ClusterCollection.Name)]
 public sealed class AIStreamChatTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

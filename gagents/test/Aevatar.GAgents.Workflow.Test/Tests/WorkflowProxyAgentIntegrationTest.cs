@@ -2,6 +2,7 @@ using Aevatar.GAgents.Workflow;
 using Orleans;
 using Shouldly;
 using Xunit;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.Workflow.Test.Tests;
 
@@ -9,6 +10,7 @@ namespace Aevatar.GAgents.Workflow.Test.Tests;
 /// Integration tests for WorkflowProxyAgent focusing only on agent-specific functionality.
 /// Does NOT test base class methods from CoreGAgentBase.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class WorkflowProxyAgentIntegrationTest : AevatarWorkflowTestBase
 {
     private readonly IGrainFactory _grainFactory;

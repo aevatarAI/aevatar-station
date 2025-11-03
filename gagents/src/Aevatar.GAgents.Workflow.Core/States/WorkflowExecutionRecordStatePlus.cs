@@ -29,7 +29,7 @@ public class WorkflowExecutionRecordStatePlus : BusinessAgentState
 public class WorkUnitExecutionRecord
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string WorkUnitGrainId { get; set; } = string.Empty;
     [Id(1)]
     public DateTime StartTime { get; set; }
     [Id(2)]
@@ -37,5 +37,15 @@ public class WorkUnitExecutionRecord
     [Id(3)]
     public WorkflowExecutionStatus Status { get; set; }
     [Id(4)]
-    public string FailureSummary { get; set; }
+    public string InputData { get; set; } = string.Empty;
+    [Id(5)]
+    public string OutputData { get; set; } = string.Empty;
+    [Id(6)] 
+    public string FailureSummary { get; set; } = string.Empty;
+    [Id(7)]
+    public string? CurrentStateSnapshot { get; set; }
+    [Id(8)]
+    public string AgentName { get; set; } = string.Empty;
+    [Id(9)]
+    public string AgentTypeName { get; set; } = string.Empty;
 }

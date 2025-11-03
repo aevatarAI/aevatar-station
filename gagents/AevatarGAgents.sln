@@ -114,6 +114,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GAgents.Twitter.Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GAgents.Core.Test", "test\Aevatar.GAgents.Core.Test\Aevatar.GAgents.Core.Test.csproj", "{E5704DB1-2182-4EDD-8679-8C60861E87A3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GAgents.Workflow", "src\Aevatar.GAgents.Workflow\Aevatar.GAgents.Workflow.csproj", "{CFB51A24-B8DE-4EB1-A79D-92F9BB4ABA13}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GAgents.Core", "src\Aevatar.GAgents.Core\Aevatar.GAgents.Core.csproj", "{3587746D-42E0-4C18-B047-A4C10205DD40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Aevatar.GAgents.Workflow.Core", "src\Aevatar.GAgents.Workflow.Core\Aevatar.GAgents.Workflow.Core.csproj", "{AFFB8CB7-2103-42AD-BFE2-D847CE88E9D3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -272,6 +278,18 @@ Global
 		{E5704DB1-2182-4EDD-8679-8C60861E87A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5704DB1-2182-4EDD-8679-8C60861E87A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5704DB1-2182-4EDD-8679-8C60861E87A3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFB51A24-B8DE-4EB1-A79D-92F9BB4ABA13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFB51A24-B8DE-4EB1-A79D-92F9BB4ABA13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFB51A24-B8DE-4EB1-A79D-92F9BB4ABA13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFB51A24-B8DE-4EB1-A79D-92F9BB4ABA13}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3587746D-42E0-4C18-B047-A4C10205DD40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3587746D-42E0-4C18-B047-A4C10205DD40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3587746D-42E0-4C18-B047-A4C10205DD40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3587746D-42E0-4C18-B047-A4C10205DD40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFFB8CB7-2103-42AD-BFE2-D847CE88E9D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFFB8CB7-2103-42AD-BFE2-D847CE88E9D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFFB8CB7-2103-42AD-BFE2-D847CE88E9D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFFB8CB7-2103-42AD-BFE2-D847CE88E9D3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

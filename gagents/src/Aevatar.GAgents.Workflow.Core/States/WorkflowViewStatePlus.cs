@@ -11,4 +11,7 @@ public class WorkflowViewStatePlus : StateBasePlus
     [Id(2)] public Guid WorkflowCoordinatorGAgentId { get; set; }
     [Id(3)] public string Name { get; set; }
     [Id(4)] public Guid AgentId { get; set; }
+    [Id(5)] public Guid WorkflowStartAgentId { get; set; }
+    [Id(6)] public Guid WorkflowEndAgentId { get; set; }
+    [Id(7)] public int RoundId { get; set; } = 0;
 }

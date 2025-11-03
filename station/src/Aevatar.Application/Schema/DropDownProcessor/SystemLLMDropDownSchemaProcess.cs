@@ -14,27 +14,26 @@ public class SystemLLMDropDownSchemaProcess : DropDownSchemaProcessBase, ITransi
     public override void ProcessSchema(SchemaProcessorContext processorContext, PropertyInfo property,
         DynamicDropDownContext? dropDownContext)
     {
-        if (processorContext.Schema.Properties != null && processorContext.Schema.Properties.Count > 0)
+        if (processorContext.Schema.Properties == null || processorContext.Schema.Properties.Count == 0)
+            return;
+
+        // Look for the property schema using different naming conventions
+        string[] possibleKeys =
         {
-            // Look for the property schema using different naming conventions
-            string[] possibleKeys =
+            property.Name.ToLowerInvariant(),
+            char.ToLowerInvariant(property.Name[0]) + property.Name.Substring(1),
+            property.Name
+        };
+
+        foreach (var key in possibleKeys)
+        {
+            if (processorContext.Schema.Properties.TryGetValue(key, out var propertySchema))
             {
-                property.Name.ToLowerInvariant(), // systemllm
-                char.ToLowerInvariant(property.Name[0]) + property.Name.Substring(1), // systemLLM -> systemLLM
-                property.Name // SystemLLM
-            };
+                if (propertySchema.ExtensionData == null)
+                    propertySchema.ExtensionData = new Dictionary<string, object?>();
 
-            foreach (var key in possibleKeys)
-            {
-                if (processorContext.Schema.Properties.TryGetValue(key, out var propertySchema))
-                {
-                    if (propertySchema.ExtensionData == null)
-                        propertySchema.ExtensionData = new Dictionary<string, object>();
-
-                    InjectSystemLLMConfigurations(propertySchema.ExtensionData, dropDownContext);
-
-                    return;
-                }
+                InjectSystemLLMConfigurations(propertySchema.ExtensionData, dropDownContext);
+                return;
             }
         }
     }
@@ -42,37 +41,22 @@ public class SystemLLMDropDownSchemaProcess : DropDownSchemaProcessBase, ITransi
     private void InjectSystemLLMConfigurations(IDictionary<string, object?> extensionData,
         DynamicDropDownContext? dropDownContext)
     {
-        // Check if dropDownContext is null or doesn't have additional data
         if (dropDownContext?.AdditionalData == null)
-        {
-            return; // No context or additional data available
-        }
+            return;
         
-        // Get AI model configurations from the dictionary
         if (!dropDownContext.AdditionalData.TryGetValue(OptionName, out var aiModelConfigsObj) ||
             aiModelConfigsObj is not List<SystemLLMConfigDto> aiModelConfigs)
+            return;
+
+        var configObjectList = aiModelConfigs.Select(config => new
         {
-            return; // No configurations available
-        }
+            Name = config.Name,
+            Strengths = config.Strengths,
+            BestFor = config.BestFor
+        }).ToList<object>();
 
-        // Create a list of AI model configurations as objects
-        var configObjectList = new List<object>();
-
-        foreach (var config in aiModelConfigs)
-        {
-            var configObject = new
-            {
-                Name = config.Name,
-                Strengths = config.Strengths,
-                BestFor = config.BestFor
-            };
-            configObjectList.Add(configObject);
-        }
-
-        // Create enum structure like MCPServerType with string type
         var enumNames = aiModelConfigs.Select(c => c.Name).ToArray();
 
-        // Inject the real configurations with enum structure
         extensionData["x-descriptions"] = configObjectList;
         extensionData["x-enumNames"] = enumNames;
         extensionData["enum"] = enumNames;

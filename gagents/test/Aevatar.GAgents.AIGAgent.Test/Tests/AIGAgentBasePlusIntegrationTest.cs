@@ -8,6 +8,7 @@ using Orleans;
 using Orleans.Providers;
 using Shouldly;
 using Xunit;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
@@ -16,6 +17,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// These tests use the full Orleans TestCluster infrastructure to test methods
 /// that require Orleans Grain functionality (State, event sourcing, etc.)
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class AIGAgentBasePlusIntegrationTest : AevatarAIGAgentTestBase
 {
     private readonly IGrainFactory _grainFactory;

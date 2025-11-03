@@ -16,12 +16,14 @@ using Orleans.Runtime;
 using Shouldly;
 using Xunit;
 using Xunit.Abstractions;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
 /// <summary>
 /// Detailed tests for GAgentToolPlugin functionality
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public sealed class GAgentToolPluginTest : AevatarAIGAgentTestBase
 {
     private readonly ITestOutputHelper _testOutputHelper;

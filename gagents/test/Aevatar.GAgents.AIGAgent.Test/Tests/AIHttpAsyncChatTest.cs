@@ -2,9 +2,11 @@ using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AIGAgent.Test.GAgents.ChatGAgents;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.GAgents.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class AIHttpAsyncChatTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

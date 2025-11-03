@@ -59,9 +59,8 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
             {
                 return false; // Skip processing if validation fails
             }
-
-            // Record input message from upstream agent
-            if (!string.IsNullOrEmpty(workflowEvent.Message) && workflowEvent.AgentId != Guid.Empty)
+            // Record input message from upstream agent (for dependency checking)
+            if (!string.IsNullOrEmpty(workflowEvent.Message) && !string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
             {
                 await RecordInputMessageAsync(workflowEvent);
             }
@@ -93,15 +92,17 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
             // Update event with error information
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowFailed;
             workflowEvent.ErrorMessage = ex.Message;
-
+            workflowEvent.WorkUnitAgentId = this.GetGrainId().ToString();
+            workflowEvent.StepEndTime = DateTime.UtcNow;
+            workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Failed;
+            
+            // P2P MESSAGING: Send failure event directly to coordinator
+            await SendFailureEventToCoordinatorAsync(workflowEvent);
+            
             // Clear received messages even on error to avoid stale data
             ClearReceivedMessages();
             return false;
         }
-
-        // GAgentBase automatically forwards to children - no explicit PublishEventByDirectionAsync needed
-        // Event forwarding is handled by the base class based on agent hierarchy
-        return await base.OnEventForwardingEventHandlerAsync(workflowEvent);    
     }
 
     /// <summary>
@@ -188,7 +189,7 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     {
         // Update workflow tracking information for processing completion
         workflowEvent.AgentId = this.GetGrainId().GetGuidKey();
-        workflowEvent.AgentName = this.GetType().FullName;
+        workflowEvent.AgentTypeName = this.GetType().FullName ?? string.Empty;
         workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
         workflowEvent.StepEndTime = DateTime.UtcNow;
 
@@ -294,6 +295,43 @@ public abstract class BusinessAgentBase<TState, TStateLogEvent, TConfiguration> 
     {
         _receivedMessages.Clear();
         Logger.LogDebug("[BusinessAgentBase] Cleared received messages after processing");
+    }
+
+    /// <summary>
+    /// P2P MESSAGING: Send WorkflowFailed event directly to coordinator using SendEventToAgentAsync
+    /// This bypasses parent-child event forwarding system for immediate failure notification
+    /// Uses WorkflowEvent.WorkflowId directly (accurate) instead of State.WorkflowCoordinatorId
+    /// </summary>
+    protected virtual async Task SendFailureEventToCoordinatorAsync(WorkflowEvent failureEvent)
+    {
+        try
+        {
+            // Use WorkflowEvent.WorkflowId directly - it's the coordinator's GrainId
+            if (failureEvent.WorkflowId == Guid.Empty)
+            {
+                Logger.LogWarning("[BusinessAgentBase] WorkflowEvent.WorkflowId is empty - cannot send failure event");
+                return;
+            }
+
+            Logger.LogInformation("[BusinessAgentBase] Sending WorkflowFailed event to coordinator {CoordinatorId} from agent {AgentId}",
+                failureEvent.WorkflowId, this.GetGrainId());
+
+            // BEST PRACTICE: Directly construct coordinator's GrainId using GrainId.Create
+            // This avoids ambiguity issues with IGAgentPlus (which has multiple implementations)
+            var coordinatorGrainId = GrainId.Create(
+                "Aevatar.GAgents.Workflow.WorkflowCoordinatorGAgentPlus",
+                failureEvent.WorkflowId.ToString("N")); // "N" format = 32 hex digits (no hyphens)
+            
+            await SendEventToAgentAsync(failureEvent, coordinatorGrainId);
+
+            Logger.LogInformation("[BusinessAgentBase] Successfully sent WorkflowFailed event to coordinator via P2P");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "[BusinessAgentBase] Failed to send failure event to coordinator {CoordinatorId}",
+                failureEvent.WorkflowId);
+            // Don't rethrow - failure to notify coordinator shouldn't crash the agent
+        }
     }
 
     /// <summary>

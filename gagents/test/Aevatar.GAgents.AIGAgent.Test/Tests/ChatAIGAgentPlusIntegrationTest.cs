@@ -8,6 +8,7 @@ using Orleans.Providers;
 using Shouldly;
 using Xunit;
 using Microsoft.Extensions.Logging;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
@@ -16,6 +17,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// These tests use the full Orleans TestCluster infrastructure to test methods
 /// that require Orleans Grain functionality (State, event sourcing, etc.)
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class ChatAIGAgentPlusIntegrationTest : AevatarAIGAgentTestBase
 {
     private readonly IGrainFactory _grainFactory;
@@ -104,7 +106,6 @@ public class ChatAIGAgentPlusIntegrationTest : AevatarAIGAgentTestBase
         capturedEvent.WorkflowEventType.ShouldBe(WorkflowEventType.WorkflowInProgress);
         capturedEvent.WorkflowAgentStatus.ShouldBe(WorkflowAgentStatus.Completed);
         capturedEvent.Message.ShouldNotBeNullOrEmpty();
-        capturedEvent.WorkUnitAgentId.ShouldBe(agentId); // ChatAIGAgent sets this
     }
 
     #endregion
@@ -222,13 +223,12 @@ public class TestChatAIGAgentPlus : ChatAIGAgentPlus, ITestChatAIGAgentPlus
             WorkflowId = source.WorkflowId,
             WorkflowEventType = source.WorkflowEventType,
             Message = source.Message,
-            AgentId = source.AgentId,
+            WorkUnitAgentId = source.WorkUnitAgentId,
             AgentName = source.AgentName,
             StepStartTime = source.StepStartTime,
             StepEndTime = source.StepEndTime,
             WorkflowAgentStatus = source.WorkflowAgentStatus,
             ErrorMessage = source.ErrorMessage,
-            WorkUnitAgentId = source.WorkUnitAgentId,
             TaskResult = source.TaskResult,
             Metadata = source.Metadata != null ? new Dictionary<string, object>(source.Metadata) : null
         };

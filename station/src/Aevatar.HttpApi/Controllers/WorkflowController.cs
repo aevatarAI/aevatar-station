@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Aevatar.Agent;
 using Aevatar.Service;
 using Aevatar.WorkflowRun;
 using Microsoft.AspNetCore.Authorization;
@@ -8,11 +10,10 @@ using Volo.Abp.AspNetCore.Mvc;
 namespace Aevatar.Controllers
 {
     /// <summary>
-    /// 工作流控制器
+    /// Workflow Controller
     /// </summary>
     [ApiController]
     [Route("api/workflow")]
-    [Authorize]
     public class WorkflowController : AbpControllerBase
     {
         private readonly IWorkflowOrchestrationService _workflowOrchestrationService;
@@ -30,10 +31,20 @@ namespace Aevatar.Controllers
         }
 
         /// <summary>
-        /// 生成工作流
+        /// Get all workflow agent types that inherit from BusinessAgentBase
         /// </summary>
-        /// <param name="request">生成请求</param>
-        /// <returns>工作流配置</returns>
+        /// <returns>List of workflow agent type information</returns>
+        [HttpGet("agent-type-info-list")]
+        public async Task<List<AgentTypeDto>> GetAllWorkflowAgents()
+        {
+            return await _workflowRunService.GetAllWorkflowAgents();
+        }
+
+        /// <summary>
+        /// Generate workflow
+        /// </summary>
+        /// <param name="request">Generation request</param>
+        /// <returns>Workflow configuration</returns>
         [HttpPost("generate")]
         public async Task<AiWorkflowViewConfigDto?> GenerateAsync([FromBody] GenerateWorkflowRequestDto request)
         {

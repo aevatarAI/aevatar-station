@@ -5,3 +5,9 @@ public interface IProjectionGrain<TState> : IGrainWithGuidKey
 {
     Task ActivateAsync();
 }
+
+public interface IProjectionGrainPlus<TState> : IGrainWithGuidKey
+    where TState : StateBasePlus, new()
+{
+    Task ActivateAsync();
+}

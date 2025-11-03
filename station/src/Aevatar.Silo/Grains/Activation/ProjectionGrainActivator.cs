@@ -32,9 +32,23 @@ namespace Aevatar.Silo.Grains.Activation
             {
                 _logger.LogInformation("Activating StateProjectionGrain for {StateType}", stateType.Name);
                 
-                // Get the generic StateProjectionGrain type with this StateBase type
-                var grainType = typeof(IProjectionGrain<>).MakeGenericType(stateType);
-                
+                // Determine which grain interface to use based on state type
+                Type grainType;
+                if (typeof(StateBasePlus).IsAssignableFrom(stateType))
+                {
+                    _logger.LogDebug("Using IProjectionGrainPlus for {StateType}", stateType.Name);
+                    grainType = typeof(IProjectionGrainPlus<>).MakeGenericType(stateType);
+                }
+                else if (typeof(StateBase).IsAssignableFrom(stateType))
+                {
+                    _logger.LogDebug("Using IProjectionGrain for {StateType}", stateType.Name);
+                    grainType = typeof(IProjectionGrain<>).MakeGenericType(stateType);
+                }
+                else
+                {
+                    _logger.LogWarning("State type {StateType} does not inherit from StateBase or StateBasePlus, skipping", stateType.Name);
+                    return;
+                }
 
                 // Get the grain and activate it
                 for (int i = 0; i < AevatarCoreConstants.DefaultNumOfProjectorPerAgentType; i++)

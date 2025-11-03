@@ -3,6 +3,7 @@ using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AIGAgent.Test.TestAgents;
 using Aevatar.GAgents.MCP.Options;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
@@ -10,6 +11,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// This file contains integration tests for both MCP and GAgent tools working together.
 /// Tests real-world scenarios where both tool types are used in combination
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class AIGAgentToolsIntegrationTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

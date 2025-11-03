@@ -4,9 +4,11 @@ using Aevatar.GAgents.Workflow.Core;
 using Newtonsoft.Json;
 using Aevatar.Core.Placement;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 using Aevatar.GAgents.Workflow.Core.States;
 using Aevatar.GAgents.Core;
 using Aevatar.GAgents.Workflow.Core.Models;
+using Orleans;
 
 namespace Aevatar.GAgents.Workflow;
 
@@ -35,6 +37,48 @@ public class WorkflowExecutionRecordGAgentPlus :
     protected override bool AreAllDependenciesReadyAsync(WorkflowEvent workflowEvent)
     {
         return true;
+    }
+    
+    /// <summary>
+    /// Capture the current state snapshot of a target GAgent
+    /// Uses the new GetStateSnapshotAsync method from IGAgent interface
+    /// </summary>
+    private async Task<string?> CaptureAgentStateAsync(string targetAgentGrainId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(targetAgentGrainId))
+            {
+                Logger.LogDebug("Skipping state capture for empty agent ID");
+                return null;
+            }
+
+            // ✅ FIX: Use GrainFactory directly to get ICoreGAgent instead of IGAgent
+            // This supports both old (IGAgent) and new (IGAgentPlus) agents
+            var grainId = GrainId.Parse(targetAgentGrainId);
+            var targetGAgent = GrainFactory.GetGrain<ICoreGAgent>(grainId);
+            
+            Logger.LogDebug("🔍 Attempting to get state snapshot for agent: {TargetAgentId}", targetAgentGrainId);
+
+            // Call GetStateSnapshotAsync method
+            var stateSnapshot = await targetGAgent.GetStateSnapshotAsync();
+            
+            if (!string.IsNullOrEmpty(stateSnapshot))
+            {
+                Logger.LogDebug("✅ Successfully retrieved state snapshot for agent: {TargetAgentId}", targetAgentGrainId);
+                return stateSnapshot;
+            }
+            else
+            {
+                Logger.LogDebug("ℹ️ GAgent returned null state snapshot (likely not stateful): {TargetAgentId}", targetAgentGrainId);
+                return null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "❌ Error during agent state capture for {TargetAgentId}", targetAgentGrainId);
+            return null;
+        }
     }
 
     /// <summary>
@@ -104,12 +148,12 @@ public class WorkflowExecutionRecordGAgentPlus :
         });
         
         // Track WorkflowStartAgent as a completed work unit
-        if (workflowEvent.WorkUnitAgentId != Guid.Empty)
+        if (!string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
         {
             Logger.LogInformation("[ExecutionRecordGAgent] Marking WorkflowStartAgent work unit as completed: {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString()
+                WorkUnitGrainId = workflowEvent.WorkUnitAgentId
             });
         }
         
@@ -119,22 +163,47 @@ public class WorkflowExecutionRecordGAgentPlus :
 
     private async Task HandleWorkflowAsync(WorkflowEvent workflowEvent)
     {
-        Logger.LogDebug("ExecutionRecordGAgent handling WorkflowTaskCompleted for work unit agent {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
+        Logger.LogDebug("ExecutionRecordGAgent handling WorkflowInProgress for work unit agent {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
+        
+        // Capture current state snapshot of the work unit agent
+        var stateSnapshot = await CaptureAgentStateAsync(workflowEvent.WorkUnitAgentId);
+        
+        // ✅ DESIGN: InputData = original input saved in Metadata["inputData"] before processing
+        // Fallback to Message if inputData is not in Metadata
+        var inputData = workflowEvent.Metadata.TryGetValue("inputData", out var savedInput) 
+            ? savedInput?.ToString() ?? string.Empty
+            : (workflowEvent.Message ?? string.Empty);
         
         if (workflowEvent.ErrorMessage.IsNullOrEmpty())
         {
-            // Track successful completion using WorkUnitAgentId to find the current work unit
+            // ✅ SUCCESS: Track work unit completion with both input and output data
+            Logger.LogInformation("✅ [ExecutionRecordGAgent] Recording successful work unit completion for {WorkUnitAgentId}", 
+                workflowEvent.WorkUnitAgentId);
+            var outputData = System.Text.Json.JsonSerializer.Serialize(workflowEvent.Message);
+            
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString()
+                WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
+                InputData = inputData,
+                OutputData = outputData,
+                CurrentStateSnapshot = stateSnapshot,
+                StartTime = workflowEvent.StepStartTime != default ? workflowEvent.StepStartTime : null
             });
         }
         else
         {
-            RaiseEvent(new FailExecuteWorkflowLogEvent()
+            // ✅ FAILURE: Track work unit failure with all context
+            // Only trigger FailExecuteWorkflowLogEvent (not FinishExecuteWorkUnitLogEvent)
+            Logger.LogWarning("❌ [ExecutionRecordGAgent] Recording failed work unit for {WorkUnitAgentId}, Error: {ErrorMessage}", 
+                workflowEvent.WorkUnitAgentId, workflowEvent.ErrorMessage);
+            
+            RaiseEvent(new FailExecuteWorkflowLogEvent
             {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString(),
-                FailureSummary = workflowEvent.ErrorMessage
+                WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
+                FailureSummary = workflowEvent.ErrorMessage,
+                InputData = inputData,  // Preserve original input
+                CurrentStateSnapshot = stateSnapshot,  // Capture state at failure
+                StartTime = workflowEvent.StepStartTime != default ? workflowEvent.StepStartTime : null
             });
         }
 
@@ -147,12 +216,12 @@ public class WorkflowExecutionRecordGAgentPlus :
             workflowEvent.WorkflowId, workflowEvent.WorkUnitAgentId, State.Status);
         
         // Track WorkflowEndAgent as a completed work unit before completing overall workflow
-        if (workflowEvent.WorkUnitAgentId != Guid.Empty)
+        if (!string.IsNullOrEmpty(workflowEvent.WorkUnitAgentId))
         {
             Logger.LogInformation("[ExecutionRecordGAgent] Marking WorkflowEndAgent work unit as completed: {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
             RaiseEvent(new FinishExecuteWorkUnitLogEvent
             {
-                WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString()
+                WorkUnitGrainId = workflowEvent.WorkUnitAgentId
             });
         }
         
@@ -185,34 +254,61 @@ public class WorkflowExecutionRecordGAgentPlus :
 
     private async Task HandleWorkflowFailedAsync(WorkflowEvent workflowEvent)
     {
-        Logger.LogDebug("ExecutionRecordGAgent handling WorkflowFailed for work unit agent {WorkUnitAgentId}", workflowEvent.WorkUnitAgentId);
+        Logger.LogWarning("❌ [ExecutionRecordGAgent] HandleWorkflowFailedAsync for work unit agent {WorkUnitAgentId}, Error: {ErrorMessage}", 
+            workflowEvent.WorkUnitAgentId, workflowEvent.ErrorMessage);
         
+        // ✅ Capture state snapshot before recording failure
+        var stateSnapshot = await CaptureAgentStateAsync(workflowEvent.WorkUnitAgentId);
+        
+        // ✅ Extract InputData from Metadata or Message (same pattern as HandleWorkflowAsync)
+        var inputData = workflowEvent.Metadata.TryGetValue("inputData", out var savedInput) 
+            ? savedInput?.ToString() ?? string.Empty
+            : (workflowEvent.Message ?? string.Empty);
+        
+        // ✅ Record workflow failure with complete context
         RaiseEvent(new FailExecuteWorkflowLogEvent()
         {
-            WorkUnitGrainId = workflowEvent.WorkUnitAgentId.ToString(),
-            FailureSummary = workflowEvent.ErrorMessage ?? "Task failed without specific error message"
+            WorkUnitGrainId = workflowEvent.WorkUnitAgentId,
+            FailureSummary = workflowEvent.ErrorMessage ?? "Task failed without specific error message",
+            InputData = inputData,
+            CurrentStateSnapshot = stateSnapshot,
+            StartTime = workflowEvent.StepStartTime != default ? workflowEvent.StepStartTime : null
         });
         await ConfirmEvents();
         
-        // Unregister from parent after processing failure event
+        Logger.LogInformation("❌ [ExecutionRecordGAgent] Workflow failure recorded, Final Status: {FinalStatus}", State.Status);
+        
+        // ✅ UNIFIED: Unregister from parent coordinator after workflow failure
+        // This ensures proper cleanup when workflow fails via P2P failure events
+        await UnregisterFromCoordinatorAsync(workflowEvent.WorkflowId, "failure");
+    }
+
+    /// <summary>
+    /// ✅ UNIFIED: Unregister from parent coordinator after workflow ends (completion or failure)
+    /// Encapsulates the unregister logic in a reusable method
+    /// </summary>
+    /// <param name="coordinatorId">The WorkflowId (same as coordinator's GrainId)</param>
+    /// <param name="reason">Reason for unregistering (for logging: "completion" or "failure")</param>
+    private async Task UnregisterFromCoordinatorAsync(Guid coordinatorId, string reason)
+    {
         try
         {
-            // Use WorkflowId from the event as the coordinator's ID (as pointed out by user)
-            var coordinatorId = workflowEvent.WorkflowId;
-            if (coordinatorId != Guid.Empty)
+            if (coordinatorId == Guid.Empty)
             {
-                var parentCoordinator = GrainFactory.GetGrain<IWorkflowCoordinatorGAgentPlus>(coordinatorId);
-                await UnregisterParentAsync(parentCoordinator);
-                Logger.LogInformation("🔌 [ExecutionRecordGAgent] Successfully unregistered from parent coordinator {CoordinatorId} after workflow failure", coordinatorId);
+                Logger.LogWarning("⚠️ [ExecutionRecordGAgent] No coordinator ID provided for unregister on {Reason}", reason);
+                return;
             }
-            else
-            {
-                Logger.LogWarning("[ExecutionRecordGAgent] No coordinator ID found in workflow event to unregister from");
-            }
+            var parentCoordinator = GrainFactory.GetGrain<IWorkflowCoordinatorGAgentPlus>(coordinatorId);
+            await UnregisterParentAsync(parentCoordinator);
+
+            Logger.LogInformation("✅ [ExecutionRecordGAgent] Successfully unregistered from parent coordinator {CoordinatorId} on workflow {Reason}", 
+                coordinatorId, reason);
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "[ExecutionRecordGAgent] Failed to unregister from parent coordinator, but workflow failure is still recorded");
+            Logger.LogWarning(ex, "⚠️ [ExecutionRecordGAgent] Failed to unregister from parent coordinator {CoordinatorId} on workflow {Reason}, but workflow {Reason} is still valid", 
+                coordinatorId, reason, reason);
+            // Don't rethrow - unregister failure shouldn't prevent workflow completion/failure recording
         }
     }
 
@@ -232,14 +328,20 @@ public class WorkflowExecutionRecordGAgentPlus :
                     new WorkUnitExecutionRecord
                     {
                         WorkUnitGrainId = o.AgentId.ToString(),
-                        Status = WorkflowExecutionStatus.Pending
+                        Status = WorkflowExecutionStatus.Pending,
+                        AgentName = o.Name
                     }).ToList();
                 break;
             case FinishExecuteWorkflowLogEvent finishExecuteWorkflowLogEvent:
                 Logger.LogInformation("[ExecutionRecordGAgent] Processing FinishExecuteWorkflowLogEvent - Setting status from {OldStatus} to Completed", state.Status);
                 state.EndTime = DateTime.UtcNow;
-                state.Status = WorkflowExecutionStatus.Completed;
-                Logger.LogInformation("[ExecutionRecordGAgent] Status successfully set to: {NewStatus} at {EndTime}", state.Status, state.EndTime);
+                
+                // ✅ Only set status to Completed if not already Failed
+                // If workflow already failed (FailExecuteWorkflowLogEvent was raised), preserve Failed status
+                if (state.Status != WorkflowExecutionStatus.Failed)
+                {
+                    state.Status = WorkflowExecutionStatus.Completed;
+                }
                 break;
             case StartExecuteWorkUnitLogEvent startExecuteWorkUnitLogEvent:
                 var startingWorkUnits = state.WorkUnitRecords.Where(o =>
@@ -283,12 +385,28 @@ public class WorkflowExecutionRecordGAgentPlus :
                     var endTime = DateTime.UtcNow;
                     foreach (var workUnit in matchingWorkUnits)
                     {
-                        Logger.LogInformation("[ExecutionRecordGAgent] Updating WorkUnit record - Setting status from {OldStatus} to Completed", workUnit.Status);
+                        Logger.LogInformation("🔄 [ExecutionRecordGAgent] Updating WorkUnit record - Setting status from {OldStatus} to Completed", workUnit.Status);
+                        
+                        // Set StartTime from event, fallback to default if needed
+                        if (workUnit.StartTime == default || workUnit.StartTime == DateTime.MinValue)
+                        {
+                            workUnit.StartTime = (finishExecuteWorkUnitLogEvent.StartTime.HasValue && finishExecuteWorkUnitLogEvent.StartTime.Value != default)
+                                ? finishExecuteWorkUnitLogEvent.StartTime.Value
+                                : endTime.AddMilliseconds(-100);
+                        }
+                        
+                        if (string.IsNullOrEmpty(workUnit.InputData) && !string.IsNullOrEmpty(finishExecuteWorkUnitLogEvent.InputData))
+                        {
+                            workUnit.InputData = finishExecuteWorkUnitLogEvent.InputData;
+                        }
+                        
                         workUnit.EndTime = endTime;
                         workUnit.Status = WorkflowExecutionStatus.Completed;
+                        workUnit.OutputData = finishExecuteWorkUnitLogEvent.OutputData;
+                        workUnit.CurrentStateSnapshot = finishExecuteWorkUnitLogEvent.CurrentStateSnapshot;
                     }
                     
-                    Logger.LogInformation("[ExecutionRecordGAgent] Successfully updated {Count} WorkUnit records for {WorkUnitGrainId} to status: Completed at {EndTime}", 
+                    Logger.LogInformation("✅ [ExecutionRecordGAgent] Successfully updated {Count} WorkUnit records for {WorkUnitGrainId} to status: Completed at {EndTime}", 
                         matchingWorkUnits.Count, finishExecuteWorkUnitLogEvent.WorkUnitGrainId, endTime);
                 }
                 else
@@ -308,10 +426,29 @@ public class WorkflowExecutionRecordGAgentPlus :
                     var endTime = DateTime.UtcNow;
                     foreach (var workUnit in failingWorkUnits)
                     {
-                        Logger.LogInformation("[ExecutionRecordGAgent] Marking WorkUnit record as failed - Setting status from {OldStatus} to Failed", workUnit.Status);
+                        Logger.LogInformation("🔄 [ExecutionRecordGAgent] Marking WorkUnit record as failed - Setting status from {OldStatus} to Failed", workUnit.Status);
+                        
+                        // Set StartTime from event, fallback to default if needed
+                        if (workUnit.StartTime == default || workUnit.StartTime == DateTime.MinValue)
+                        {
+                            workUnit.StartTime = (failExecuteWorkflowLogEvent.StartTime.HasValue && failExecuteWorkflowLogEvent.StartTime.Value != default)
+                                ? failExecuteWorkflowLogEvent.StartTime.Value
+                                : endTime.AddMilliseconds(-100);
+                        }
+                        
                         workUnit.EndTime = endTime;
                         workUnit.Status = WorkflowExecutionStatus.Failed;
                         workUnit.FailureSummary = failExecuteWorkflowLogEvent.FailureSummary;
+                        
+                        // ✅ Apply InputData and CurrentStateSnapshot from failure event
+                        if (!string.IsNullOrEmpty(failExecuteWorkflowLogEvent.InputData))
+                        {
+                            workUnit.InputData = failExecuteWorkflowLogEvent.InputData;
+                        }
+                        if (failExecuteWorkflowLogEvent.CurrentStateSnapshot != null)
+                        {
+                            workUnit.CurrentStateSnapshot = failExecuteWorkflowLogEvent.CurrentStateSnapshot;
+                        }
                     }
                     
                     Logger.LogInformation("[ExecutionRecordGAgent] Successfully updated {Count} WorkUnit records for {WorkUnitGrainId} to status: Failed at {EndTime}", 
@@ -326,6 +463,7 @@ public class WorkflowExecutionRecordGAgentPlus :
                 state.EndTime = DateTime.UtcNow;
                 break;
         }
+        base.GAgentTransitionState(state, @event);
     }
 }
 
@@ -361,14 +499,28 @@ public class StartExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
 public class FinishExecuteWorkUnitLogEvent : WorkflowExecutionRecordLogEvent
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string WorkUnitGrainId { get; set; } = string.Empty;
+    [Id(1)]
+    public string OutputData { get; set; } = string.Empty;
+    [Id(2)]
+    public string? CurrentStateSnapshot { get; set; }
+    [Id(3)]
+    public string InputData { get; set; } = string.Empty;
+    [Id(4)]
+    public DateTime? StartTime { get; set; }
 }
 
 [GenerateSerializer]
 public class FailExecuteWorkflowLogEvent : WorkflowExecutionRecordLogEvent
 {
     [Id(0)]
-    public string WorkUnitGrainId { get; set; }
+    public string WorkUnitGrainId { get; set; } = string.Empty;
     [Id(1)]
-    public string FailureSummary { get; set; }
+    public string FailureSummary { get; set; } = string.Empty;
+    [Id(2)]
+    public string InputData { get; set; } = string.Empty;
+    [Id(3)]
+    public string? CurrentStateSnapshot { get; set; }
+    [Id(4)]
+    public DateTime? StartTime { get; set; }
 }

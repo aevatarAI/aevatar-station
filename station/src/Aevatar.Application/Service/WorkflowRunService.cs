@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -8,15 +9,24 @@ using System.Threading.Tasks;
 using Aevatar.Agent;
 using Aevatar.AgentValidation;
 using Aevatar.Application.Grains.Agents.Creator;
+using Aevatar.Common;
 using Aevatar.Core.Abstractions;
-using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto;
+using Aevatar.GAgents.Core;
+// using Aevatar.GAgents.GroupChat.GAgent.Coordinator.WorkflowView.Dto; // Removed due to type conflicts with Workflow.Core.Configs
+using Aevatar.GAgents.Workflow.Core;
+using Aevatar.GAgents.Workflow.Core.Configs;
+using Aevatar.Options;
+using Aevatar.Provider;
 using Aevatar.Schema;
 using Aevatar.Subscription;
 using Aevatar.WorkflowRun;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using NJsonSchema.Validation;
 using Orleans;
+using Orleans.Metadata;
 using Orleans.Runtime;
 using Volo.Abp.Application.Services;
 using Volo.Abp;
@@ -27,6 +37,7 @@ namespace Aevatar.Service;
 public interface IWorkflowRunService
 {
     Task<WorkflowRunResultDto> RunWorkflowAsync(WorkflowRunRequestDto request);
+    Task<List<AgentTypeDto>> GetAllWorkflowAgents();
 }
 
 [RemoteService(IsEnabled = false)]
@@ -36,18 +47,26 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
     private readonly IWorkflowViewService _workflowViewService;
     private readonly ISubscriptionAppService _subscriptionAppService;
     private readonly IAgentService _agentService;
-    private readonly IGAgentFactory _gAgentFactory;
+    private readonly IGAgentFactory<IBusinessAgentBase> _gAgentFactory;
     private readonly ISchemaProvider _schemaProvider;
     private readonly ILogger<WorkflowRunService> _logger;
+    private readonly IGAgentManager _gAgentManager;
+    private readonly GrainTypeResolver _grainTypeResolver;
+    private readonly IServiceProvider _serviceProvider;
+    private readonly WorkflowAgentFilterOptions _filterOptions;
 
     public WorkflowRunService(
         IWorkflowViewService workflowViewService,
         ISubscriptionAppService subscriptionAppService,
         IAgentService agentService,
-        IGAgentFactory gAgentFactory,
+        IGAgentFactory<IBusinessAgentBase> gAgentFactory,
         ISchemaProvider schemaProvider,
         ILogger<WorkflowRunService> logger,
-        IClusterClient clusterClient)
+        IClusterClient clusterClient,
+        IGAgentManager gAgentManager,
+        GrainTypeResolver grainTypeResolver,
+        IServiceProvider serviceProvider,
+        IOptions<WorkflowAgentFilterOptions> filterOptions)
     {
         _workflowViewService = workflowViewService;
         _subscriptionAppService = subscriptionAppService;
@@ -56,6 +75,10 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         _schemaProvider = schemaProvider;
         _logger = logger;
         _clusterClient = clusterClient;
+        _gAgentManager = gAgentManager;
+        _grainTypeResolver = grainTypeResolver;
+        _serviceProvider = serviceProvider;
+        _filterOptions = filterOptions.Value;
     }
 
     public async Task<WorkflowRunResultDto> RunWorkflowAsync(WorkflowRunRequestDto request)
@@ -68,33 +91,93 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         // Step 2: Publish workflow
         var publishedAgent = await PublishWorkflowAsync(request.ViewAgentId);
         
-        // Step 3: Execute workflow
-        var executionSuccess = await ExecuteWorkflowAsync(publishedAgent.Item2.WorkflowCoordinatorGAgentId, request);
-
-        if (!executionSuccess)
+        // Step 3: Execute workflow through IWorkflowViewGAgentPlus
+        Guid executionEventId;
+        try
         {
-            _logger.LogWarning("Workflow execution failed for ViewAgentId: {ViewAgentId}, coordinator agent not ready",
-                request.ViewAgentId);
+            executionEventId = await ExecuteWorkflowAsync(request.ViewAgentId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to execute workflow for ViewAgentId: {ViewAgentId}", request.ViewAgentId);
             return new WorkflowRunResultDto
             {
                 IsSuccess = false,
                 WorkflowId = publishedAgent.Item2.WorkflowCoordinatorGAgentId,
-                Message = "Workflow coordinator agent is not ready yet. Please retry the execution in a few moments.",
+                Message = $"Workflow execution failed: {ex.Message}",
                 PublishedAgent = publishedAgent.Item1
             };
         }
 
         // All steps completed successfully
-        _logger.LogInformation("Workflow run completed successfully for ViewAgentId: {ViewAgentId}",
-            request.ViewAgentId);
+        _logger.LogInformation("Workflow run completed successfully for ViewAgentId: {ViewAgentId}, ExecutionEventId: {ExecutionEventId}",
+            request.ViewAgentId, executionEventId);
 
         return new WorkflowRunResultDto
         {
             IsSuccess = true,
             WorkflowId = publishedAgent.Item2.WorkflowCoordinatorGAgentId,
-            Message = "Workflow executed successfully",
+            Message = $"Workflow executed successfully. Execution event ID: {executionEventId}",
             PublishedAgent = publishedAgent.Item1
         };
+    }
+
+    /// <summary>
+    /// Get all workflow agents that inherit from BusinessAgentBase
+    /// Infrastructure agents are filtered by IsBusinessAgentType using WorkflowAgentFilterOptions
+    /// </summary>
+    public async Task<List<AgentTypeDto>> GetAllWorkflowAgents()
+    {
+        _logger.LogInformation("Getting all workflow agents that inherit from BusinessAgentBase");
+        
+        var propertyDtos = await GetWorkflowAgentTypeDataMap();
+        var resp = new List<AgentTypeDto>();
+        
+        foreach (var kvp in propertyDtos)
+        {
+            var paramDto = new AgentTypeDto
+            {
+                AgentType = kvp.Key,
+                FullName = kvp.Value?.FullName ?? kvp.Key,
+                Description = kvp.Value?.Description
+            };
+
+            if (kvp.Value != null)
+            {
+                paramDto.FullName = kvp.Value.FullName ?? "";
+                if (kvp.Value.InitializationData != null)
+                {
+                    paramDto.AgentParams = kvp.Value.InitializationData.Properties.Select(p => new ParamDto
+                    {
+                        Name = p.Name,
+                        Type = p.Type.ToString()
+                    }).ToList();
+
+                    try
+                    {
+                        paramDto.PropertyJsonSchema = await GenerateSchemaForConfigType(kvp.Value.InitializationData.DtoType);
+                        
+                        if (string.IsNullOrWhiteSpace(paramDto.PropertyJsonSchema))
+                        {
+                            _logger.LogError("PropertyJsonSchema is null or empty for workflow agent {AgentType} with DtoType {DtoType}", 
+                                kvp.Key, kvp.Value.InitializationData.DtoType.Name);
+                            paramDto.PropertyJsonSchema = "{}"; // Fallback to empty JSON object
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to generate PropertyJsonSchema for workflow agent {AgentType} with DtoType {DtoType}", 
+                            kvp.Key, kvp.Value.InitializationData.DtoType.Name);
+                        paramDto.PropertyJsonSchema = "{}"; // Fallback to empty JSON object
+                    }
+                }
+            }
+
+            resp.Add(paramDto);
+        }
+
+        _logger.LogInformation("Successfully retrieved {Count} workflow agent types", resp.Count);
+        return resp;
     }
     
     private async Task ValidateWorkflowConfigurationAsync(Guid viewAgentId)
@@ -116,7 +199,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             throw new UserFriendlyException("Invalid workflow configuration format");
         }
 
-        if (viewConfigDto == null)
+        if (viewConfigDto == null || viewConfigDto.WorkflowNodeList == null || viewConfigDto.WorkflowNodeList.Count == 0)
         {
             throw new UserFriendlyException("Workflow contains no nodes");
         }
@@ -233,16 +316,34 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
 
     /// <summary>
-    /// 执行工作流 - 检查事件是否可用后再发布
+    /// Execute workflow directly through IWorkflowViewGAgentPlus.ExecuteWorkflowAsync()
+    /// Execution name is automatically generated as: {WorkflowName}-Round{RoundId}
     /// </summary>
-    private async Task<bool> ExecuteWorkflowAsync(Guid coordinatorAgentId, WorkflowRunRequestDto request)
+    /// <param name="viewAgentId">WorkflowViewAgent ID</param>
+    /// <returns>Event ID of the workflow event</returns>
+    private async Task<Guid> ExecuteWorkflowAsync(Guid viewAgentId)
+    {
+        _logger.LogInformation("[ExecuteWorkflow] Starting workflow execution for ViewAgentId: {ViewAgentId}", viewAgentId);
+        
+        // Get IWorkflowViewGAgentPlus grain
+        var workflowViewAgent = _clusterClient.GetGrain<IWorkflowViewGAgentPlus>(viewAgentId);
+        
+        // Direct call to ExecuteWorkflowAsync (execution name generated internally as {Name}-Round{RoundId})
+        var executionEventId = await workflowViewAgent.ExecuteWorkflowAsync();
+        
+        _logger.LogInformation("[ExecuteWorkflow] Workflow execution started successfully. ViewAgentId: {ViewAgentId}, EventId: {ExecutionEventId}", 
+            viewAgentId, executionEventId);
+        
+        return executionEventId;
+    }
+    
+    private async Task<Guid> ExecuteWorkflowAsync_Old(Guid coordinatorAgentId, WorkflowRunRequestDto request)
     {
         const string targetEventType = "Aevatar.GAgents.GroupChat.WorkflowCoordinator.GEvent.StartWorkflowCoordinatorEvent";
         const int maxRetries = 20;
         const int retryDelayMs = 1000;
 
         _logger.LogInformation("Starting workflow execution for coordinator agent: {CoordinatorAgentId}", coordinatorAgentId);
-
         for (var attempt = 1; attempt <= maxRetries; attempt++)
         {
             _logger.LogInformation("Checking event availability, attempt {Attempt}/{MaxRetries} for agent: {AgentId}", 
@@ -273,7 +374,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
                     _logger.LogInformation("Workflow event published successfully for agent: {AgentId}",
                         coordinatorAgentId);
-                    return true;
+                    return Guid.NewGuid(); // Return a dummy event ID for old implementation
                 }
 
                 _logger.LogWarning("StartWorkflowCoordinatorEvent not found on attempt {Attempt}",attempt);
@@ -291,7 +392,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         }
 
         _logger.LogError("Failed to find StartWorkflowCoordinatorEvent after {MaxRetries} attempts for agent: {AgentId}", maxRetries, coordinatorAgentId);
-        return false;
+        return Guid.Empty;
     }
 
     #region Agent Validation Methods
@@ -305,7 +406,7 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
 
         try
         {
-            var tempGrainId = GrainId.Create(agentType, Guid.NewGuid().ToString());
+            var tempGrainId = GrainId.Create(agentType, GuidUtil.GuidToGrainKey(Guid.NewGuid()));
             var agent = await _gAgentFactory.GetGAgentAsync(tempGrainId);
             var configurationType = ExtractConfigurationProperties(await agent.GetConfigurationTypeAsync());
             if (configurationType == null)
@@ -335,6 +436,170 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
         return configuration;
     }
 
+    /// <summary>
+    /// Get workflow agents that inherit from BusinessAgentBase
+    /// </summary>
+    private async Task<Dictionary<string, AgentTypeData?>> GetWorkflowAgentTypeDataMap()
+    {
+        var availableGAgents = _gAgentManager.GetAvailableGAgentTypes();
+        
+        _logger.LogInformation("Total available GAgent types: {Count}", availableGAgents.Count());
+        
+        // Filter agents that:
+        // 1. Don't start with OrleansCodeGen
+        // 2. Inherit from BusinessAgentBase (new workflow agents)
+        var workflowAgentTypes = availableGAgents
+            .Where(a => !a.Namespace.StartsWith("OrleansCodeGen"))
+            .Where(a => IsBusinessAgentType(a))
+            .ToList();
+
+        _logger.LogInformation("Found {Count} workflow agent types that inherit from BusinessAgentBase", workflowAgentTypes.Count);
+
+        var dict = new Dictionary<string, AgentTypeData?>();
+
+        foreach (var agentType in workflowAgentTypes)
+        {
+            try
+            {
+                var grainType = _grainTypeResolver.GetGrainType(agentType).ToString();
+
+                if (grainType == null) continue;
+
+                var agentTypeData = new AgentTypeData { FullName = agentType.FullName };
+                var grainId = GrainId.Create(grainType,
+                    GuidUtil.GuidToGrainKey(
+                        GuidUtil.StringToGuid("WorkflowAgentDefaultId"))); // unique ID for workflow agents
+                var agent = await _gAgentFactory.GetGAgentAsync(grainId);
+                
+                // Filter out workflow infrastructure agents (coordinator, execution record, etc.)
+                // These are system agents that should not be exposed as user-facing workflow nodes
+                var isWorkflowAgent = await agent.GetIsWorkflowAgentAsync();
+                if (isWorkflowAgent)
+                {
+                    _logger.LogDebug("Skipping workflow infrastructure agent: {AgentType}", agentType.FullName);
+                    continue;
+                }
+                
+                var description = await agent.GetDescriptionAsync();
+                agentTypeData.Description = description;
+
+                var initializationData = await GetAgentConfigurationAsync(agent);
+
+                agentTypeData.InitializationData = initializationData;
+                dict[grainType] = agentTypeData;
+                
+                _logger.LogDebug("Processed workflow agent type: {AgentType}", agentType.FullName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to process workflow agent type {AgentType}: {ErrorMessage}",
+                    agentType.FullName, ex.Message);
+                continue;
+            }
+        }
+
+        return dict;
+    }
+    
+    /// <summary>
+    /// Check if a type is a BusinessAgent type (inherits from BusinessAgentBase)
+    /// </summary>
+    private bool IsBusinessAgentType(Type type)
+    {
+        // Get the fully qualified type name for exact matching
+        var fullTypeName = $"{type.Namespace}.{type.Name}";
+        
+        // Check if the type is in the excluded list (infrastructure agents)
+        if (_filterOptions.ExcludedAgentTypes.Contains(fullTypeName))
+        {
+            return false;
+        }
+        
+        // Check if the type inherits from BusinessAgentBase class
+        var currentType = type.BaseType;
+        while (currentType != null)
+        {
+            if (currentType.Name.StartsWith("BusinessAgentBase"))
+            {
+                return true;
+            }
+            currentType = currentType.BaseType;
+        }
+        return false;
+    }
+
+    private async Task<Configuration?> GetAgentConfigurationAsync(IGAgentPlus agent)
+        => ExtractConfigurationProperties(await agent.GetConfigurationTypeAsync());
+    
+    /// <summary>
+    /// Generate JSON schema for configuration type
+    /// </summary>
+    private async Task<string> GenerateSchemaForConfigType(Type configurationType)
+    {
+        try
+        {
+            // Create dynamic dropdown context
+            var dynamicContext = await CreateSchemaContextAsync();
+            
+            var schema = _schemaProvider.GetTypeSchema(configurationType, dynamicContext);
+            if (schema == null)
+            {
+                _logger.LogError("SchemaProvider returned null schema for type {TypeName}", configurationType.Name);
+                return "{}";
+            }
+            
+            var schemaJson = schema.ToJson();
+            if (string.IsNullOrWhiteSpace(schemaJson))
+            {
+                _logger.LogError("Schema ToJson() returned empty result for type {TypeName}", configurationType.Name);
+                return "{}";
+            }
+            
+            return schemaJson;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to generate schema for type {TypeName}", configurationType.Name);
+            return "{}";
+        }
+    }
+
+    private async Task<DynamicDropDownContext> CreateSchemaContextAsync()
+    {
+        try
+        {
+            var concurrentData = new ConcurrentDictionary<string, object>();
+            var configurationProviders = _serviceProvider.GetServices<IDynamicConfigurationProvider>().ToList();
+            
+            if (!configurationProviders.Any())
+            {
+                _logger.LogWarning("No configuration providers found");
+                return new DynamicDropDownContext { AdditionalData = new Dictionary<string, object>() };
+            }
+
+            var processingTasks = configurationProviders.Select(async provider =>
+            {
+                try
+                {
+                    await provider.ProcessSchemaAsync(concurrentData, _clusterClient);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to process with provider: {ProviderType}", 
+                        provider.GetType().Name);
+                }
+            });
+
+            await Task.WhenAll(processingTasks);
+            return new DynamicDropDownContext { AdditionalData = new Dictionary<string, object>(concurrentData) };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create schema context");
+            return new DynamicDropDownContext { AdditionalData = new Dictionary<string, object>() };
+        }
+    }
+
     private async Task ValidateConfigurationDataAsync(Configuration configType, string configJson)
     {
         try
@@ -345,7 +610,13 @@ public class WorkflowRunService : ApplicationService, IWorkflowRunService
             var config = (ConfigurationBase)actualDto!;
             var schema = _schemaProvider.GetTypeSchema(config.GetType());
             var validateResponse = schema.Validate(configJson, new JsonSchemaValidatorSettings { PropertyStringComparer = StringComparer.CurrentCultureIgnoreCase });
-            if (validateResponse.Count > 0) throw new UserFriendlyException($"Schema validation failed for {configType.DtoType}");
+            if (validateResponse.Count > 0)
+            {
+                var errors = string.Join("; ", validateResponse.Select(e => $"{e.Path}: {e.Kind}"));
+                _logger.LogWarning("[AgentValidation] Schema validation failed for {ConfigType}. Errors: {Errors}. JSON: {ConfigJson}", 
+                    configType.DtoType, errors, configJson);
+                throw new UserFriendlyException($"Schema validation failed for {configType.DtoType}: {errors}");
+            }
 
             if (config is IValidatableObject validatableConfig)
             {

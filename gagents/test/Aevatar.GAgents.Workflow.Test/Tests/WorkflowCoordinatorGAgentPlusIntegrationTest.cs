@@ -10,6 +10,7 @@ using Orleans;
 using Orleans.Providers;
 using Shouldly;
 using Xunit;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.Workflow.Test.Tests;
 
@@ -17,6 +18,7 @@ namespace Aevatar.GAgents.Workflow.Test.Tests;
 /// Integration tests for WorkflowCoordinatorGAgentPlus using Orleans TestCluster infrastructure.
 /// Tests the BusinessAgentBase-based workflow coordinator functionality.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestBase
 {
     private readonly IGrainFactory _grainFactory;
@@ -62,7 +64,6 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         // Assert
         var state = await agent.GetStateAsync();
         state.Content.ShouldBe("Test workflow initialization");
-        state.EnableRunRecord.ShouldBeTrue();
     }
 
     [Fact]
@@ -220,7 +221,7 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
             WorkflowId = agentId, // Use the SAME GUID as the agent ID
             WorkflowEventType = WorkflowEventType.WorkflowStarted,
             AgentId = agentId, // Required for topology discovery
-            AgentName = "Aevatar.GAgents.Workflow.WorkflowStartAgent", // Required for topology discovery - full type name
+            AgentTypeName = "Aevatar.GAgents.Workflow.WorkflowStartAgent", // Required for topology discovery - full type name
             Message = "Start workflow coordination",
             Metadata = new Dictionary<string, object>
             {
@@ -246,7 +247,6 @@ public class WorkflowCoordinatorGAgentPlusIntegrationTest : AevatarWorkflowTestB
         state.CurrentExecutionName.ShouldBe("TestExecution"); // Set from metadata
         state.ExecutionRecords.ShouldContainKey("TestExecution"); // Added to dictionary
         state.RoundId.ShouldBeGreaterThan(0); // Incremented by 1
-        state.EnableRunRecord.ShouldBeTrue(); // Verify EnableRunRecord is set correctly
     }
 
     [Fact]

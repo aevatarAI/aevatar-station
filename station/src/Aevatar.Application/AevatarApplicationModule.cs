@@ -9,6 +9,7 @@ using Aevatar.BlobStorings;
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
 using Aevatar.CQRS;
+using Aevatar.GAgents.Core;
 using Aevatar.Kubernetes;
 using Aevatar.Kubernetes.Manager;
 using Aevatar.LocalDevelopment;
@@ -70,11 +71,18 @@ public class AevatarApplicationModule : AbpModule
         Configure<NameContestOptions>(configuration.GetSection("NameContest"));
         context.Services.AddSingleton<ISchemaProvider, SchemaProvider>();
         
+        // Register IGAgentFactory for BusinessAgentBase (required for workflow agents)
+        context.Services.AddSingleton<IGAgentFactory<IBusinessAgentBase>, GAgentFactory<IBusinessAgentBase>>();
+        
+        // Register WorkflowViewService explicitly
+        context.Services.AddSingleton<IWorkflowViewService, WorkflowViewServicePlus>();
+        
         // 配置Schema处理器
         ConfigureSchemaProcessors(context);
         Configure<WebhookDeployOptions>(configuration.GetSection("WebhookDeploy"));
         Configure<AgentOptions>(configuration.GetSection("Agent"));
         Configure<AgentDefaultValuesOptions>(configuration.GetSection("AgentDefaults"));
+        Configure<WorkflowAgentFilterOptions>(configuration.GetSection("WorkflowAgentFilter"));
         context.Services.AddTransient<IHostDeployManager, KubernetesHostManager>();
         context.Services.AddTransient<IHostCopyManager, KubernetesHostManager>();
         context.Services.AddSingleton<INotificationHandlerFactory, NotificationProcessorFactory>();

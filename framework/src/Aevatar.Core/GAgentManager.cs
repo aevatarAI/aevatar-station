@@ -22,6 +22,7 @@ public class GAgentManager : IGAgentManager
     public List<Type> GetAvailableGAgentTypes()
     {
         var gAgentType = typeof(IGAgent);
+        var gAgentPlusType = typeof(IGAgentPlus);
         var assemblies = AppDomain.CurrentDomain.GetAssemblies().ToList();
         var pluginsAssemblies = AsyncHelper.RunSync(() => _pluginGAgentManager.GetCurrentTenantPluginAssembliesAsync());
         var pluginsLoadStatus = AsyncHelper.RunSync(() => _pluginGAgentManager.GetPluginLoadStatusAsync());
@@ -49,7 +50,8 @@ public class GAgentManager : IGAgentManager
         foreach (var assembly in assemblies)
         {
             var types = assembly.GetTypesIgnoringLoadException()
-                .Where(t => gAgentType.IsAssignableFrom(t) && t is { IsClass: true, IsAbstract: false });
+                .Where(t => (gAgentType.IsAssignableFrom(t) || gAgentPlusType.IsAssignableFrom(t)) 
+                         && t is { IsClass: true, IsAbstract: false });
             gAgentTypes.AddRange(types);
         }
 

@@ -1,3 +1,4 @@
+using System.Threading;
 using System.Threading.Tasks;
 using Aevatar.Core.Abstractions;
 using Aevatar.GAgents.Core;
@@ -59,9 +60,6 @@ public class WorkflowStartAgent : BusinessAgentBase<WorkflowStartState, Workflow
     {
         Logger.LogInformation("[WorkflowStartAgent] Starting workflow execution {WorkflowId}", 
             workflowEvent.WorkflowId);  // Execution Record Agent ID
-        
-        // Assign the WorkUnitAgentId to represent this processing node
-        workflowEvent.WorkUnitAgentId = this.GetPrimaryKey();
         
         // Update existing event fields for this step
         workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowStarted;

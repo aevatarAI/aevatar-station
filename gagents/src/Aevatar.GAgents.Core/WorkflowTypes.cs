@@ -36,7 +36,8 @@ public enum WorkflowStatus
 public enum WorkflowAgentStatus
 {
     Pending,
-    Completed
+    Completed,
+    Failed
 }
 
 /// <summary>
@@ -47,7 +48,7 @@ public class WorkflowEvent : EventBase
 {
     // Workflow coordination properties
     [Id(0)] public Guid WorkflowId { get; set; }
-    [Id(1)] public Guid AgentId { get; set; }
+    [Id(1)] public Guid AgentId { get; set; } // Used by WorkflowCoordinatorGAgentPlus
     [Id(2)] public WorkflowEventType WorkflowEventType { get; set; }
     [Id(3)] public string AgentName { get; set; } = string.Empty;
     [Id(4)] public string TaskResult { get; set; } = string.Empty;
@@ -57,7 +58,8 @@ public class WorkflowEvent : EventBase
     [Id(8)] public DateTime StepStartTime { get; set; } = DateTime.UtcNow;
     [Id(9)] public DateTime? StepEndTime { get; set; }
     [Id(10)] public Dictionary<string, object> Metadata { get; set; } = new();
-    [Id(11)] public Guid WorkUnitAgentId { get; set; }
+    [Id(11)] public string WorkUnitAgentId { get; set; } = string.Empty; // Used by WorkflowExecutionRecordGAgentPlus
+    [Id(12)] public string AgentTypeName { get; set; } = string.Empty; // Agent type full name
     
     // Inherits from EventBase:
     // - Message: Text data pipeline between agents

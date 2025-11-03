@@ -19,8 +19,7 @@ using Orleans;
 namespace Aevatar.GAgents.AIGAgent.Agent;
 
 public abstract partial class
-    AIGAgentBasePlus<TState, TStateLogEvent, TConfiguration> :
-    BusinessAgentBase<TState, TStateLogEvent, TConfiguration>, IAIGAgent, IGrainAsyncHandler<AITextToImageResponse>
+    AIGAgentBasePlus<TState, TStateLogEvent, TConfiguration>
     where TState : AIGAgentStateBasePlus, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TConfiguration : ConfigurationBase

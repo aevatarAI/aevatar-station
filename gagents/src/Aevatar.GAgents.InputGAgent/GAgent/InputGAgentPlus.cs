@@ -37,13 +37,11 @@ public class InputGAgentPlus : BusinessAgentBase<InputGAgentStatePlus, InputGAge
     /// Override OnBusinessAgentEventForwardingEventHandlerAsync for input handling
     /// This ensures BusinessAgentBase validation runs first
     /// </summary>
+    [Interceptor(LogCategory = "WORKFLOW", ContextProperty = new[] { "WorkflowId", "GrainIdString" })]
     protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
     {
         try
         {
-            // Assign the WorkUnitAgentId to represent this processing node
-            workflowEvent.WorkUnitAgentId = this.GetPrimaryKey();
-            
             workflowEvent.Message = State.Input ?? "No input configured";
             workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowInProgress;
             workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;

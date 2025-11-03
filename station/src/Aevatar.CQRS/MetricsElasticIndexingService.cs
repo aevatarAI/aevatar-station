@@ -75,6 +75,27 @@ public class MetricsElasticIndexingService : IIndexingService
         _countLuceneFailCounter = meter.CreateCounter<long>("es.count_lucene.failure", "count", "ElasticSearch Lucene count operations failed");
     }
 
+    public async Task CheckExistOrCreateStateIndexPlus<T>(T stateBase) where T : CoreStateBase
+    {
+        using var activity = _activitySource.StartActivity("CheckExistOrCreateStateIndexPlus", ActivityKind.Client);
+        var sw = Stopwatch.StartNew();
+        try
+        {
+            await _inner.CheckExistOrCreateStateIndexPlus(stateBase);
+            _checkOrCreateSuccessCounter.Add(1);
+        }
+        catch (Exception ex)
+        {
+            _checkOrCreateFailCounter.Add(1);
+            _logger.LogError(ex, "CheckExistOrCreateStateIndexPlus failed for type {Type}", typeof(T).Name);
+            throw;
+        }
+        finally
+        {
+            _checkOrCreateDurationHistogram.Record(sw.ElapsedMilliseconds);
+        }
+    }
+
     public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
     {
         using var activity = _activitySource.StartActivity("SaveOrUpdateStateIndexBatchAsync", ActivityKind.Client);
@@ -95,6 +116,34 @@ public class MetricsElasticIndexingService : IIndexingService
             activity?.SetTag("exception", true);
             activity?.SetTag("exception.message", ex.Message);
             _logger.LogError(ex, "[ES-Bulk-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId, activity?.SpanId);
+            throw;
+        }
+        finally
+        {
+            activity?.SetTag("es.bulk.elapsedMs", stopwatch.ElapsedMilliseconds);
+        }
+    }
+
+    public async Task SaveOrUpdateStateIndexBatchAsyncPlus(IEnumerable<SaveStateCommandPlus> commands)
+    {
+        using var activity = _activitySource.StartActivity("SaveOrUpdateStateIndexBatchAsyncPlus", ActivityKind.Client);
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            await _inner.SaveOrUpdateStateIndexBatchAsyncPlus(commands);
+            stopwatch.Stop();
+            _bulkSuccessCounter.Add(1);
+            _bulkDurationHistogram.Record(stopwatch.ElapsedMilliseconds);
+            activity?.SetTag("es.bulk.success", 1);
+            _logger.LogInformation("[ES-Bulk-Plus] traceId:{traceId} spanId:{spanId} success", activity?.TraceId, activity?.SpanId);
+        }
+        catch (Exception ex)
+        {
+            stopwatch.Stop();
+            _bulkFailCounter.Add(1);
+            activity?.SetTag("exception", true);
+            activity?.SetTag("exception.message", ex.Message);
+            _logger.LogError(ex, "[ES-Bulk-Plus-Error] traceId:{traceId} spanId:{spanId}", activity?.TraceId, activity?.SpanId);
             throw;
         }
         finally

@@ -3,6 +3,7 @@ using Aevatar.GAgents.AIGAgent.Dtos;
 using Aevatar.GAgents.AIGAgent.Test.TestAgents;
 using Aevatar.GAgents.MCP.Options;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
@@ -10,6 +11,7 @@ namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 /// This file contains comprehensive unit tests for AIGAgentBase MCP functionality.
 /// Tests MCP server configuration, tool discovery, and tool calling flows.
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public class AIGAgentBaseMCPTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

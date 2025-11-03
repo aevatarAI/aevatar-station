@@ -1,14 +1,20 @@
 using Aevatar.Core;
 using Aevatar.Core.Abstractions;
+using Aevatar.Core.Placement;
+using Aevatar.GAgents.Core;
+using Aevatar.GAgents.Workflow.Core;
 using Aevatar.GAgents.Workflow.Core.Configs;
 using Aevatar.GAgents.Workflow.Core.Events;
 using Aevatar.GAgents.Workflow.Core.States;
 using Microsoft.Extensions.Logging;
-using Aevatar.GAgents.Workflow.Core;
+using Orleans.Providers;
 
 namespace Aevatar.GAgents.Workflow;
 
+[StorageProvider(ProviderName = "PubSubStore")]
+[LogConsistencyProvider(ProviderName = "LogStorage")]
 [GAgent]
+[SiloNamePatternPlacement("Projector")]
 public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, WorkflowViewLogEvent, EventBase,
     WorkflowViewConfigDto>, IWorkflowViewGAgentPlus
 {
@@ -23,11 +29,95 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
 
     protected override async Task PerformConfigAsync(WorkflowViewConfigDto configuration)
     {
+        // Preserve existing system IDs from State if they exist (immutability protection)
+        // Only override configuration if State has valid (non-Empty) values
+        if (State.WorkflowStartAgentId != Guid.Empty)
+        {
+            configuration.WorkflowStartAgentId = State.WorkflowStartAgentId;
+        }
+        if (State.WorkflowEndAgentId != Guid.Empty)
+        {
+            configuration.WorkflowEndAgentId = State.WorkflowEndAgentId;
+        }
+        if (State.WorkflowCoordinatorGAgentId != Guid.Empty)
+        {
+            configuration.WorkflowCoordinatorGAgentId = State.WorkflowCoordinatorGAgentId;
+        }
+
         await TrySaveWorkflowViewAsync(configuration);
+    }
+
+    /// <summary>
+    /// Get current round ID (execution counter)
+    /// </summary>
+    public Task<int> GetCurrentRoundIdAsync()
+    {
+        return Task.FromResult(State.RoundId);
+    }
+
+    /// <summary>
+    /// Execute workflow by creating and sending WorkflowEvent to StartAgent, and increment RoundId
+    /// Execution name is automatically generated as: {WorkflowName}-Round{RoundId}
+    /// </summary>
+    public async Task<Guid> ExecuteWorkflowAsync()
+    {
+        // Validate prerequisites
+        if (State.WorkflowStartAgentId == Guid.Empty)
+        {
+            Logger.LogError("[WorkflowViewGAgent] Cannot execute workflow: WorkflowStartAgentId is not initialized");
+            throw new InvalidOperationException("WorkflowStartAgentId is not initialized. Please publish the workflow first.");
+        }
+        
+        // Increment RoundId for each workflow execution
+        RaiseEvent(new IncrementRoundIdLogEvent());
+        await ConfirmEvents();
+        
+        // Generate execution name based on workflow name and RoundId
+        var executionName = $"{State.Name}-Round{State.RoundId}";
+        
+        Logger.LogInformation("[WorkflowViewGAgent] Starting workflow execution '{ExecutionName}', RoundId: {RoundId}", 
+            executionName, State.RoundId);
+        
+        // Ensure WorkflowStartAgent is registered as a child (parent-child relationship)
+        // This is critical for stream-based event forwarding
+        var startAgent = GrainFactory.GetGrain<IWorkflowStartAgent>(State.WorkflowStartAgentId);
+        var startAgentGrainId = GrainId.Create(typeof(IWorkflowStartAgent).FullName!, State.WorkflowStartAgentId.ToString("N"));
+        
+        // Check if WorkflowStartAgent is already a child, if not, register it
+        if (!State.Children.Contains(startAgentGrainId))
+        {
+            Logger.LogWarning("[WorkflowViewGAgent] WorkflowStartAgent not registered as child, registering now (this should have been done during publish)");
+            await RegisterAsync(startAgent);
+            Logger.LogDebug("[WorkflowViewGAgent] Successfully registered WorkflowStartAgent as child");
+        }
+        // Create simplified WorkflowEvent
+        var workflowEvent = new WorkflowEvent
+        {
+            Direction = EventDirection.Down,
+            WorkflowId = State.WorkflowCoordinatorGAgentId, // Use WorkflowCoordinatorGAgentId as WorkflowId
+            WorkUnitAgentId = startAgentGrainId.ToString(), // Full GrainId string for WorkflowCoordinator topology discovery
+            WorkflowEventType = WorkflowEventType.WorkflowStarted,
+            WorkflowAgentStatus = WorkflowAgentStatus.Pending,
+            Message = $"Workflow '{executionName}' execution started",
+            Metadata = new Dictionary<string, object>
+            {
+                { "ExecutionName", executionName },
+                { "RoundId", State.RoundId },
+                { "WorkflowName", State.Name }
+            }
+        };
+        
+        // Publish event to child agents (WorkflowStartAgent will receive it because it subscribed to this agent's stream)
+        Logger.LogDebug("[WorkflowViewGAgent] Publishing WorkflowEvent to children (WorkflowStartAgent)");
+        await PublishEventByDirectionAsync(workflowEvent);
+        Logger.LogDebug("[WorkflowViewGAgent] Successfully published WorkflowEvent");
+        
+        return Guid.NewGuid(); // Return event ID for tracking
     }
 
     private async Task TrySaveWorkflowViewAsync(WorkflowViewConfigDto configuration)
     {
+        
         if (configuration.WorkflowNodeList.IsNullOrEmpty() || configuration.Name.IsNullOrEmpty())
         {
             return;
@@ -40,17 +130,8 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
                 throw new ArgumentException("The workflow view node has invalid value.");
             }
 
-            if (node.AgentId != Guid.Empty)
-            {
-                var grainId = GrainId.Create(node.AgentType, node.AgentId.ToString("N"));
-                var agent = GrainFactory.GetGrain<IGAgent>(grainId);
-                var agentParent = await agent.GetParentAsync();
-                if (agentParent != default && State.WorkflowCoordinatorGAgentId != Guid.Empty && State.WorkflowCoordinatorGAgentId != agentParent.GetGuidKey())
-                {
-                    Logger.LogError($"[WorkflowViewGAgent] GAgent {grainId} already has a parent GAgent.");
-                    throw new ArgumentException($"GAgent {grainId} already has a parent GAgent.");
-                }
-            }
+            
+            
         }
 
         if (State.WorkflowCoordinatorGAgentId != Guid.Empty && State.WorkflowCoordinatorGAgentId != configuration.WorkflowCoordinatorGAgentId)
@@ -98,7 +179,9 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
             UpdateNodeList = updateNodeList,
             RemoveNodeIdList = removeNodeIdList,
             WorkflowNodeUnitList = configuration.WorkflowNodeUnitList,
-            Name = configuration.Name
+            Name = configuration.Name,
+            WorkflowStartAgentId = configuration.WorkflowStartAgentId,  // Use configuration value (already protected by PerformConfigAsync)
+            WorkflowEndAgentId = configuration.WorkflowEndAgentId       // Use configuration value (already protected by PerformConfigAsync)
         });
         if (configuration.WorkflowCoordinatorGAgentId != Guid.Empty)
         {
@@ -187,6 +270,18 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
                 state.WorkflowNodeUnitList = updateWorkflowViewLogEvent.WorkflowNodeUnitList;
                 state.Name = updateWorkflowViewLogEvent.Name;
                 state.AgentId = this.GetPrimaryKey();
+                
+                // Set WorkflowStartAgentId and WorkflowEndAgentId only if provided (not empty)
+                // The event now contains either the new value or the preserved existing value
+                if (updateWorkflowViewLogEvent.WorkflowStartAgentId != Guid.Empty)
+                {
+                    state.WorkflowStartAgentId = updateWorkflowViewLogEvent.WorkflowStartAgentId;
+                }
+                
+                if (updateWorkflowViewLogEvent.WorkflowEndAgentId != Guid.Empty)
+                {
+                    state.WorkflowEndAgentId = updateWorkflowViewLogEvent.WorkflowEndAgentId;
+                }
                 break;
             case UpdateNodeAgentIdLogEvent nodeAgentIdLogEvent:
                 var updateAgentIdNode = state.WorkflowNodeList.FirstOrDefault(t => t.NodeId == nodeAgentIdLogEvent.NodeId);
@@ -197,6 +292,9 @@ public class WorkflowViewGAgentPlus : GAgentBasePlus<WorkflowViewStatePlus, Work
                 break;
             case UpdateWorkflowAgentIdLogEvent updateWorkflowAgentIdLogEvent:
                 state.WorkflowCoordinatorGAgentId = updateWorkflowAgentIdLogEvent.AgentId;
+                break;
+            case IncrementRoundIdLogEvent:
+                state.RoundId++;
                 break;
         }
 

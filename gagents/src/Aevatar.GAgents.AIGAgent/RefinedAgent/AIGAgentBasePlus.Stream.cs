@@ -23,8 +23,7 @@ namespace Aevatar.GAgents.AIGAgent.Agent;
 /// Uses unified Event class for event forwarding
 /// </summary>
 public abstract partial class
-    AIGAgentBasePlus<TState, TStateLogEvent, TConfiguration> :
-    BusinessAgentBase<TState, TStateLogEvent, TConfiguration>, IAIGAgent, IGrainAsyncHandler<AIStreamChatResponseEvent>
+    AIGAgentBasePlus<TState, TStateLogEvent, TConfiguration>
     where TState : AIGAgentStateBasePlus, new()
     where TStateLogEvent : StateLogEventBase<TStateLogEvent>
     where TConfiguration : ConfigurationBase

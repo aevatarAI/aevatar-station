@@ -122,6 +122,38 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         });
     }
 
+    public async Task CheckExistOrCreateStateIndexPlus<T>(T stateBase) where T : CoreStateBase
+    {
+        var indexName = GetIndexName(stateBase.GetType().Name.ToLower());
+        if (_cache.TryGetValue(indexName, out bool? _))
+        {
+            return;
+        }
+
+        var indexExistsResponse = _client.Indices.Exists(indexName);
+        if (!indexExistsResponse.Exists)
+        {
+            var createIndexResponse = await CreateIndexAsyncPlus<T>(indexName);
+
+            if (!createIndexResponse.IsValidResponse)
+            {
+                _logger.LogError(
+                    "Error creating Plus state index. indexName:{indexName},error:{error},DebugInfo:{DebugInfo}",
+                    indexName,
+                    createIndexResponse.ElasticsearchServerError?.Error,
+                    createIndexResponse.DebugInformation);
+                return;
+            }
+
+            _logger.LogInformation("Successfully created Plus state index. indexName:{indexName}", indexName);
+        }
+
+        _cache.Set(indexName, true, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(24)
+        });
+    }
+
     private async Task<CreateIndexResponse> CreateIndexAsync<T>(string indexName) where T : StateBase
     {
         var createIndexResponse = await _client.Indices.CreateAsync(indexName, c => c
@@ -179,6 +211,61 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
         return createIndexResponse;
     }
 
+    private async Task<CreateIndexResponse> CreateIndexAsyncPlus<T>(string indexName) where T : CoreStateBase
+    {
+        var createIndexResponse = await _client.Indices.CreateAsync(indexName, c => c
+            .Mappings(m => m
+                .Properties<T>(props =>
+                {
+                    var type = typeof(T);
+                    foreach (var property in type.GetProperties())
+                    {
+                        var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+                        var propType = property.PropertyType;
+
+                        // Map based on property type
+                        if (propType == typeof(string))
+                        {
+                            props.Text(propertyName);
+                           // props.Keyword(propertyName, k => k.IgnoreAbove(256));
+                        }
+                        else if (propType == typeof(short) || propType == typeof(int) || propType == typeof(long))
+                        {
+                            props.LongNumber(propertyName);
+                        }
+                        else if (propType == typeof(float))
+                        {
+                            props.FloatNumber(propertyName);
+                        }
+                        else if (propType == typeof(double) || propType == typeof(decimal))
+                        {
+                            props.DoubleNumber(propertyName);
+                        }
+                        else if (propType == typeof(DateTime))
+                        {
+                            props.Date(propertyName); // Date for datetime fields
+                        }
+                        else if (propType == typeof(bool))
+                        {
+                            props.Boolean(propertyName); // Boolean for boolean fields
+                        }
+                        else if (propType == typeof(Guid))
+                        {
+                            props.Keyword(propertyName); // Treat GUID as keyword
+                        }
+                        else
+                        {
+                            // For complex types, store as text
+                            props.Text(propertyName);
+                        }
+                    }
+                })
+            )
+        );
+
+        return createIndexResponse;
+    }
+
     private static bool IsBasicType(Type type)
     {
         Type underlyingType = Nullable.GetUnderlyingType(type) ?? type;
@@ -210,6 +297,72 @@ public class ElasticIndexingService : IIndexingService, ISingletonDependency
     }
 
     public async Task SaveOrUpdateStateIndexBatchAsync(IEnumerable<SaveStateCommand> commands)
+    {
+        var bulkOperations = new BulkOperationsCollection();
+
+        foreach (var command in commands)
+        {
+            var (stateBase, id) = (command.State, command.GuidKey);
+            var indexName = GetIndexName(stateBase.GetType().Name.ToLower());
+            var document = new Dictionary<string, object>();
+            foreach (var property in stateBase.GetType().GetProperties())
+            {
+                var propertyName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+                var value = property.GetValue(stateBase);
+                if (value == null)
+                {
+                    continue;
+                }
+
+                if (!IsBasicType(property.PropertyType))
+                {
+                    document[propertyName] = JsonConvert.SerializeObject(value, new JsonSerializerSettings
+                    {
+                        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+                        ContractResolver = new CamelCasePropertyNamesContractResolver()
+                    });
+                }
+                else
+                {
+                    document[propertyName] = value;
+                }
+            }
+
+            document["ctime"] = DateTime.UtcNow;
+            document["version"] = command.Version;
+
+            // Use BulkUpdateOperation with script-based version checking for updates
+            var item = new BulkUpdateOperation<Dictionary<string, object>, object>(id)
+            {
+                Index = indexName,
+                Script = new Script
+                {
+                    Source = "if (ctx.op == 'create' || ctx._source.version == null || params.version > ctx._source.version) { ctx._source = params.doc; } else { ctx.op = 'noop'; }",
+                    Params = new Dictionary<string, object>
+                    {
+                        ["version"] = document["version"],
+                        ["doc"] = document
+                    }
+                },
+                ScriptedUpsert = true,
+                Upsert = document
+            };
+
+            bulkOperations.Add(item);
+        }
+
+        var bulkRequest = new BulkRequest
+        {
+            Operations = bulkOperations,
+            Refresh = Refresh.WaitFor
+        };
+
+        var response = await _client.BulkAsync(bulkRequest);
+
+        ProcessBulkResponse(response);
+    }
+
+    public async Task SaveOrUpdateStateIndexBatchAsyncPlus(IEnumerable<SaveStateCommandPlus> commands)
     {
         var bulkOperations = new BulkOperationsCollection();
 

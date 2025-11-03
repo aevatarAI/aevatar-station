@@ -9,9 +9,11 @@ using Aevatar.GAgents.AIGAgent.Test.GAgents.ChatGAgents;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Shouldly;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
+[Collection(ClusterCollection.Name)]
 public class AIGAgentBaseUnitTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

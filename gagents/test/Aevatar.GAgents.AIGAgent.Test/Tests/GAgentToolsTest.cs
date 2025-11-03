@@ -12,12 +12,14 @@ using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Shouldly;
 using Xunit;
+using Aevatar.GAgents.TestBase;
 
 namespace Aevatar.GAgents.AIGAgent.Test.Tests;
 
 /// <summary>
 /// Test class for GAgent tools functionality without mocks
 /// </summary>
+[Collection(ClusterCollection.Name)]
 public sealed class GAgentToolsTest : AevatarAIGAgentTestBase
 {
     private readonly IGAgentFactory _agentFactory;

@@ -70,7 +70,7 @@ public class HostController : AevatarController
             "1");
 
         // Query ES paged directly (no total for performance)
-        var logs = await _logService.GetWorkflowLogsAsync(indexName, input.WorkflowId, input.RoundId, input.GrainId, input.Level, input.MessagePattern, from, pageSize);
+        var logs = await _logService.GetWorkflowLogsAsync(indexName, input.WorkflowId, input.RoundId, input.GrainIdString, input.Level, input.MessagePattern, from, pageSize);
         return logs ?? new List<HostLogIndex>();
     }
 }

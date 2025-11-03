@@ -71,7 +71,7 @@ public class HostControllerTests
         {
             WorkflowId = "wf-123",
             RoundId = 7,
-            GrainId = "grain-1",
+            GrainIdString = "grain-1",
             Level = "Error",
             MessagePattern = "oops",
             PageIndex = 3,
@@ -90,7 +90,7 @@ public class HostControllerTests
                 "alias-test",
                 input.WorkflowId,
                 input.RoundId,
-                input.GrainId,
+                input.GrainIdString,
                 input.Level,
                 input.MessagePattern,
                 (input.PageIndex - 1) * input.PageSize,

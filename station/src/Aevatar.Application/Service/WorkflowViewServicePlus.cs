@@ -9,13 +9,16 @@ using Aevatar.GAgents.Workflow;
 using Aevatar.GAgents.Workflow.Core;
 using Aevatar.GAgents.Workflow.Core.Configs;
 using Aevatar.Options;
+using Aevatar.Station.Feature.CreatorGAgent;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using Orleans;
 using Orleans.Runtime;
 using Volo.Abp;
 using Volo.Abp.Application.Services;
+using ICreatorGAgent = Aevatar.Application.Grains.Agents.Creator.ICreatorGAgent;
 
 namespace Aevatar.Service;
 
@@ -24,14 +27,16 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
 {
     private readonly IAgentService _agentService;
     private readonly IGAgentFactory<IGAgentPlus> _gAgentFactory;
+    private readonly IClusterClient _clusterClient;
     private readonly ILogger<WorkflowViewServicePlus> _logger;
     private readonly DebugModeOptions _debugModeOptions;
 
-    public WorkflowViewServicePlus(IAgentService agentService, IGAgentFactory<IGAgentPlus> gAgentFactory,  ILogger<WorkflowViewServicePlus> logger,
+    public WorkflowViewServicePlus(IAgentService agentService, IGAgentFactory<IGAgentPlus> gAgentFactory, IClusterClient clusterClient, ILogger<WorkflowViewServicePlus> logger,
         IOptionsSnapshot<DebugModeOptions> debugModeOptions)
     {
         _agentService = agentService;
         _gAgentFactory = gAgentFactory;
+        _clusterClient = clusterClient;
         _logger = logger;
         _debugModeOptions = debugModeOptions == null ? new DebugModeOptions() : debugModeOptions.Value;
     }
@@ -107,7 +112,8 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
         
         // create or update workflowCoordinatorGAgent
         var workflowConfig = new WorkflowCoordinatorConfigDto();
-        workflowConfig.EnableExecutionRecord = _debugModeOptions.ExecuteRecordMode;
+        // ✅ FIXED: Always enable execution recording for Plus system
+        workflowConfig.EnableExecutionRecord = true;
         var nodeMap = viewConfigDto.WorkflowNodeList.ToDictionary(r => r.NodeId, r => r);
         foreach (var node in viewConfigDto.WorkflowNodeList)
         {
@@ -169,7 +175,7 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
                 throw new UserFriendlyException($"create workflowCoordinatorGAgent fail: {e.Message}");
             }
 
-            await _agentService.AddSubAgentAsync(workflowCoordinatorGAgentDto.AgentGuid, new AddSubAgentDto());
+           // await _agentService.AddSubAgentAsync(workflowCoordinatorGAgentDto.AgentGuid, new AddSubAgentDto());
         }
         else
         {
@@ -188,26 +194,40 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
                 _logger.LogError(e, "workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {agentId} fail: {message}", viewAgentId, workflowCoordinatorGAgentId, e.Message);
                 throw new UserFriendlyException($"update workflowCoordinatorGAgent {viewConfigDto.WorkflowCoordinatorGAgentId} fail: {e.Message}");
             }
-            _logger.LogInformation("workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {AgentId} success.", 
-                viewAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
-        }
+        _logger.LogInformation("workflowViewGAgent {viewAgentId} update workflowCoordinatorGAgent {AgentId} success.", 
+            viewAgentId, viewConfigDto.WorkflowCoordinatorGAgentId);
+    }
 
-        // update workflowViewAgent
-        configJson = JsonConvert.SerializeObject(viewConfigDto);
-        var viewConfigProperties = JsonConvert.DeserializeObject<Dictionary<string, object>>(configJson);
-        viewConfigProperties.Remove("PublisherGrainId");
-        viewConfigProperties.Remove("CorrelationId");
-        agentDto = await _agentService.UpdateAgentAsync(viewAgentId, new UpdateAgentInputDto()
-        {
-            Properties = viewConfigProperties,
-            Name = agentDto.Name
-        });
+    // Config workflow agent IDs: query state, supplement viewConfigDto, and persist
+    await WorkflowViewAgentConfigAsync(viewAgentId, viewConfigDto);
+    
+    // Setup workflow relationships (Start/End/Coordinator + business agents)
+    await SetupWorkflowRelationshipsAsync(viewAgentId, viewConfigDto);
+    
+    // Update agentDto.Properties with the updated viewConfigDto (which now has the correct IDs)
+    var jsonSerializerSettings = new JsonSerializerSettings
+    {
+        ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+        ContractResolver = new CamelCasePropertyNamesContractResolver(),
+        NullValueHandling = NullValueHandling.Ignore
+    };
+    var serializedConfig = JsonConvert.SerializeObject(viewConfigDto, jsonSerializerSettings);
+    agentDto.Properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(serializedConfig);
+        
+    // Persist updated properties to CreatorGAgent
+    var creatorGAgent = _clusterClient.GetGrain<ICreatorGAgent>(viewAgentId);
+    await creatorGAgent.UpdateAgentAsync(new UpdateAgentInput
+    {
+        Name = agentDto.Name,
+        Properties = serializedConfig
+    });
+        
         return agentDto;
     }
 
     public async Task<AgentDto> CreateDefaultWorkflowAsync()
     {
-        var emptyWorkflowViewGAgent = await _gAgentFactory.GetGAgentAsync<WorkflowViewGAgentPlus>(Guid.Empty);
+        var emptyWorkflowViewGAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowViewGAgentPlus>(Guid.Empty);
         string workflowAgentType;
         try
         {
@@ -237,6 +257,301 @@ public class WorkflowViewServicePlus : ApplicationService, IWorkflowViewService
         return agentDto;
     }
 
+    /// <summary>
+    /// Setup workflow relationships with incremental updates
+    /// Only updates relationships that have changed to improve performance
+    /// </summary>
+    private async Task SetupWorkflowRelationshipsAsync(Guid viewAgentId, WorkflowViewConfigDto viewConfigDto)
+    {
+        _logger.LogInformation("🔧 [SetupWorkflowRelationships] START - Workflow: {WorkflowName}, Nodes: {NodeCount}, Connections: {UnitCount}", 
+            viewConfigDto.Name, viewConfigDto.WorkflowNodeList.Count, viewConfigDto.WorkflowNodeUnitList.Count);
+        
+        // Get all agent references
+        var agents = await GetWorkflowAgentsAsync(viewAgentId, viewConfigDto);
+        
+        // Analyze workflow topology
+        var topology = AnalyzeWorkflowTopology(viewConfigDto);
+        
+        // Setup business agent relationships (includes cleanup + coordinator relationships)
+        await SetupBusinessAgentTopologyAsync(agents, topology, viewConfigDto);
+        
+        // Setup WorkflowViewAgent → WorkflowStartAgent relationship
+        await UpdateAgentChildrenAsync(agents.WorkflowViewAgent, new List<GrainId> { agents.StartAgent.GetGrainId() }, 
+            "WorkflowViewAgent", "WorkflowStartAgent");
+        
+        // Setup Coordinator → WorkflowViewAgent relationship
+        await UpdateAgentChildrenAsync(agents.CoordinatorAgent, new List<GrainId> { agents.WorkflowViewAgent.GetGrainId() }, 
+            "Coordinator", "WorkflowViewAgent");
+        
+        _logger.LogInformation("🔧 [SetupWorkflowRelationships] ✅ COMPLETED - Workflow: {WorkflowName}", viewConfigDto.Name);
+    }
+    
+    /// <summary>
+    /// Config workflow agent IDs: query state, supplement viewConfigDto, and persist to WorkflowViewGAgent.State
+    /// </summary>
+    private async Task WorkflowViewAgentConfigAsync(Guid viewAgentId, WorkflowViewConfigDto viewConfigDto)
+    {
+        var agentDto = await _agentService.GetAgentAsync(viewAgentId);
+        var workflowViewAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowViewGAgentPlus>(agentDto.GrainId);
+        var state = await workflowViewAgent.GetStateAsync();
+        
+        // Supplement viewConfigDto with State values (if State has valid IDs)
+        if (state.WorkflowStartAgentId != Guid.Empty)
+        {
+            viewConfigDto.WorkflowStartAgentId = state.WorkflowStartAgentId;
+        }
+        else if (viewConfigDto.WorkflowStartAgentId == Guid.Empty)
+        {
+            viewConfigDto.WorkflowStartAgentId = Guid.NewGuid();
+        }
+        
+        if (state.WorkflowEndAgentId != Guid.Empty)
+        {
+            viewConfigDto.WorkflowEndAgentId = state.WorkflowEndAgentId;
+        }
+        else if (viewConfigDto.WorkflowEndAgentId == Guid.Empty)
+        {
+            viewConfigDto.WorkflowEndAgentId = Guid.NewGuid();
+        }
+        
+        if (state.WorkflowCoordinatorGAgentId != Guid.Empty)
+        {
+            viewConfigDto.WorkflowCoordinatorGAgentId = state.WorkflowCoordinatorGAgentId;
+        }
+        
+        // Persist to WorkflowViewGAgent.State only
+        await workflowViewAgent.ConfigAsync(viewConfigDto);
+    }
+    
+    /// <summary>
+    /// Get all workflow agent references
+    /// </summary>
+    private async Task<WorkflowAgents> GetWorkflowAgentsAsync(Guid viewAgentId, WorkflowViewConfigDto viewConfigDto)
+    {
+        return new WorkflowAgents
+        {
+            StartAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowStartAgent>(viewConfigDto.WorkflowStartAgentId),
+            EndAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowEndAgent>(viewConfigDto.WorkflowEndAgentId),
+            CoordinatorAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowCoordinatorGAgentPlus>(viewConfigDto.WorkflowCoordinatorGAgentId),
+            WorkflowViewAgent = await _gAgentFactory.GetGAgentAsync<IWorkflowViewGAgentPlus>(viewAgentId)
+        };
+    }
+    
+    /// <summary>
+    /// Analyze workflow topology to find top-level and leaf nodes
+    /// </summary>
+    private WorkflowTopology AnalyzeWorkflowTopology(WorkflowViewConfigDto viewConfigDto)
+    {
+        var nodeMap = viewConfigDto.WorkflowNodeList.ToDictionary(r => r.NodeId, r => r);
+        var downstreamNodeIds = viewConfigDto.WorkflowNodeUnitList.Select(u => u.NextNodeId).ToHashSet();
+        var upstreamNodeIds = viewConfigDto.WorkflowNodeUnitList.Select(u => u.NodeId).ToHashSet();
+        
+        var topLevelNodes = viewConfigDto.WorkflowNodeList
+            .Where(n => !downstreamNodeIds.Contains(n.NodeId))
+            .ToList();
+        
+        var leafNodes = viewConfigDto.WorkflowNodeList
+            .Where(n => !upstreamNodeIds.Contains(n.NodeId))
+            .ToList();
+        
+        _logger.LogInformation("Found {TopCount} top-level nodes and {LeafCount} leaf nodes", 
+            topLevelNodes.Count, leafNodes.Count);
+        
+        return new WorkflowTopology
+        {
+            NodeMap = nodeMap,
+            TopLevelNodes = topLevelNodes,
+            LeafNodes = leafNodes
+        };
+    }
+    
+    /// <summary>
+    /// ✅ SIMPLE: Clean up orphaned parent relationships
+    /// If a node's parent no longer exists in the topology, remove that parent relationship
+    /// </summary>
+    private async Task CleanupStaleParentRelationshipsAsync(WorkflowTopology topology, WorkflowViewConfigDto viewConfigDto, IGAgentPlus endAgent)
+    {
+        // Get all valid business node GrainIds in current topology
+        var validNodeGrainIds = topology.NodeMap.Values
+            .Select(n => GrainId.Create(n.AgentType, GuidUtil.GuidToGrainKey(n.AgentId)))
+            .ToHashSet();
+        
+        // ✅ STEP 1: Clean up business nodes' orphaned parents
+        foreach (var node in topology.NodeMap.Values)
+        {
+            var nodeGrainId = GrainId.Create(node.AgentType, GuidUtil.GuidToGrainKey(node.AgentId));
+            var nodeAgent = await _gAgentFactory.GetGAgentAsync(nodeGrainId);
+            var currentParents = await nodeAgent.GetParentsAsync();
+            
+            // Find orphaned parents (parents that no longer exist in topology)
+            var orphanedParents = currentParents.Where(p => !validNodeGrainIds.Contains(p)).ToList();
+            
+            if (orphanedParents.Count > 0)
+            {
+                _logger.LogInformation("🧹 [CleanupOrphanedParents] {NodeName} has {Count} orphaned parent(s), cleaning up...", 
+                    node.Name, orphanedParents.Count);
+                
+                foreach (var orphanedParentGrainId in orphanedParents)
+                {
+                    try
+                    {
+                        var orphanedParentAgent = await _gAgentFactory.GetGAgentAsync(orphanedParentGrainId);
+                        await orphanedParentAgent.UnregisterAsync(nodeAgent);
+                        _logger.LogInformation("🧹 [CleanupOrphanedParents]   ✅ Removed orphaned parent: {Parent}", orphanedParentGrainId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "🧹 [CleanupOrphanedParents]   ⚠️ Failed to remove orphaned parent {Parent}", orphanedParentGrainId);
+                    }
+                }
+            }
+        }
+        
+        // ✅ STEP 2: Clean up EndAgent's orphaned parents (critical fix!)
+        // EndAgent is not in NodeMap, so we need to handle it separately
+        var endAgentParents = await endAgent.GetParentsAsync();
+        var endAgentOrphanedParents = endAgentParents.Where(p => !validNodeGrainIds.Contains(p)).ToList();
+        
+        if (endAgentOrphanedParents.Count > 0)
+        {
+            _logger.LogInformation("🧹 [CleanupOrphanedParents] EndAgent has {Count} orphaned parent(s), cleaning up...", 
+                endAgentOrphanedParents.Count);
+            
+            foreach (var orphanedParentGrainId in endAgentOrphanedParents)
+            {
+                try
+                {
+                    var orphanedParentAgent = await _gAgentFactory.GetGAgentAsync(orphanedParentGrainId);
+                    await orphanedParentAgent.UnregisterAsync(endAgent);
+                    _logger.LogInformation("🧹 [CleanupOrphanedParents]   ✅ Removed orphaned parent from EndAgent: {Parent}", orphanedParentGrainId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "🧹 [CleanupOrphanedParents]   ⚠️ Failed to remove orphaned parent from EndAgent: {Parent}", orphanedParentGrainId);
+                }
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Setup business agent topology with incremental updates
+    /// </summary>
+    private async Task SetupBusinessAgentTopologyAsync(WorkflowAgents agents, WorkflowTopology topology, WorkflowViewConfigDto viewConfigDto)
+    {
+        var coordinatorGrainId = agents.CoordinatorAgent.GetGrainId();
+        
+        // Clean up stale parent relationships for all business nodes + EndAgent
+        await CleanupStaleParentRelationshipsAsync(topology, viewConfigDto, agents.EndAgent);
+        
+        // Update StartAgent → Top-level business agents + Coordinator
+        var expectedStartChildren = topology.TopLevelNodes
+            .Select(n => GrainId.Create(n.AgentType, GuidUtil.GuidToGrainKey(n.AgentId)))
+            .ToList();
+        expectedStartChildren.Add(coordinatorGrainId);
+        await UpdateAgentChildrenAsync(agents.StartAgent, expectedStartChildren, "StartAgent", "top-level agents + Coordinator");
+        
+        // Update business agent topology (business agent → next agents + Coordinator)
+        var groupedConnections = viewConfigDto.WorkflowNodeUnitList
+            .GroupBy(u => u.NodeId)
+            .ToList();
+        
+        foreach (var group in groupedConnections)
+        {
+            var sourceNodeId = group.Key;
+            var sourceNode = topology.NodeMap[sourceNodeId];
+            var sourceGrainId = GrainId.Create(sourceNode.AgentType, GuidUtil.GuidToGrainKey(sourceNode.AgentId));
+            var sourceAgent = await _gAgentFactory.GetGAgentAsync(sourceGrainId);
+            
+            // Collect all target agents for this source node (handles parallel connections)
+            var targetGrainIds = new List<GrainId>();
+            foreach (var unit in group)
+            {
+                var targetNode = topology.NodeMap[unit.NextNodeId];
+                var targetGrainId = GrainId.Create(targetNode.AgentType, GuidUtil.GuidToGrainKey(targetNode.AgentId));
+                targetGrainIds.Add(targetGrainId);
+            }
+            
+            // Add Coordinator to the children list
+            targetGrainIds.Add(coordinatorGrainId);
+            
+            var targetNames = string.Join(", ", group.Select(u => topology.NodeMap[u.NextNodeId].Name));
+            await UpdateAgentChildrenAsync(sourceAgent, targetGrainIds, 
+                $"BusinessAgent({sourceNode.Name})", $"{targetNames} + Coordinator");
+        }
+        
+        // Update Leaf agents → EndAgent + Coordinator
+        foreach (var leafNode in topology.LeafNodes)
+        {
+            var leafGrainId = GrainId.Create(leafNode.AgentType, GuidUtil.GuidToGrainKey(leafNode.AgentId));
+            var leafAgent = await _gAgentFactory.GetGAgentAsync(leafGrainId);
+            await UpdateAgentChildrenAsync(leafAgent, new List<GrainId> { agents.EndAgent.GetGrainId(), coordinatorGrainId }, 
+                $"LeafAgent({leafNode.Name})", "EndAgent + Coordinator");
+        }
+        
+        // Update EndAgent → Coordinator
+        await UpdateAgentChildrenAsync(agents.EndAgent, new List<GrainId> { coordinatorGrainId }, 
+            "EndAgent", "Coordinator");
+    }
+    
+    /// <summary>
+    /// Update agent children with incremental logic (only add/remove changes)
+    /// </summary>
+    private async Task UpdateAgentChildrenAsync(IGAgentPlus parentAgent, List<GrainId> expectedChildGrainIds, 
+        string parentName, string childrenDesc)
+    {
+        var currentChildren = await parentAgent.GetChildrenAsync();
+        var currentChildIdSet = currentChildren.ToHashSet();
+        var expectedChildIdSet = expectedChildGrainIds.ToHashSet();
+        
+        // Find children to add/remove
+        var toAdd = expectedChildGrainIds.Where(id => !currentChildIdSet.Contains(id)).ToList();
+        var toRemove = currentChildren.Where(id => !expectedChildIdSet.Contains(id)).ToList();
+        
+        // Skip if no changes
+        if (toAdd.Count == 0 && toRemove.Count == 0)
+        {
+            return;
+        }
+        
+        _logger.LogInformation("👥 [UpdateAgentChildren] {ParentName}: +{AddCount}/-{RemoveCount} children", 
+            parentName, toAdd.Count, toRemove.Count);
+        
+        // Remove outdated children
+        foreach (var childGrainIdToRemove in toRemove)
+        {
+            var childAgent = await _gAgentFactory.GetGAgentAsync(childGrainIdToRemove);
+            await parentAgent.UnregisterAsync(childAgent);
+        }
+        
+        // Add new children
+        foreach (var childGrainIdToAdd in toAdd)
+        {
+            var childAgent = await _gAgentFactory.GetGAgentAsync(childGrainIdToAdd);
+            await parentAgent.RegisterAsync(childAgent);
+        }
+    }
+    
+    /// <summary>
+    /// Helper class to hold workflow agent references
+    /// </summary>
+    private class WorkflowAgents
+    {
+        public IWorkflowStartAgent StartAgent { get; init; }
+        public IWorkflowEndAgent EndAgent { get; init; }
+        public IWorkflowCoordinatorGAgentPlus CoordinatorAgent { get; init; }
+        public IWorkflowViewGAgentPlus WorkflowViewAgent { get; init; }
+    }
+    
+    /// <summary>
+    /// Helper class to hold workflow topology analysis results
+    /// </summary>
+    private class WorkflowTopology
+    {
+        public Dictionary<Guid, WorkflowNodeDto> NodeMap { get; init; }
+        public List<WorkflowNodeDto> TopLevelNodes { get; init; }
+        public List<WorkflowNodeDto> LeafNodes { get; init; }
+    }
+
     private const string DefaultWorkflowProperties =
-        "{\"workflowNodeList\":[{\"agentType\":\"Aevatar.GAgents.InputGAgent.GAgent.InputGAgent\",\"name\":\"MyInputGAgent\",\"extendedData\":{\"xPosition\":\"2\",\"yPosition\":\"16\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"inputGAgent1\\\",\\\"input\\\":\\\"I want to eat, get me a choose.\\\"}\",\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\"},{\"agentType\":\"Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgent\",\"name\":\"ai\",\"extendedData\":{\"xPosition\":\"365.1172008973645\",\"yPosition\":\"-12.62092346330003\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"ai\\\",\\\"instructions\\\":\\\"You are a helpful AI assistant\\\",\\\"systemLLM\\\":\\\"OpenAI\\\",\\\"mcpServers\\\":[],\\\"toolGAgentTypes\\\":[],\\\"toolGAgents\\\":[]}\",\"nodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"workflowNodeUnitList\":[{\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\",\"nextNodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"name\":\"default workflow\"}";
+        "{\"workflowNodeList\":[{\"agentType\":\"Aevatar.GAgents.InputGAgent.GAgent.InputGAgentPlus\",\"name\":\"MyInputGAgent\",\"extendedData\":{\"xPosition\":\"2\",\"yPosition\":\"16\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"inputGAgent1\\\",\\\"input\\\":\\\"I want to eat, get me a choose.\\\"}\",\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\"},{\"agentType\":\"Aevatar.GAgents.Twitter.GAgents.ChatAIAgent.ChatAIGAgentPlus\",\"name\":\"ai\",\"extendedData\":{\"xPosition\":\"365.1172008973645\",\"yPosition\":\"-12.62092346330003\"},\"jsonProperties\":\"{\\\"memberName\\\":\\\"ai\\\",\\\"instructions\\\":\\\"You are a helpful AI assistant\\\",\\\"systemLLM\\\":\\\"OpenAI\\\",\\\"mcpServers\\\":[],\\\"toolGAgentTypes\\\":[],\\\"toolGAgents\\\":[]}\",\"nodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"workflowNodeUnitList\":[{\"nodeId\":\"45dc7d32-1002-4479-8616-b12cbc112bb4\",\"nextNodeId\":\"6c15ac63-ce9b-4ef2-a982-171e4ed94bdb\"}],\"name\":\"default workflow\"}";
 }
