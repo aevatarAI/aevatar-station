@@ -21,7 +21,12 @@ jobs:
       matrix:
         servicename:
           [
-            Aevatar.AuthServer
+            Aevatar.HttpApi.Host,
+            Aevatar.Silo,
+            Aevatar.AuthServer,
+            Aevatar.WebHook.Host,
+            Aevatar.Developer.Host,
+            Aevatar.DbMigrator,
           ]
     steps:
       # Checkout source code
@@ -63,7 +68,12 @@ jobs:
       matrix:
         servicename:
           [
-            Aevatar.AuthServer
+            Aevatar.HttpApi.Host,
+            Aevatar.Silo,
+            Aevatar.AuthServer,
+            Aevatar.WebHook.Host,
+            Aevatar.Developer.Host,
+            Aevatar.DbMigrator,
           ]
     permissions:
       contents: read
