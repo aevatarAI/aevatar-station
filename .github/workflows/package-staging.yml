@@ -25,12 +25,17 @@ jobs:
             Aevatar.DbMigrator
           ]
     steps:
+      # Checkout source code
       - name: Checkout code
         uses: actions/checkout@v3
+
+      # Set up .NET 9 SDK
       - name: Setup .NET
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '9.0.x'
+          
+      # Cache NuGet packages to speed up builds
       - name: Cache NuGet Packages
         id: nuget-packages
         uses: actions/cache@v4
@@ -40,11 +45,11 @@ jobs:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ matrix.servicename }}
 
-      - name: List NuGet Packages
-        if: ${{ steps.nuget-packages.outputs.cache-hit == 'true' }}
-        continue-on-error: true
-        run: ls -lh ~/.nuget/packages
-      - run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      # Publish .NET project
+      - name: Publish .NET project      
+        run: dotnet publish station/src/${{ matrix.servicename }}/${{ matrix.servicename }}.csproj -o out/${{ matrix.servicename }}
+      
+      # Upload build artifacts for the next job
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -67,18 +72,25 @@ jobs:
     outputs:
       short_sha: ${{ steps.vars.outputs.short_sha }}
     steps:
+      # Checkout code (used for Docker build context)
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Extract short SHA for versioning
       - name: Set short git commit SHA
         id: vars
         run: |
           calculatedSha=$(git rev-parse --short ${{ github.sha }})
           echo "short_sha=$calculatedSha" >> "$GITHUB_OUTPUT"
+
+      # Download published build artifact
       - name: Download a single artifact
         uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.servicename }}
           path: out/${{ matrix.servicename }}
+
+      # Generate image tag metadata
       - name: Create image tag
         id: meta
         uses: docker/metadata-action@v5
@@ -86,10 +98,16 @@ jobs:
           images: ${{ secrets.REPOSITORY_REGION }}-docker.pkg.dev/${{ secrets.PROJECT_ID }}/${{ secrets.REPOSITORY }}/${{ matrix.servicename }}
           tags: |
             type=sha
+
+      # Setup Docker Buildx (multi-platform builds & cache support)
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+
+      # Build and push Docker image
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true

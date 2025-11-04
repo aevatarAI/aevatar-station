@@ -8,6 +8,4 @@ public class CreateProjectDto : CreateOrganizationDto
 {
     [Required]
     public Guid OrganizationId { get; set; }
-    [Required]
-    public string DomainName { get; set; }
 }

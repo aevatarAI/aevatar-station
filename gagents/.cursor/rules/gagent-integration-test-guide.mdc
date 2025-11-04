@@ -1,0 +1,873 @@
+---
+alwaysApply: false
+---
+# GAgent Integration Testing Guide for Aevatar GAgents
+
+## Overview
+This guide provides comprehensive patterns and best practices for writing integration tests for GAgents in the Aevatar framework. Integration tests validate the complete system behavior including Orleans silo, in-memory databases, multi-agent communication, and end-to-end workflows. Each test project should define its own TestBase and TestModule following the patterns established in this guide.
+
+## Part 1: Integration Test Infrastructure Setup
+
+### CRITICAL: Orleans Silo and Cluster Setup
+Integration tests require a fully functional Orleans cluster with silo, storage providers, and all necessary services. **DO NOT** implement `ISiloConfigurator` in individual test projects. All Orleans-related service injection should be handled through the `ClusterFixture` in the `Aevatar.GAgents.TestBase` project.
+
+#### Orleans Cluster Infrastructure
+The `ClusterFixture` handles:
+- **Orleans Silo Startup**: Complete silo configuration with all required services
+- **In-Memory Storage**: MongoDB in-memory providers for state persistence
+- **Event Sourcing**: Orleans event store configuration
+- **Service Registration**: All GAgent dependencies and factories
+- **Cluster Communication**: Multi-silo coordination (if needed)
+
+If you need to register additional services for Orleans Grains/GAgents to use, add them to the `TestSiloConfigurations.Configure` method in `ClusterFixture.cs`.
+
+### 1.1 Integration Test Module Definition
+Each integration test project should define its own test module inheriting from `AbpModule` with full infrastructure setup:
+
+```csharp
+using Aevatar.GAgents.TestBase;
+using Volo.Abp.Modularity;
+
+namespace Aevatar.GAgents.YourModule.Test;
+
+[DependsOn(
+    typeof(AevatarGAgentTestBaseModule),
+    typeof(AevatarGAgentsYourModule) // The module being tested
+)]
+public class AevatarYourModuleTestModule : AbpModule
+{
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        var services = context.Services;
+        
+        // Integration test specific configurations
+        // Note: Orleans cluster and MongoDB are handled by AevatarGAgentTestBaseModule
+        
+        // Configure external service clients for integration testing
+        services.AddHttpClient();
+        
+        // Configure test-specific storage providers if needed
+        // (MongoDB in-memory is already configured in base module)
+        
+        // Register any additional test infrastructure services
+        services.AddSingleton<ITestDataSeeder, YourModuleTestDataSeeder>();
+        
+        // Configure logging for integration tests
+        services.Configure<AbpLoggerOptions>(options =>
+        {
+            options.LogLevel = LogLevel.Debug; // More verbose for integration tests
+        });
+    }
+}
+```
+
+### 1.2 Integration Test Base Class
+Each integration test project should define its own test base class with infrastructure access:
+
+```csharp
+using Aevatar.GAgents.TestBase;
+using Microsoft.Extensions.DependencyInjection;
+using Orleans;
+using Aevatar.Core.Abstractions;
+
+namespace Aevatar.GAgents.YourModule.Test;
+
+public abstract class AevatarYourModuleTestBase : AevatarGAgentTestBase<AevatarYourModuleTestModule>
+{
+    protected readonly IGAgentFactory GAgentFactory;
+    protected readonly IClusterClient ClusterClient;
+    
+    protected AevatarYourModuleTestBase()
+    {
+        GAgentFactory = GetRequiredService<IGAgentFactory>();
+        ClusterClient = GetRequiredService<IClusterClient>();
+    }
+    
+    /// <summary>
+    /// Setup complex multi-agent system for integration testing
+    /// </summary>
+    protected async Task<IntegrationTestSystem> SetupTestSystemAsync()
+    {
+        // Create coordinator and worker agents
+        var coordinator = await GAgentFactory.GetGAgentAsync<ICoordinatorGAgent>(Guid.NewGuid());
+        var worker1 = await GAgentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+        var worker2 = await GAgentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+        
+        // Register agents for event communication
+        await coordinator.RegisterAsync(worker1);
+        await coordinator.RegisterAsync(worker2);
+        
+        return new IntegrationTestSystem
+        {
+            Coordinator = coordinator,
+            Workers = new[] { worker1, worker2 }
+        };
+    }
+    
+    /// <summary>
+    /// Seed test data into storage systems
+    /// </summary>
+    protected async Task SeedTestDataAsync()
+    {
+        var seeder = GetRequiredService<ITestDataSeeder>();
+        await seeder.SeedAsync();
+    }
+    
+    /// <summary>
+    /// Wait for async operations and event propagation
+    /// </summary>
+    protected async Task WaitForEventPropagationAsync(int delayMs = 1000)
+    {
+        await Task.Delay(delayMs);
+    }
+}
+
+public class IntegrationTestSystem
+{
+    public ICoordinatorGAgent Coordinator { get; set; }
+    public IWorkerGAgent[] Workers { get; set; }
+}
+```
+
+### 1.3 Integration Test Class
+```csharp
+using Xunit;
+using Xunit.Abstractions;
+using Aevatar.Core.Abstractions;
+using Orleans;
+
+[Collection(ClusterCollection.Name)]
+public sealed class MyGAgentIntegrationTests : AevatarYourModuleTestBase
+{
+    private readonly ITestOutputHelper _testOutputHelper;
+
+    public MyGAgentIntegrationTests(ITestOutputHelper testOutputHelper)
+    {
+        _testOutputHelper = testOutputHelper;
+    }
+    
+    /// <summary>
+    /// Setup method called before each test
+    /// </summary>
+    protected override async Task InitializeAsync()
+    {
+        await base.InitializeAsync();
+        
+        // Seed any required test data
+        await SeedTestDataAsync();
+        
+        _testOutputHelper.WriteLine("Integration test infrastructure initialized");
+        _testOutputHelper.WriteLine($"Orleans cluster status: {ClusterClient.ServiceProvider != null}");
+    }
+}
+```
+
+### 1.4 Required Using Statements for Integration Tests
+```csharp
+using System;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
+using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.TestBase;
+using Microsoft.Extensions.DependencyInjection;
+using Orleans;
+using Orleans.Hosting;
+using Xunit;
+using Xunit.Abstractions;
+using Shouldly; // Recommended for better assertions
+using MongoDB.Driver; // For database integration testing
+```
+
+## Part 2: Integration Test Patterns
+
+### 2.1 System Startup and Infrastructure Test Pattern
+```csharp
+[Fact]
+public async Task OrleansCluster_SystemStartup_ShouldInitializeAllComponents()
+{
+    // Arrange - Verify Orleans cluster is running
+    ClusterClient.ShouldNotBeNull();
+    
+    // Act - Test silo connectivity and GAgent factory
+    var testAgent = await GAgentFactory.GetGAgentAsync<IMyGAgent>(Guid.NewGuid());
+    
+    // Assert - Verify full system stack is operational
+    testAgent.ShouldNotBeNull();
+    
+    // Verify Orleans grain activation
+    var grainRef = ClusterClient.GetGrain<IMyGAgent>(Guid.NewGuid());
+    grainRef.ShouldNotBeNull();
+    
+    // Verify storage providers are functional
+    var state = await testAgent.GetStateAsync();
+    state.ShouldNotBeNull();
+    
+    _testOutputHelper.WriteLine("Orleans cluster and all infrastructure components initialized successfully");
+}
+```
+
+### 2.2 State Persistence and Event Sourcing Integration Test
+```csharp
+[Fact]
+public async Task GAgent_StatePersistence_ShouldPersistAcrossActivations()
+{
+    // Arrange - Create agent and perform state changes
+    var agentId = Guid.NewGuid();
+    var myAgent = await GAgentFactory.GetGAgentAsync<IMyGAgent>(agentId);
+    
+    // Act - Perform multiple state-changing operations
+    await myAgent.UpdateStateAsync("initial value");
+    await myAgent.AddItemAsync("item1");
+    await myAgent.AddItemAsync("item2");
+    
+    // Wait for state persistence
+    await WaitForEventPropagationAsync();
+    
+    // Force deactivation and reactivation by getting new reference
+    var reactivatedAgent = await GAgentFactory.GetGAgentAsync<IMyGAgent>(agentId);
+    
+    // Assert - Verify state persisted correctly through Orleans storage
+    var state = await reactivatedAgent.GetStateAsync();
+    state.Value.ShouldBe("initial value");
+    state.Items.Count.ShouldBe(2);
+    state.Items.ShouldContain("item1");
+    state.Items.ShouldContain("item2");
+    
+    // Verify event sourcing worked correctly
+    state.EventHistory.Count.ShouldBeGreaterThan(0);
+    
+    _testOutputHelper.WriteLine($"State persisted correctly with {state.EventHistory.Count} events");
+    foreach (var eventItem in state.EventHistory.Take(5))
+    {
+        _testOutputHelper.WriteLine($"Event: {eventItem}");
+    }
+}
+```
+
+### 2.3 Multi-Agent Event Communication Integration Test
+```csharp
+[Fact]
+public async Task MultiAgent_EventCommunication_ShouldPropagateAcrossSystem()
+{
+    // Arrange - Setup complex multi-agent system
+    var system = await SetupTestSystemAsync();
+    
+    var publisher = system.Coordinator;
+    var subscribers = system.Workers;
+    
+    // Act - Publish complex event with payload
+    var testEvent = new WorkflowStartedEvent 
+    { 
+        WorkflowId = Guid.NewGuid().ToString(),
+        Data = "integration test workflow",
+        Priority = EventPriority.High,
+        Metadata = new Dictionary<string, string>
+        {
+            ["source"] = "integration_test",
+            ["environment"] = "test"
+        }
+    };
+    
+    await publisher.PublishAsync(testEvent);
+    
+    // Wait for event propagation across Orleans cluster
+    await WaitForEventPropagationAsync(2000);
+    
+    // Assert - Verify event received and processed by all subscribers
+    foreach (var subscriber in subscribers)
+    {
+    var subscriberState = await subscriber.GetStateAsync();
+        subscriberState.ReceivedEvents.ShouldContain(e => e.WorkflowId == testEvent.WorkflowId);
+        subscriberState.ProcessedWorkflows.ShouldContain(testEvent.WorkflowId);
+    }
+    
+    // Verify coordinator state updated correctly
+    var coordinatorState = await publisher.GetStateAsync();
+    coordinatorState.PublishedEvents.ShouldContain(e => e.WorkflowId == testEvent.WorkflowId);
+    coordinatorState.ActiveWorkflows.ShouldContain(testEvent.WorkflowId);
+    
+    _testOutputHelper.WriteLine($"Event propagated to {subscribers.Length} agents successfully");
+    _testOutputHelper.WriteLine($"Coordinator tracking {coordinatorState.ActiveWorkflows.Count} active workflows");
+}
+```
+
+## Part 3: Integration Test Data and System Management
+
+### 3.1 Database Integration and Test Data Seeding
+```csharp
+/// <summary>
+/// Test data seeder for integration tests with MongoDB in-memory storage
+/// </summary>
+public class IntegrationTestDataSeeder : ITestDataSeeder
+{
+    private readonly IMongoDatabase _database;
+    private readonly IGAgentFactory _gAgentFactory;
+    
+    public IntegrationTestDataSeeder(IMongoDatabase database, IGAgentFactory gAgentFactory)
+    {
+        _database = database;
+        _gAgentFactory = gAgentFactory;
+    }
+    
+    public async Task SeedAsync()
+    {
+        // Seed base configuration data
+        await SeedConfigurationDataAsync();
+        
+        // Seed workflow templates
+        await SeedWorkflowTemplatesAsync();
+        
+        // Pre-create system agents
+        await SeedSystemAgentsAsync();
+    }
+    
+    private async Task SeedSystemAgentsAsync()
+    {
+        // Create system coordinator
+        var coordinator = await _gAgentFactory.GetGAgentAsync<ISystemCoordinatorGAgent>(
+            new Guid("00000000-0000-0000-0000-000000000001"));
+        
+        await coordinator.InitializeSystemAsync();
+        
+        // Create monitoring agents
+        var monitor = await _gAgentFactory.GetGAgentAsync<IMonitoringGAgent>(
+            new Guid("00000000-0000-0000-0000-000000000002"));
+        
+        await monitor.StartMonitoringAsync();
+    }
+    
+    private async Task SeedWorkflowTemplatesAsync()
+    {
+        var collection = _database.GetCollection<WorkflowTemplate>("workflow_templates");
+        
+        var templates = new[]
+        {
+            new WorkflowTemplate
+            {
+                Id = "test-simple-workflow",
+                Name = "Simple Test Workflow",
+                Nodes = CreateSimpleWorkflowNodes(),
+                IsActive = true
+            },
+            new WorkflowTemplate
+            {
+                Id = "test-complex-workflow", 
+                Name = "Complex Integration Test Workflow",
+                Nodes = CreateComplexWorkflowNodes(),
+                IsActive = true
+            }
+        };
+        
+        await collection.InsertManyAsync(templates);
+    }
+}
+```
+
+### 3.2 Multi-Agent System Setup for Integration Testing
+```csharp
+public class IntegrationTestSystemBuilder
+{
+    private readonly IGAgentFactory _gAgentFactory;
+    private readonly ITestDataSeeder _dataSeeder;
+    
+    public IntegrationTestSystemBuilder(IGAgentFactory gAgentFactory, ITestDataSeeder dataSeeder)
+    {
+        _gAgentFactory = gAgentFactory;
+        _dataSeeder = dataSeeder;
+    }
+    
+    public async Task<ComplexTestSystem> BuildCompleteSystemAsync()
+    {
+        // Seed required data first
+        await _dataSeeder.SeedAsync();
+        
+        // Create system coordinator with persistent state
+        var coordinator = await _gAgentFactory.GetGAgentAsync<IWorkflowCoordinatorGAgent>(
+            new Guid("10000000-0000-0000-0000-000000000001"));
+        
+        // Create specialized worker agents
+        var workers = new List<IWorkerGAgent>();
+        for (int i = 0; i < 5; i++)
+        {
+            var workerId = new Guid($"20000000-0000-0000-0000-00000000000{i + 1}");
+            var worker = await _gAgentFactory.GetGAgentAsync<IWorkerGAgent>(workerId);
+            await worker.ConfigureAsync(new WorkerConfiguration 
+            { 
+                WorkerType = $"TestWorker{i + 1}",
+                MaxConcurrentTasks = 10
+            });
+            workers.Add(worker);
+        }
+        
+        // Create monitoring and health check agents
+        var monitor = await _gAgentFactory.GetGAgentAsync<ISystemMonitorGAgent>(
+            new Guid("30000000-0000-0000-0000-000000000001"));
+        
+        var healthCheck = await _gAgentFactory.GetGAgentAsync<IHealthCheckGAgent>(
+            new Guid("30000000-0000-0000-0000-000000000002"));
+        
+        // Establish agent relationships and communication
+        foreach (var worker in workers)
+        {
+            await coordinator.RegisterWorkerAsync(worker);
+            await monitor.RegisterForMonitoringAsync(worker);
+        }
+        
+        await monitor.RegisterForMonitoringAsync(coordinator);
+        await healthCheck.StartHealthChecksAsync();
+        
+        // Initialize complete system
+        await coordinator.InitializeWorkflowSystemAsync();
+        await monitor.StartSystemMonitoringAsync();
+        
+        // Wait for system stabilization
+        await Task.Delay(2000);
+        
+        return new ComplexTestSystem
+        {
+            Coordinator = coordinator,
+            Workers = workers.ToArray(),
+            Monitor = monitor,
+            HealthCheck = healthCheck
+        };
+    }
+}
+
+public class ComplexTestSystem
+{
+    public IWorkflowCoordinatorGAgent Coordinator { get; set; }
+    public IWorkerGAgent[] Workers { get; set; }
+    public ISystemMonitorGAgent Monitor { get; set; }
+    public IHealthCheckGAgent HealthCheck { get; set; }
+    
+    public async Task<SystemHealthReport> GetSystemHealthAsync()
+    {
+        return await HealthCheck.GetCurrentHealthReportAsync();
+    }
+    
+    public async Task ShutdownAsync()
+    {
+        await Monitor.StopMonitoringAsync();
+        await HealthCheck.StopHealthChecksAsync();
+        await Coordinator.ShutdownAsync();
+    }
+}
+```
+
+## Part 4: Integration Test Scenarios
+
+### 4.1 Database Integration and Storage Testing
+```csharp
+[Fact]
+public async Task System_DatabaseIntegration_ShouldPersistDataCorrectly()
+{
+    // Arrange - Setup complete system with database
+    var system = await new IntegrationTestSystemBuilder(GAgentFactory, GetRequiredService<ITestDataSeeder>())
+        .BuildCompleteSystemAsync();
+    
+    var database = GetRequiredService<IMongoDatabase>();
+    var workflowCollection = database.GetCollection<WorkflowExecution>("workflow_executions");
+    
+    // Act - Execute workflow that involves database operations
+    var workflowRequest = new WorkflowExecutionRequest
+    {
+        WorkflowId = "test-complex-workflow",
+        InputData = new Dictionary<string, object>
+        {
+            ["testData"] = "integration test execution",
+            ["executionId"] = Guid.NewGuid().ToString()
+        }
+    };
+    
+    var executionId = await system.Coordinator.StartWorkflowAsync(workflowRequest);
+    
+    // Wait for workflow completion
+    await WaitForWorkflowCompletionAsync(system.Coordinator, executionId, TimeSpan.FromMinutes(2));
+    
+    // Assert - Verify database state
+    var storedExecution = await workflowCollection
+        .Find(e => e.Id == executionId)
+        .FirstOrDefaultAsync();
+    
+    storedExecution.ShouldNotBeNull();
+    storedExecution.Status.ShouldBe(WorkflowStatus.Completed);
+    storedExecution.Steps.Count.ShouldBeGreaterThan(0);
+    
+    // Verify all agents updated their persistent state
+    foreach (var worker in system.Workers)
+    {
+        var workerState = await worker.GetStateAsync();
+        workerState.ProcessedWorkflows.ShouldContain(executionId);
+    }
+    
+    _testOutputHelper.WriteLine($"Workflow {executionId} completed and persisted successfully");
+    
+    await system.ShutdownAsync();
+}
+
+private async Task WaitForWorkflowCompletionAsync(IWorkflowCoordinatorGAgent coordinator, string executionId, TimeSpan timeout)
+{
+    var stopwatch = Stopwatch.StartNew();
+    while (stopwatch.Elapsed < timeout)
+    {
+        var status = await coordinator.GetWorkflowStatusAsync(executionId);
+        if (status.IsCompleted)
+            return;
+        
+        await Task.Delay(500);
+    }
+    
+    throw new TimeoutException($"Workflow {executionId} did not complete within {timeout}");
+}
+```
+
+### 4.2 System Performance and Load Testing
+```csharp
+[Fact]
+public async Task System_ConcurrentLoad_ShouldHandleMultipleWorkflows()
+{
+    // Arrange - Setup system for load testing
+    var system = await new IntegrationTestSystemBuilder(GAgentFactory, GetRequiredService<ITestDataSeeder>())
+        .BuildCompleteSystemAsync();
+    
+    const int concurrentWorkflows = 50;
+    var executionTasks = new List<Task<string>>();
+    
+    // Act - Execute multiple workflows concurrently
+    for (int i = 0; i < concurrentWorkflows; i++)
+    {
+        var workflowRequest = new WorkflowExecutionRequest
+        {
+            WorkflowId = "test-simple-workflow",
+            InputData = new Dictionary<string, object>
+            {
+                ["testIndex"] = i,
+                ["concurrentTest"] = true
+            }
+        };
+        
+        executionTasks.Add(system.Coordinator.StartWorkflowAsync(workflowRequest));
+    }
+    
+    var executionIds = await Task.WhenAll(executionTasks);
+    
+    // Wait for all workflows to complete
+    var completionTasks = executionIds.Select(id => 
+        WaitForWorkflowCompletionAsync(system.Coordinator, id, TimeSpan.FromMinutes(5)));
+    
+    await Task.WhenAll(completionTasks);
+    
+    // Assert - Verify system handled load correctly
+    var systemHealth = await system.GetSystemHealthAsync();
+    systemHealth.OverallHealth.ShouldBe(HealthStatus.Healthy);
+    systemHealth.ProcessedWorkflows.ShouldBe(concurrentWorkflows);
+    
+    // Verify all workers participated
+    foreach (var worker in system.Workers)
+    {
+        var workerState = await worker.GetStateAsync();
+        workerState.ProcessedWorkflows.Count.ShouldBeGreaterThan(0);
+    }
+    
+    _testOutputHelper.WriteLine($"Successfully processed {concurrentWorkflows} concurrent workflows");
+    _testOutputHelper.WriteLine($"System health: {systemHealth.OverallHealth}");
+    
+    await system.ShutdownAsync();
+}
+```
+
+### 4.3 System Resilience and Recovery Testing
+```csharp
+[Fact]
+public async Task System_AgentFailure_ShouldRecoverGracefully()
+{
+    // Arrange - Setup system with monitoring
+    var system = await new IntegrationTestSystemBuilder(GAgentFactory, GetRequiredService<ITestDataSeeder>())
+        .BuildCompleteSystemAsync();
+    
+    // Start a long-running workflow
+    var workflowRequest = new WorkflowExecutionRequest
+    {
+        WorkflowId = "test-complex-workflow",
+        InputData = new Dictionary<string, object>
+        {
+            ["resilience_test"] = true,
+            ["delay_steps"] = true
+        }
+    };
+    
+    var executionId = await system.Coordinator.StartWorkflowAsync(workflowRequest);
+    
+    // Wait for workflow to start processing
+    await Task.Delay(1000);
+    
+    // Act - Simulate worker failure by deactivating grain
+    var failingWorker = system.Workers[0];
+    var failingWorkerId = await failingWorker.GetIdAsync();
+    
+    // Force deactivation to simulate failure
+    var grainManagement = ClusterClient.GetGrain<IManagementGrain>(0);
+    await grainManagement.ForceGarbageCollection(TimeSpan.Zero);
+    
+    // Wait for system to detect failure and recover
+    await Task.Delay(5000);
+    
+    // Assert - Verify system recovered
+    var systemHealth = await system.GetSystemHealthAsync();
+    systemHealth.FailedAgents.ShouldContain(failingWorkerId);
+    
+    // Verify workflow continued on other workers
+    var workflowStatus = await system.Coordinator.GetWorkflowStatusAsync(executionId);
+    workflowStatus.Status.ShouldBeOneOf(WorkflowStatus.Running, WorkflowStatus.Completed);
+    
+    // Wait for workflow completion
+    await WaitForWorkflowCompletionAsync(system.Coordinator, executionId, TimeSpan.FromMinutes(3));
+    
+    var finalStatus = await system.Coordinator.GetWorkflowStatusAsync(executionId);
+    finalStatus.Status.ShouldBe(WorkflowStatus.Completed);
+    
+    _testOutputHelper.WriteLine($"System recovered from worker failure and completed workflow {executionId}");
+    
+    await system.ShutdownAsync();
+}
+```
+
+## Part 5: Advanced Integration Testing Patterns
+
+### 5.1 End-to-End Workflow with External Dependencies
+```csharp
+[Fact]
+public async Task System_EndToEndWorkflowWithExternalAPIs_ShouldProcessCorrectly()
+{
+    // Arrange - Setup complete system with external service mocks
+    var system = await new IntegrationTestSystemBuilder(GAgentFactory, GetRequiredService<ITestDataSeeder>())
+        .BuildCompleteSystemAsync();
+    
+    // Configure external service mocks
+    var httpClientFactory = GetRequiredService<IHttpClientFactory>();
+    var mockServer = new MockHttpServer(); // Assuming a mock server setup
+    
+    // Act - Execute workflow that calls external APIs
+    var workflowRequest = new WorkflowExecutionRequest
+    {
+        WorkflowId = "test-workflow-with-external-calls",
+        InputData = new Dictionary<string, object>
+        {
+            ["external_api_url"] = mockServer.BaseUrl,
+            ["api_key"] = "test-key",
+            ["payload"] = new { test = "integration_data" }
+        }
+    };
+    
+    var executionId = await system.Coordinator.StartWorkflowAsync(workflowRequest);
+    
+    // Wait for workflow completion
+    await WaitForWorkflowCompletionAsync(system.Coordinator, executionId, TimeSpan.FromMinutes(3));
+    
+    // Assert - Verify complete workflow including external calls
+    var workflowStatus = await system.Coordinator.GetWorkflowStatusAsync(executionId);
+    workflowStatus.Status.ShouldBe(WorkflowStatus.Completed);
+    workflowStatus.ExternalApiCalls.Count.ShouldBeGreaterThan(0);
+    
+    // Verify external API was called correctly
+    mockServer.ReceivedRequests.Count.ShouldBeGreaterThan(0);
+    mockServer.ReceivedRequests.First().Headers["Authorization"].ShouldBe("Bearer test-key");
+    
+    // Verify system health after external dependencies
+    var systemHealth = await system.GetSystemHealthAsync();
+    systemHealth.OverallHealth.ShouldBe(HealthStatus.Healthy);
+    systemHealth.ExternalServiceHealth.ShouldNotContain(s => s.Status == ServiceStatus.Unhealthy);
+    
+    _testOutputHelper.WriteLine($"End-to-end workflow with external dependencies completed successfully");
+    
+    await system.ShutdownAsync();
+}
+```
+
+### 5.2 Multi-Silo Cluster Integration Testing
+```csharp
+[Fact]
+public async Task MultiSiloCluster_AgentCommunication_ShouldWorkAcrossSilos()
+{
+    // Arrange - This test requires special cluster configuration for multiple silos
+    // Note: This test may require additional setup in ClusterFixture for multi-silo testing
+    
+    var system = await new IntegrationTestSystemBuilder(GAgentFactory, GetRequiredService<ITestDataSeeder>())
+        .BuildCompleteSystemAsync();
+    
+    // Create agents that will be distributed across different silos
+    var crossSiloAgents = new List<IWorkerGAgent>();
+    for (int i = 0; i < 10; i++)
+    {
+        var agent = await GAgentFactory.GetGAgentAsync<IWorkerGAgent>(Guid.NewGuid());
+        crossSiloAgents.Add(agent);
+        await system.Coordinator.RegisterWorkerAsync(agent);
+    }
+    
+    // Act - Execute workflow that spans multiple silos
+    var workflowRequest = new WorkflowExecutionRequest
+    {
+        WorkflowId = "test-multi-silo-workflow",
+        InputData = new Dictionary<string, object>
+        {
+            ["cross_silo_test"] = true,
+            ["agent_count"] = crossSiloAgents.Count
+        }
+    };
+    
+    var executionId = await system.Coordinator.StartWorkflowAsync(workflowRequest);
+    
+    // Wait for cross-silo coordination to complete
+    await WaitForWorkflowCompletionAsync(system.Coordinator, executionId, TimeSpan.FromMinutes(5));
+    
+    // Assert - Verify agents across silos coordinated correctly
+    var workflowStatus = await system.Coordinator.GetWorkflowStatusAsync(executionId);
+    workflowStatus.Status.ShouldBe(WorkflowStatus.Completed);
+    
+    // Verify all agents participated regardless of silo location
+    var participatingAgents = workflowStatus.ParticipatingAgents;
+    participatingAgents.Count.ShouldBe(crossSiloAgents.Count);
+    
+    foreach (var agent in crossSiloAgents)
+    {
+        var agentState = await agent.GetStateAsync();
+        agentState.ProcessedWorkflows.ShouldContain(executionId);
+    }
+    
+    _testOutputHelper.WriteLine($"Multi-silo workflow completed with {participatingAgents.Count} agents across silos");
+    
+    await system.ShutdownAsync();
+}
+```
+
+## Part 6: AI GAgent Integration Testing
+
+### 6.1 AI GAgent with Tool Integration Testing
+```csharp
+[Fact]
+public async Task AIGAgent_IntegratedToolUsage_ShouldExecuteComplexWorkflows()
+{
+    // Arrange - Setup AI agent with real tool integrations
+    var system = await new IntegrationTestSystemBuilder(GAgentFactory, GetRequiredService<ITestDataSeeder>())
+        .BuildCompleteSystemAsync();
+    
+    var aiConfig = new AIGAgentConfiguration
+    {
+        LLMConfig = new LLMConfigDto { SystemLLM = "test-model" },
+        EnableGAgentTools = true,
+        EnableMCPTools = true
+    };
+    
+    var aiAgent = await GAgentFactory.GetGAgentAsync<IWorkflowAIGAgent>(Guid.NewGuid(), aiConfig);
+    
+    // Initialize AI agent with system access
+    await aiAgent.InitializeAsync(new InitializeDto
+    {
+        Instructions = "You are a workflow automation assistant with access to the system",
+        SelectedGAgents = system.Workers.Select(w => w.GetType().Name).ToList(),
+        EnableGAgentTools = true
+    });
+    
+    // Act - Ask AI to orchestrate a complex workflow
+    var complexPrompt = @"Create and execute a workflow that:
+        1. Processes a batch of 10 test items
+        2. Distributes work across available workers
+        3. Monitors execution progress
+        4. Generates a completion report
+        
+        Use the available system agents to accomplish this.";
+    
+    var response = await aiAgent.ChatAsync(new ChatRequestDto
+    {
+        Prompt = complexPrompt,
+        ChatId = Guid.NewGuid().ToString()
+    });
+    
+    // Wait for AI-orchestrated workflow completion
+    await WaitForEventPropagationAsync(5000);
+    
+    // Assert - Verify AI successfully orchestrated system integration
+    response.ShouldNotBeNull();
+    response.Content.ShouldNotBeNullOrEmpty();
+    response.ToolCalls.Count.ShouldBeGreaterThan(0);
+    
+    // Verify system state after AI orchestration
+    var systemHealth = await system.GetSystemHealthAsync();
+    systemHealth.OverallHealth.ShouldBe(HealthStatus.Healthy);
+    
+    // Verify workers were utilized by AI
+    var activeWorkers = system.Workers.Where(async w => (await w.GetStateAsync()).ProcessedWorkflows.Count > 0);
+    activeWorkers.Count().ShouldBeGreaterThan(0);
+    
+    _testOutputHelper.WriteLine($"AI agent successfully orchestrated system workflow");
+    _testOutputHelper.WriteLine($"AI made {response.ToolCalls.Count} tool calls");
+    _testOutputHelper.WriteLine($"System health: {systemHealth.OverallHealth}");
+    
+    await system.ShutdownAsync();
+}
+```
+
+## Integration Testing Checklist
+
+### Infrastructure Setup
+- [ ] Orleans cluster configured and running via `ClusterFixture`
+- [ ] MongoDB in-memory database initialized
+- [ ] All required services registered in test module
+- [ ] Test data seeder implemented and configured
+- [ ] Integration test base class created with system builders
+
+### Test Module Structure
+- [ ] Create module-specific `TestModule` class inheriting from `AbpModule`
+- [ ] Depend on `AevatarGAgentTestBaseModule` for Orleans infrastructure
+- [ ] Create integration test base class with system setup helpers
+- [ ] Add `[Collection(ClusterCollection.Name)]` attribute to test classes
+- [ ] Implement `IntegrationTestSystemBuilder` for complex system setup
+
+### Integration Test Patterns
+- [ ] Test Orleans silo startup and connectivity
+- [ ] Verify state persistence across agent activations/deactivations
+- [ ] Test multi-agent event communication and coordination
+- [ ] Validate database integration with MongoDB storage
+- [ ] Test external API integrations with mock servers
+- [ ] Verify system performance under concurrent load
+- [ ] Test system resilience and failure recovery
+
+### Advanced Integration Scenarios
+- [ ] End-to-end workflow testing with complete system
+- [ ] Multi-silo cluster testing (if applicable)
+- [ ] AI agent integration with tool calling
+- [ ] External dependency integration testing
+- [ ] System health monitoring and reporting
+- [ ] Cross-component communication validation
+
+### Data and System Management
+- [ ] Implement comprehensive test data seeding
+- [ ] Setup complex multi-agent systems with proper relationships
+- [ ] Configure monitoring and health check agents
+- [ ] Implement proper system cleanup and shutdown
+- [ ] Use appropriate wait strategies for async operations
+
+### Performance and Reliability
+- [ ] Test concurrent workflow execution
+- [ ] Verify system performance under load
+- [ ] Test agent failure and recovery scenarios
+- [ ] Validate event propagation across distributed system
+- [ ] Monitor resource usage and system health
+
+### Assertions and Validation
+- [ ] Verify complete workflow execution and status
+- [ ] Check database state after operations
+- [ ] Validate event history and state transitions
+- [ ] Confirm system health after operations
+- [ ] Use appropriate timeouts for async operations
+- [ ] Test both success and failure scenarios
+
+### Debugging and Monitoring
+- [ ] Implement comprehensive logging with `ITestOutputHelper`
+- [ ] Monitor system health during test execution
+- [ ] Track workflow execution progress
+- [ ] Log agent state changes and event propagation
+- [ ] Capture performance metrics for analysis
+
+This guide provides comprehensive patterns for integration testing of GAgents in the Aevatar framework. Integration tests validate the complete system behavior including Orleans infrastructure, database persistence, multi-agent coordination, and end-to-end workflows. Each module should adapt these patterns to test their specific integration scenarios while maintaining consistency with the overall testing approach.

@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Aevatar.Application\Aevatar.Application.csproj" />
+    <ProjectReference Include="..\..\src\Aevatar.HttpApi.Admin\Aevatar.HttpApi.Admin.csproj" />
     <ProjectReference Include="..\Aevatar.Domain.Tests\Aevatar.Domain.Tests.csproj" />
     <ProjectReference Include="..\Aevatar.Orleans.TestBase\Aevatar.Orleans.TestBase.csproj" />
     <ProjectReference Include="..\..\src\Aevatar.WebHook.Host\Aevatar.WebHook.Host.csproj" />
@@ -17,8 +18,7 @@
 
   <ItemGroup>
       <PackageReference Include="Microsoft.Orleans.TestingHost" />
-      <PackageReference Include="AutoGen"/>
-      <PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+      <PackageReference Include="AutoGen" />
       <PackageReference Include="Azure.AI.TextAnalytics" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" />
@@ -26,6 +26,7 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <PackageReference Include="Newtonsoft.Json" />
   </ItemGroup>
 
   <ItemGroup>

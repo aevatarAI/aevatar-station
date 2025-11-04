@@ -6,6 +6,9 @@ namespace Aevatar.Core.Abstractions;
 [AttributeUsage(AttributeTargets.Class, Inherited = true, AllowMultiple = false)]
 public sealed class GAgentAttribute : Attribute, IGrainTypeProviderAttribute
 {
+    public string? Namespace => _ns;
+    public string? Alias => _alias;
+
     private readonly string? _ns;
     private readonly string? _alias;
 

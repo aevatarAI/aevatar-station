@@ -14,4 +14,7 @@ public class AgentDto
     public Guid AgentGuid { get; set; }
     public string PropertyJsonSchema { get; set; }
     public string BusinessAgentGrainId { get; set; }
+    public Guid? WorkflowCoordinatorGAgentId { get; set; }
+    public DateTime CreateTime { get; set; }
+    public DateTime UpdateTime { get; set; }
 }

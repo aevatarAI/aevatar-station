@@ -22,6 +22,9 @@ public interface IKubernetesClientAdapter
     Task<V1DeploymentList> ListDeploymentAsync(string namespaceParameter,
         CancellationToken cancellationToken = default(CancellationToken));
 
+    Task<V1DeploymentList> ListDeploymentAsync(string namespaceParameter, string labelSelector,
+        CancellationToken cancellationToken = default(CancellationToken));
+
     Task<V1ServiceList> ListServiceAsync(string namespaceParameter,
         CancellationToken cancellationToken = default(CancellationToken));
 
@@ -86,5 +89,6 @@ public interface IKubernetesClientAdapter
     public Task<V2HorizontalPodAutoscaler> CreateNamespacedHorizontalPodAutoscalerAsync(V2HorizontalPodAutoscaler body,
         string namespaceParameter, CancellationToken cancellationToken = default(CancellationToken));
 
+    Task<bool> NamespaceExistsAsync(string namespaceName, CancellationToken cancellationToken = default(CancellationToken));
 
 }

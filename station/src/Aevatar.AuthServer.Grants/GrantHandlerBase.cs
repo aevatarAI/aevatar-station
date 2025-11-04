@@ -53,11 +53,13 @@ public abstract class GrantHandlerBase : ITokenExtensionGrant
         return resources;
     }
 
-    protected async Task<ClaimsPrincipal> CreateUserClaimsPrincipalWithFactoryAsync(ExtensionGrantContext context, IdentityUser user)
+    protected async Task<ClaimsPrincipal> CreateUserClaimsPrincipalWithFactoryAsync(ExtensionGrantContext context, IdentityUser user, bool isNewUser = false)
     {
         var signInManager = context.HttpContext.RequestServices.GetRequiredService<SignInManager<IdentityUser>>();
         var claimsPrincipal = await signInManager.CreateUserPrincipalAsync(user);
 
+        claimsPrincipal.AddClaim("is_new_user", isNewUser);
+        
         claimsPrincipal.SetScopes(context.Request.GetScopes());
         claimsPrincipal.SetResources(await GetResourcesAsync(context, claimsPrincipal.GetScopes()));
         claimsPrincipal.SetAudiences("Aevatar");

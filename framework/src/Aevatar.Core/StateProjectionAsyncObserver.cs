@@ -24,9 +24,17 @@ public class StateProjectionAsyncObserver : IAsyncObserver<StateWrapperBase>
         return new StateProjectionAsyncObserver(stateProjectors, logger);
     }
 
-    public Task OnNextAsync(StateWrapperBase item, StreamSequenceToken? token = null)
+    public async Task OnNextAsync(StateWrapperBase item, StreamSequenceToken? token = null)
     {
-        return Task.WhenAll(_stateProjectors.Select(projector => projector.ProjectAsync(item)));
+        if (item == null)
+        {
+            throw new ArgumentNullException(nameof(item));
+        }
+        
+        var latency = (DateTime.UtcNow - item.PublishedTimestampUtc).TotalSeconds;
+        Observability.EventPublishLatencyMetrics.Record(latency, item, _logger);
+
+        await Task.WhenAll(_stateProjectors.Select(projector => projector.ProjectAsync(item)));
     }
 
     public Task OnCompletedAsync()

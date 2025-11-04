@@ -2,21 +2,8 @@ using Orleans.Concurrency;
 
 namespace Aevatar.Core.Abstractions;
 
-public interface IGAgent : IGrainWithGuidKey
+public interface IGAgent : IGAgentBase
 {
-    /// <summary>
-    /// Used for activating the agent manually.
-    /// </summary>
-    /// <returns></returns>
-    Task ActivateAsync();
-
-    /// <summary>
-    /// Get GAgent description.
-    /// </summary>
-    /// <returns></returns>
-    [ReadOnly]
-    Task<string> GetDescriptionAsync();
-
     /// <summary>
     /// Register a GAgent as the next level of the current GAgent.
     /// </summary>
@@ -46,14 +33,6 @@ public interface IGAgent : IGrainWithGuidKey
     Task UnregisterAsync(IGAgent gAgent);
 
     /// <summary>
-    /// Get all subscribed events of current GAgent.
-    /// </summary>
-    /// <param name="includeBaseHandlers"></param>
-    /// <returns></returns>
-    [ReadOnly]
-    Task<List<Type>?> GetAllSubscribedEventsAsync(bool includeBaseHandlers = false);
-
-    /// <summary>
     /// Get subscriber list of current GAgent.
     /// </summary>
     /// <returns></returns>
@@ -67,19 +46,22 @@ public interface IGAgent : IGrainWithGuidKey
     [ReadOnly]
     Task<GrainId> GetParentAsync();
 
+    
     /// <summary>
-    /// Get the type of GAgent initialization event.
+    /// Prepare the agent with available resource context.
+    /// This allows agents to discover and utilize external resources without explicit configuration.
     /// </summary>
-    /// <returns></returns>
-    [ReadOnly]
-    Task<Type?> GetConfigurationTypeAsync();
+    /// <param name="context">The resource context containing available resources and metadata</param>
+    /// <returns>Task representing the asynchronous operation</returns>
+    Task PrepareResourceContextAsync(ResourceContext context);
 
     /// <summary>
-    /// Config the GAgent.
+    /// Get the current state as JSON string for snapshot purposes.
+    /// Returns null if the GAgent does not implement IStateGAgent&lt;TState&gt;.
     /// </summary>
-    /// <param name="configuration"></param>
-    /// <returns></returns>
-    Task ConfigAsync(ConfigurationBase configuration);
+    /// <returns>JSON representation of the current state, or null if not stateful</returns>
+    [ReadOnly]
+    Task<string?> GetStateSnapshotAsync();
 }
 
 public interface IStateGAgent<TState> : IGAgent

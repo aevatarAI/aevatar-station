@@ -10,21 +10,19 @@ using Newtonsoft.Json;
 using Orleans.Providers;
 
 namespace Aevatar.Application.Grains.Subscription;
-
 [StorageProvider(ProviderName = "PubSubStore")]
 [LogConsistencyProvider(ProviderName = "LogStorage")]
 public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, SubscriptionGEvent>, ISubscriptionGAgent
 {
     private readonly ILogger<SubscriptionGAgent> _logger;
     private readonly IClusterClient _clusterClient;
-
-    public SubscriptionGAgent(ILogger<SubscriptionGAgent> logger,
+    public SubscriptionGAgent(ILogger<SubscriptionGAgent> logger, 
         IClusterClient clusterClient)
     {
         _logger = logger;
         _clusterClient = clusterClient;
     }
-
+    
     public async Task<EventSubscriptionState> SubscribeAsync(SubscribeEventInputDto input)
     {
         RaiseEvent(new AddSubscriptionGEvent()
@@ -45,9 +43,9 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     {
         if (State.Status.IsNullOrEmpty())
         {
-            return;
+           return;
         }
-
+        
         RaiseEvent(new CancelSubscriptionGEvent()
         {
             Id = Guid.NewGuid(),
@@ -55,16 +53,16 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
         });
         await ConfirmEvents();
     }
-
+    
     [AllEventHandler]
-    public async Task HandleSubscribedEventAsync(EventWrapperBase eventWrapperBase)
+    public async Task HandleSubscribedEventAsync(EventWrapperBase eventWrapperBase) 
     {
         if (eventWrapperBase is EventWrapper<EventBase> eventWrapper)
         {
             _logger.LogInformation("EventSubscriptionGAgent HandleRequestAllSubscriptionsEventAsync :" +
                                    JsonConvert.SerializeObject(eventWrapper));
-            if (State.Status == "Active" && (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains("ALL") ||
-                                             State.EventTypes.Contains(eventWrapper.GetType().Name)))
+            if (State.Status == "Active" && (State.EventTypes.IsNullOrEmpty() || State.EventTypes.Contains("ALL") || 
+                                             State.EventTypes.Contains( eventWrapper.GetType().Name)))
             {
                 var eventPushRequest = new EventPushRequest();
                 eventPushRequest.AgentId = State.AgentId;
@@ -79,19 +77,18 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError(e, "Error sending event to callback url: {url} error: {err}", State.CallbackUrl,
-                        e.Message);
+                    _logger.LogError(e, "Error sending event to callback url: {url} error: {err}", State.CallbackUrl, e.Message);
                 }
             }
         }
     }
-
+    
     private async Task<AgentDto> GetAtomicAgentDtoFromEventGrainId(GrainId grainId)
     {
         var guid = grainId.GetGuidKey();
         var agent = _clusterClient.GetGrain<ICreatorGAgent>(guid);
         var agentState = await agent.GetAgentAsync();
-
+        
         return new AgentDto
         {
             Id = guid,
@@ -104,9 +101,8 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
     {
         return " a global event subscription and notification management agent";
     }
-
-    protected override void GAgentTransitionState(EventSubscriptionState state,
-        StateLogEventBase<SubscriptionGEvent> @event)
+    
+    protected override void GAgentTransitionState(EventSubscriptionState state, StateLogEventBase<SubscriptionGEvent> @event)
     {
         switch (@event)
         {
@@ -125,3 +121,4 @@ public class SubscriptionGAgent : GAgentBase<EventSubscriptionState, Subscriptio
         }
     }
 }
+

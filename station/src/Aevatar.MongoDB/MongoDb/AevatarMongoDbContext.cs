@@ -14,6 +14,7 @@ using Volo.Abp.MongoDB;
 using Volo.Abp.OpenIddict.MongoDB;
 using Volo.Abp.PermissionManagement.MongoDB;
 using Volo.Abp.SettingManagement.MongoDB;
+using Aevatar.Projects;
 
 namespace Aevatar.MongoDB;
 
@@ -27,7 +28,8 @@ public class AevatarMongoDbContext : AbpMongoDbContext
     public IMongoCollection<StatePermission> StatePermissionInfos { get; private set; }
     public IMongoCollection<ApiRequestSnapshot> ApiRequestSnapshots { get; private set; }
     public IMongoCollection<Plugin> Plugins { get; private set; }
-
+    public IMongoCollection<ProjectCorsOrigin> ProjectCorsOrigins { get; private set; }
+    public IMongoCollection<ProjectDomain> ProjectDomains { get; private set; }
 
     protected override void CreateModel(IMongoModelBuilder modelBuilder)
     {
@@ -50,5 +52,7 @@ public class AevatarMongoDbContext : AbpMongoDbContext
         modelBuilder.Entity<NotificationInfo>(b => b.CollectionName = "NotificationInfoCollection");
         modelBuilder.Entity<ApiRequestSnapshot>(b => b.CollectionName = "ApiRequestSnapshots");
         modelBuilder.Entity<Plugin>(b => b.CollectionName = "Plugins");
+        modelBuilder.Entity<ProjectCorsOrigin>(b => b.CollectionName = "ProjectCorsOrigins");
+        modelBuilder.Entity<ProjectDomain>(b => b.CollectionName = "ProjectDomains");
     }
 }

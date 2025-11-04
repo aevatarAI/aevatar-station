@@ -1,0 +1,60 @@
+using Aevatar.Core.Abstractions;
+using Aevatar.Core.Interception;
+using Aevatar.GAgents.GroupChat.Core.Dto;
+using GroupChat.GAgent;
+using GroupChat.GAgent.Feature.Common;
+using GroupChat.GAgent.GEvent;
+
+namespace GroupChat.Grain;
+
+[GAgent(nameof(Leader))]
+public class Leader : GroupMemberGAgentBase<GroupMemberState, LeaderEventLog, EventBase, GroupMemberConfigDto>, ILeader
+{
+    public override Task<string> GetDescriptionAsync()
+    {
+        return Task.FromResult("Leader");
+    }
+
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
+    protected override async Task<int> GetInterestValueAsync()
+    {
+        var messages = await GetMessageFromBlackboardAsync(BlackboardId);
+        if (messages.Count > 10)
+        {
+            return 100;
+        }
+
+        return 0;
+    }
+
+    [Interceptor(LogCategory = WorkflowLogCategory, ContextProperty = new[] {WorkflowIdProperty})]
+    protected override Task<ChatResponse> ChatAsync(List<ChatMessage>? messages)
+    {
+        var response = new ChatResponse();
+        Console.WriteLine($"{State.MemberName} Can Speak");
+        if (messages.Count() < 10)
+        {
+            response.Skip = true;
+            return Task.FromResult(response);
+        }
+
+        response.Continue = false;
+        response.Content = "Discussion ended";
+        return Task.FromResult(response);
+    }
+
+    protected override Task GroupChatFinishAsync()
+    {
+        Console.WriteLine($"{State.MemberName} receive finish message");
+        return Task.CompletedTask;
+    }
+}
+
+public interface ILeader : IGAgent
+{
+}
+
+[GenerateSerializer]
+public class LeaderEventLog : StateLogEventBase<LeaderEventLog>
+{
+}
