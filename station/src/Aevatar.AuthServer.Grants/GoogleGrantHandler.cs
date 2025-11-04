@@ -36,14 +36,15 @@ public class GoogleGrantHandler : GrantHandlerBase
     {
         var idToken = context.Request.GetParameter("id_token").ToString();
         var source = context.Request.GetParameter("source")?.ToString();
+        var appId = context.Request.GetParameter("google_app_id")?.ToString();
         
-        _logger.LogDebug("GoogleGrantHandler.HandleAsync source: {source} idToken: {idToken}", source, idToken);
+        _logger.LogDebug("GoogleGrantHandler.HandleAsync source: {source} idToken: {idToken}, appId: {APPID}", source, idToken, appId);
         if (string.IsNullOrEmpty(idToken))
         {
             return CreateForbidResult("Missing id_token parameter");
         }
 
-        var clientId = await _googleProvider.GetClientIdAsync(source);
+        var clientId = await _googleProvider.GetClientIdAsync(source, appId);
         if (string.IsNullOrEmpty(clientId))
         {
             _logger.LogDebug("GoogleGrantHandler.HandleAsync: clientId not found");
