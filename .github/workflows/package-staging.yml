@@ -63,12 +63,7 @@ jobs:
       matrix:
         servicename:
           [
-            Aevatar.HttpApi.Host,
-            Aevatar.Silo,
-            Aevatar.AuthServer,
-            Aevatar.WebHook.Host,
-            Aevatar.Developer.Host,
-            Aevatar.DbMigrator,
+            Aevatar.AuthServer
           ]
     permissions:
       contents: read
