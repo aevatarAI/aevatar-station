@@ -96,6 +96,16 @@ public class AevatarAuthServerModule : AbpModule
                 {
                     options.SetAccessTokenLifetime(DateTime.Now.AddHours(expirationHour) - DateTime.Now);
                 }
+
+                // Configure refresh token settings
+                int.TryParse(configuration["RefreshTokenExpirationDays"], out int refreshTokenDays);
+                if (refreshTokenDays > 0)
+                {
+                    options.SetRefreshTokenLifetime(TimeSpan.FromDays(refreshTokenDays));
+                }
+
+                // Disable rolling refresh tokens to allow multiple uses
+                options.DisableRollingRefreshTokens();
             });
 
             builder.AddValidation(options =>
