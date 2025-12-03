@@ -20,6 +20,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Aevatar.WebHook.Deploy\Aevatar.WebHook.Deploy.csproj" />
       <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj" />
+      <ProjectReference Include="..\Aevatar.Application.Grains\Aevatar.Application.Grains.csproj" />
     </ItemGroup>
 
 </Project>

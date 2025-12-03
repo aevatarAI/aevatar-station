@@ -33,6 +33,7 @@ public class AevatarAuthServerGrantsModule : AbpModule
         context.Services.Configure<SignatureGrantOptions>(configuration.GetSection("Signature"));
         context.Services.Configure<ChainOptions>(configuration.GetSection("Chains"));
         context.Services.Configure<AppleOptions>(configuration.GetSection("Apple"));
+        context.Services.Configure<GoogleOptions>(configuration.GetSection("Google"));
         
         context.Services.AddOptions<AbpOpenIddictExtensionGrantsOptions>()
             .Configure<IServiceProvider>((options, serviceProvider) =>

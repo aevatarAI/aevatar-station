@@ -47,6 +47,10 @@ public class AgentTest : GAgentBase<FrontAgentState, FrontTestEvent, EventBase>,
             Name = @event.Name
         });
         await ConfirmEvents();
+        await PublishAsync(new FrontTestResponseEvent
+        {
+            Name = @event.Name
+        });
     }
 
     protected override void GAgentTransitionState(FrontAgentState state, StateLogEventBase<FrontTestEvent> @event)
@@ -86,6 +90,12 @@ public class FrontTestCreateSEvent : FrontTestEvent
 
 [GenerateSerializer]
 public class FrontTestCreateEvent : EventBase
+{
+    [Id(0)] [Required] public string Name { get; set; }
+}
+
+[GenerateSerializer]
+public class FrontTestResponseEvent : EventBase
 {
     [Id(0)] [Required] public string Name { get; set; }
 }

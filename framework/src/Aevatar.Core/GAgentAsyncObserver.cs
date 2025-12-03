@@ -77,7 +77,8 @@ public class GAgentAsyncObserver : IAsyncObserver<EventWrapperBase>
     {
         var (eventType, eventId) = EventWrapperHelper.ExtractProperties(item);
         var latency = (DateTime.UtcNow - item.PublishedTimestampUtc).TotalSeconds;
-        Observability.EventPublishLatencyMetrics.Record(latency, item, null, null, _logger);
+        
+        Observability.EventPublishLatencyMetrics.Record(latency, item, _logger);
         
         // Try to create an activity with parent context if available
         var activity = ActivityHelper.CreateEventActivity(item, eventType, _grainId, eventId, token);

@@ -114,5 +114,20 @@ namespace Aevatar.Permissions
         {
             public const string Default = Dashboard + ".ApiRequests";
         }
+        
+        public static class ProjectCorsOrigins
+        {
+            public const string Default = DeveloperPlatform + ".ProjectCorsOrigins";
+            public const string Create = Default + ".Create";
+            public const string Delete = Default + ".Delete";
+        }
+        
+        public static class Plugins
+        {
+            public const string Default = DeveloperPlatform + ".Plugins";
+            public const string Create = Default + ".Create";
+            public const string Edit = Default + ".Edit";
+            public const string Delete = Default + ".Delete";
+        }
     }
 }

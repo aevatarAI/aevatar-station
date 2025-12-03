@@ -1,0 +1,747 @@
+{
+  "dashboard": {
+    "uid": "aevatar-orleans-streaming-metrics",
+    "title": "Orleans & Aevatar Streaming Metrics",
+    "tags": ["aevatar", "orleans", "streaming", "kafka", "pubsub"],
+    "timezone": "browser",
+    "schemaVersion": 37,
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "cluster_id",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values({__name__=~\"orleans_streams_.*|aevatar_stream_.*\"}, cluster_id)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Cluster ID"
+        },
+        {
+          "name": "silo_id",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values({__name__=~\"orleans_streams_.*|aevatar_stream_.*\"}, silo_id)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Silo ID"
+        },
+        {
+          "name": "queue_id",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values(orleans_streams_queue_cache_pressure{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\"}, queue_id)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Queue ID"
+        },
+        {
+          "name": "stream_provider",
+          "type": "query",
+          "datasource": "Prometheus",
+          "refresh": 1,
+          "query": "label_values({__name__=~\"orleans_streams_persistent_stream_.*\"}, stream_provider)",
+          "includeAll": true,
+          "multi": true,
+          "sort": 1,
+          "current": {"selected": false, "text": "All", "value": "$__all"},
+          "label": "Stream Provider"
+        }
+      ]
+    },
+    "panels": [
+      {
+        "type": "stat",
+        "title": "Stream Cache Pressure Status",
+        "description": "Current stream cache pressure status across all queues",
+        "targets": [
+          {
+            "expr": "orleans_streams_queue_cache_under_pressure{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}",
+            "legendFormat": "{{silo_id}}/{{queue_id}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "max": 1,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "Normal",
+                    "color": "green"
+                  },
+                  "1": {
+                    "text": "Under Pressure",
+                    "color": "red"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "type": "gauge",
+        "title": "Current Cache Pressure",
+        "description": "Current pressure level for stream caches",
+        "targets": [
+          {
+            "expr": "orleans_streams_queue_cache_pressure{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}",
+            "legendFormat": "{{silo_id}}/{{queue_id}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "custom": {
+              "orientation": "auto",
+              "neutral": 50
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.7
+                },
+                {
+                  "color": "red",
+                  "value": 0.9
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "type": "timeseries",
+        "title": "Stream Cache Pressure Over Time",
+        "description": "Stream cache pressure trends",
+        "targets": [
+          {
+            "expr": "orleans_streams_queue_cache_pressure{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}",
+            "legendFormat": "{{silo_id}}/{{queue_id}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "auto",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "line"
+              }
+            },
+            "color": {
+              "mode": "palette-classic"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 0.7
+                },
+                {
+                  "color": "red",
+                  "value": 0.9
+                }
+              ]
+            },
+            "mappings": []
+          },
+          "overrides": []
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "showLegend": true,
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+      },
+      {
+        "type": "stat",
+        "title": "Queue Cache Statistics",
+        "description": "Current queue cache size and message counts",
+        "targets": [
+          {
+            "expr": "orleans_streams_queue_cache_size_bytes_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}",
+            "legendFormat": "Cache Size ({{silo_id}}/{{queue_id}})",
+            "refId": "A"
+          },
+          {
+            "expr": "orleans_streams_queue_cache_length_messages_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}",
+            "legendFormat": "Message Count ({{silo_id}}/{{queue_id}})",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": []
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "Cache Size.*"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "bytes"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "type": "stat",
+        "title": "Cache Message Activity",
+        "description": "Messages added and purged from cache",
+        "targets": [
+          {
+            "expr": "rate(orleans_streams_queue_cache_messages_added_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}[5m])",
+            "legendFormat": "Added/sec ({{silo_id}}/{{queue_id}})",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(orleans_streams_queue_cache_messages_purged_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}[5m])",
+            "legendFormat": "Purged/sec ({{silo_id}}/{{queue_id}})",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "min": 0,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": []
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      },
+      {
+        "type": "timeseries",
+        "title": "Queue Cache Memory Usage",
+        "description": "Memory allocated and released by queue cache",
+        "targets": [
+          {
+            "expr": "rate(orleans_streams_queue_cache_memory_allocated_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}[5m])",
+            "legendFormat": "Allocated/sec - {{silo_id}}/{{queue_id}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(orleans_streams_queue_cache_memory_released_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}[5m])",
+            "legendFormat": "Released/sec - {{silo_id}}/{{queue_id}}",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "binBps",
+            "min": 0,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "auto",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "color": {
+              "mode": "palette-classic"
+            },
+            "mappings": []
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "Allocated.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "green"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "Released.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "blue"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "showLegend": true,
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24}
+      },
+      {
+        "type": "stat",
+        "title": "Pub/Sub Infrastructure",
+        "description": "Consumers, producers, and pulling agents",
+        "targets": [
+          {
+            "expr": "orleans_streams_pubsub_consumers_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", stream_provider=~\"$stream_provider\"}",
+            "legendFormat": "Consumers ({{silo_id}}/{{stream_provider}})",
+            "refId": "A"
+          },
+          {
+            "expr": "orleans_streams_pubsub_producers_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", stream_provider=~\"$stream_provider\"}",
+            "legendFormat": "Producers ({{silo_id}}/{{stream_provider}})",
+            "refId": "B"
+          },
+          {
+            "expr": "orleans_streams_persistent_stream_pulling_agents{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", stream_provider=~\"$stream_provider\"}",
+            "legendFormat": "Pulling Agents ({{silo_id}}/{{stream_provider}})",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": []
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32}
+      },
+      {
+        "type": "stat",
+        "title": "Stream Processing Rate",
+        "description": "Messages read and sent per second",
+        "targets": [
+          {
+            "expr": "rate(orleans_streams_persistent_stream_messages_read_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", stream_provider=~\"$stream_provider\"}[5m])",
+            "legendFormat": "Read/sec ({{silo_id}}/{{stream_provider}})",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(orleans_streams_persistent_stream_messages_sent_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", stream_provider=~\"$stream_provider\"}[5m])",
+            "legendFormat": "Sent/sec ({{silo_id}}/{{stream_provider}})",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "min": 0,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": []
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32}
+      },
+      {
+        "type": "timeseries",
+        "title": "Stream Message Processing",
+        "description": "Stream messages read and sent over time",
+        "targets": [
+          {
+            "expr": "rate(orleans_streams_persistent_stream_messages_read_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", stream_provider=~\"$stream_provider\"}[5m])",
+            "legendFormat": "Read/sec - {{silo_id}}/{{stream_provider}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(orleans_streams_persistent_stream_messages_sent_total{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", stream_provider=~\"$stream_provider\"}[5m])",
+            "legendFormat": "Sent/sec - {{silo_id}}/{{stream_provider}}",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "min": 0,
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "linear",
+              "lineWidth": 2,
+              "fillOpacity": 10,
+              "gradientMode": "none",
+              "spanNulls": false,
+              "insertNulls": false,
+              "showPoints": "auto",
+              "pointSize": 5,
+              "stacking": {
+                "mode": "none",
+                "group": "A"
+              },
+              "axisPlacement": "auto",
+              "axisLabel": "",
+              "axisColorMode": "text",
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "color": {
+              "mode": "palette-classic"
+            },
+            "mappings": []
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "Read.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "green"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "Sent.*"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed",
+                    "fixedColor": "blue"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "tooltip": {
+            "mode": "multi",
+            "sort": "none"
+          },
+          "legend": {
+            "showLegend": true,
+            "displayMode": "list",
+            "placement": "bottom"
+          }
+        },
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 40}
+      },
+      {
+        "type": "stat",
+        "title": "Cache Age & PubSub Cache",
+        "description": "Cache aging and pub/sub cache metrics",
+        "targets": [
+          {
+            "expr": "orleans_streams_queue_cache_oldest_age{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", queue_id=~\"$queue_id\"}",
+            "legendFormat": "Oldest Age ({{silo_id}}/{{queue_id}})",
+            "refId": "A"
+          },
+          {
+            "expr": "orleans_streams_persistent_stream_pubsub_cache_size{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\", stream_provider=~\"$stream_provider\"}",
+            "legendFormat": "PubSub Cache Size ({{silo_id}}/{{stream_provider}})",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": []
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "Oldest Age.*"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "s"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 48}
+      },
+      {
+        "type": "stat",
+        "title": "Event Publish Latency Summary",
+        "description": "Aevatar stream event publish latency statistics",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\"}) by (le))",
+            "legendFormat": "P50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\"}) by (le))",
+            "legendFormat": "P95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, sum(aevatar_stream_event_publish_latency_seconds_bucket{cluster_id=~\"$cluster_id\", silo_id=~\"$silo_id\"}) by (le))",
+            "legendFormat": "P99",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "custom": {
+              "displayMode": "basic",
+              "orientation": "auto"
+            },
+            "mappings": []
+          },
+          "overrides": []
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "auto",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 48}
+      }
+    ],
+    "overwrite": true,
+    "folderId": 0
+  }
+} 

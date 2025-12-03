@@ -115,7 +115,7 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     services.AddTransient<TenantPluginCodeMongoDbContext>();
                     services.AddTransient<PluginCodeStorageMongoDbContext>();
                 })
-                .UseAevatar()
+                .UseAevatar(true)  // Include ABP services containing IEventObserverManager & IStatePublisher
                 .UseAevatarPermissionManagement()
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryStreams("AevatarSignalR")

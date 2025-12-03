@@ -16,9 +16,21 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(gh pr create:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(dotnet test:*)",
       "Bash(dotnet list:*)",
       "Bash(dotnet restore:*)",
-      "Bash(dotnet nuget locals:*)"
+      "Bash(dotnet nuget locals:*)",
+      "Bash(dotnet publish:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh api:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checkout:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl:*)",
+      "Bash(gh pr comment:*)",
+      "Bash(gh pr review:*)"
     ]
   },
   "enableAllProjectMcpServers": true

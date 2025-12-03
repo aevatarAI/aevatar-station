@@ -107,6 +107,17 @@ public class AevatarPermissionDefinitionProvider : PermissionDefinitionProvider
         dashboardsPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         dashboardsPermission.AddChild(AevatarPermissions.LLMSModels.Default, L("Permission:LLMSModels")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
         dashboardsPermission.AddChild(AevatarPermissions.ApiRequests.Default, L("Permission:ApiRequests")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        
+        var projectCorsOriginsPermission = developerPlatformGroup.AddPermission(AevatarPermissions.ProjectCorsOrigins.Default, L("Permission:ProjectCorsOrigins"));
+        projectCorsOriginsPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        projectCorsOriginsPermission.AddChild(AevatarPermissions.ProjectCorsOrigins.Create, L("Permission:ProjectCorsOrigins.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        projectCorsOriginsPermission.AddChild(AevatarPermissions.ProjectCorsOrigins.Delete, L("Permission:ProjectCorsOrigins.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        
+        var pluginsPermission = developerPlatformGroup.AddPermission(AevatarPermissions.Plugins.Default, L("Permission:Plugins"));
+        pluginsPermission.Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        pluginsPermission.AddChild(AevatarPermissions.Plugins.Create, L("Permission:Plugins.Create")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        pluginsPermission.AddChild(AevatarPermissions.Plugins.Edit, L("Permission:Plugins.Edit")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
+        pluginsPermission.AddChild(AevatarPermissions.Plugins.Delete, L("Permission:Plugins.Delete")).Properties[AevatarPermissions.OrganizationScopeKey] = PermissionScope.OrganizationAndProject;
     }
 
     private static LocalizableString L(string name)

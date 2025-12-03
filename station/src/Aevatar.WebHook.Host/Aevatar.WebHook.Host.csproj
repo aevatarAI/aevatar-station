@@ -13,6 +13,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Aevatar.WebHook.SDK\Aevatar.WebHook.SDK.csproj"/>
+        <ProjectReference Include="..\Aevatar.Domain.Shared\Aevatar.Domain.Shared.csproj"/>
     </ItemGroup>
     
     <ItemGroup>

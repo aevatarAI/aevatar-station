@@ -12,6 +12,7 @@ using Aevatar.CQRS.Provider;
 using Aevatar.Mock;
 using Aevatar.Options;
 using Aevatar.Service;
+using Aevatar.Core.Placement;
 using AutoMapper;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Ingest;
@@ -21,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MongoDB.Driver.Core.Configuration;
 using Moq;
+using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.TestingHost;
 using Volo.Abp.AutoMapper;
@@ -112,12 +114,41 @@ public class ClusterFixture : IDisposable, ISingletonDependency
                     );
                     services.AddSingleton(typeof(ICQRSProvider), typeof(CQRSProvider));
                     services.AddSingleton(typeof(ICqrsService), typeof(CqrsService));
+                    
+                    // Register SiloNamePatternPlacement strategy for grain placement
+                    services.AddPlacementDirector<SiloNamePatternPlacement, SiloNamePatternPlacementDirector>();
+                    
+                    // Add mock IBrainFactory for AIGAgent testing
+                    try
+                    {
+                        var brainFactoryType = Type.GetType("Aevatar.GAgents.AI.BrainFactory.IBrainFactory, Aevatar.GAgents.AI.Abstractions");
+                        if (brainFactoryType != null)
+                        {
+                            // Use reflection to create Mock.Of<T> with the correct type
+                            var mockOfMethod = typeof(Mock).GetMethods()
+                                .Where(m => m.Name == "Of" && m.IsGenericMethodDefinition && m.GetParameters().Length == 0)
+                                .FirstOrDefault();
+                            
+                            if (mockOfMethod != null)
+                            {
+                                var genericMockOfMethod = mockOfMethod.MakeGenericMethod(brainFactoryType);
+                                var mockBrainFactory = genericMockOfMethod.Invoke(null, null);
+                                services.AddSingleton(brainFactoryType, mockBrainFactory);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log the exception but don't fail the test setup
+                        Console.WriteLine($"Warning: Could not register IBrainFactory mock: {ex.Message}");
+                    }
                 })
                 .AddMemoryStreams("Aevatar")
                 .AddMemoryGrainStorage("PubSubStore")
                 .AddMemoryGrainStorageAsDefault()
                 .AddLogStorageBasedLogConsistencyProvider("LogStorage")
-                .Configure<NameContestOptions>(configuration.GetSection("NameContest"));
+                .Configure<NameContestOptions>(configuration.GetSection("NameContest"))
+                .Configure<SiloOptions>(options => options.SiloName = "Projector");
         }
     }
 

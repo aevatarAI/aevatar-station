@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Net;
 using Aevatar.Dapr;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -24,33 +25,19 @@ public static class OrleansHostExtensions
             var hostId = context.Configuration.GetValue<string>("Host:HostId");
             if (configSection == null)
                 throw new ArgumentNullException(nameof(configSection), "The Orleans config node is missing");
-
-            // Check if ZooKeeper configuration is available
-            var zookeeperSection = configSection.GetSection("ZooKeeper");
-            var zookeeperConnectionString = zookeeperSection.GetValue<string>("ConnectionString");
-
-            // Configure clustering based on available provider
-            if (!string.IsNullOrEmpty(zookeeperConnectionString))
-            {
-                // Use ZooKeeper clustering
-                clientBuilder.UseZooKeeperClustering(options =>
+                
+            // Configure Gateway connection
+            // var gatewayPort = configSection.GetValue<int>("GatewayPort", 11111);
+            // clientBuilder.UseStaticClustering(new IPEndPoint(IPAddress.Loopback, gatewayPort));
+                
+            clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
+                .UseMongoDBClustering(options =>
                 {
-                    options.ConnectionString = zookeeperConnectionString;
-                });
-            }
-            else
-            {
-                // Use MongoDB clustering (existing behavior)
-                clientBuilder.UseMongoDBClient(configSection.GetValue<string>("MongoDBClient"))
-                    .UseMongoDBClustering(options =>
-                    {
-                        options.DatabaseName = configSection.GetValue<string>("DataBase");
-                        options.Strategy = MongoDBMembershipStrategy.SingleDocument;
-                        options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" : $"Orleans{hostId}";
-                    });
-            }
-
-            clientBuilder.Configure<ClusterOptions>(options =>
+                    options.DatabaseName = configSection.GetValue<string>("DataBase");
+                    options.Strategy = MongoDBMembershipStrategy.SingleDocument;
+                    options.CollectionPrefix = hostId.IsNullOrEmpty() ? "OrleansAevatar" :$"Orleans{hostId}";
+                })
+                .Configure<ClusterOptions>(options =>
                 {
                     options.ClusterId = configSection.GetValue<string>("ClusterId");
                     options.ServiceId = configSection.GetValue<string>("ServiceId");
@@ -62,7 +49,7 @@ public static class OrleansHostExtensions
                     options.SupportedNamespacePrefixes.Add("MongoDB.Driver");
                 })
                 .AddActivityPropagation();
-
+                
             var streamProvider = config.GetSection("OrleansStream:Provider").Get<string>();
             Log.Information("Stream Provider: {streamProvider}", streamProvider);
             if (string.Equals("kafka", streamProvider, StringComparison.CurrentCultureIgnoreCase))
@@ -90,7 +77,6 @@ public static class OrleansHostExtensions
                                 ReplicationFactor = replicationFactor
                             });
                         }
-
                         Log.Information("Kafka Options: {@options}", options);
                     })
                     .AddJson()

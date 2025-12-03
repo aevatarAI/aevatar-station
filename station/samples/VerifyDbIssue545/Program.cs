@@ -15,8 +15,65 @@ using VerifyDbIssue545;
 using Aevatar.Core.Streaming.Extensions;
 
 // Parse command line arguments
-bool useStoredIds = args.Length > 0 && args[0].ToLower() == "--use-stored-ids";
+bool useStoredIds = true; // Default to using stored IDs
+int subscriberCount = 1; // Default value
+
+// Display usage information
+void ShowUsage()
+{
+    Console.WriteLine("Usage: VerifyDbIssue545 [options]");
+    Console.WriteLine("Options:");
+    Console.WriteLine("  --use-stored-ids              Use stored agent IDs from agent_ids.json");
+    Console.WriteLine("  --subscribers <count>         Number of subscriber agents to create (default: 1)");
+    Console.WriteLine("  --subscriber-count <count>    Alias for --subscribers");
+    Console.WriteLine("  --help                        Show this help message");
+    Console.WriteLine();
+    Console.WriteLine("Examples:");
+    Console.WriteLine("  VerifyDbIssue545");
+    Console.WriteLine("  VerifyDbIssue545 --subscribers 5000");
+    Console.WriteLine("  VerifyDbIssue545 --use-stored-ids --subscribers 1000");
+}
+
+// Parse command line arguments
+for (int i = 0; i < args.Length; i++)
+{
+    string arg = args[i].ToLower();
+    
+    switch (arg)
+    {
+        case "--use-stored-ids":
+            useStoredIds = true;
+            break;
+            
+        case "--subscribers":
+        case "--subscriber-count":
+            if (i + 1 < args.Length && int.TryParse(args[i + 1], out int subscriberCountValue) && subscriberCountValue > 0)
+            {
+                subscriberCount = subscriberCountValue;
+                i++; // Skip the next argument as it's the count value
+            }
+            else
+            {
+                Console.WriteLine($"Error: {arg} requires a positive integer value");
+                ShowUsage();
+                return;
+            }
+            break;
+            
+        case "--help":
+        case "-h":
+            ShowUsage();
+            return;
+            
+        default:
+            Console.WriteLine($"Error: Unknown argument '{args[i]}'");
+            ShowUsage();
+            return;
+    }
+}
+
 Console.WriteLine($"Using stored agent IDs: {useStoredIds}");
+Console.WriteLine($"Subscriber count: {subscriberCount}");
 
 IHostBuilder builder = Host.CreateDefaultBuilder(args)
     .UseOrleansClient(client =>
@@ -44,9 +101,9 @@ IHostBuilder builder = Host.CreateDefaultBuilder(args)
                 options.ConsumerGroupId = "Aevatar";
                 options.ConsumeMode = ConsumeMode.LastCommittedMessage;
 
-                var partitions = 1;
+                var partitions = 8; // Multiple partitions for load distribution
                 var replicationFactor = (short)1;  // ReplicationFactor should be short
-                var topics = "Aevatar,AevatarStateProjection,AevatarBroadCast";
+                var topics = "Aevatar,AevatarStateProjection,AevatarBroadcast";
                 foreach (var topic in topics.Split(','))
                 {
                     options.AddTopic(topic.Trim(), new TopicCreationConfig
@@ -71,7 +128,6 @@ using IHost host = builder.Build();
 await host.StartAsync();
 
 var client = host.Services.GetRequiredService<IClusterClient>();
-const int subscriberCount = 1;
 var agentIdsFilePath = Path.Combine(Directory.GetCurrentDirectory(), "agent_ids.json");
 
 // Function to save agent IDs to JSON file
@@ -230,7 +286,7 @@ var TestDbEvent = new TestDbEvent
 };
 
 Console.WriteLine($"Broadcasting event with Number = {eventNumber}");
-await pubAgent.BroadCastEventAsync("TestDbScheduleGAgent", TestDbEvent);
+await pubAgent.BroadcastEventAsync("TestDbScheduleGAgent", TestDbEvent);
 
 // Wait for the event to be processed
 await Task.Delay(5000);

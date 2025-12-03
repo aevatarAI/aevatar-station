@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Aevatar.Agent;
+using Aevatar.AgentValidation;
 using Aevatar.Controllers;
 using Aevatar.CQRS.Dto;
 using Aevatar.Permissions;
@@ -17,16 +19,19 @@ public class AgentController : AevatarController
 {
     private readonly ILogger<AgentController> _logger;
     private readonly IAgentService _agentService;
-    private readonly SubscriptionAppService _subscriptionAppService;
+    private readonly ISubscriptionAppService _subscriptionAppService;
+    private readonly IAgentValidationService _agentValidationService;
 
     public AgentController(
         ILogger<AgentController> logger,
-        SubscriptionAppService subscriptionAppService,
-        IAgentService agentService)
+        ISubscriptionAppService subscriptionAppService,
+        IAgentService agentService,
+        IAgentValidationService agentValidationService)
     {
         _logger = logger;
         _agentService = agentService;
         _subscriptionAppService = subscriptionAppService;
+        _agentValidationService = agentValidationService;
     }
 
 
@@ -40,9 +45,9 @@ public class AgentController : AevatarController
 
     [HttpGet("agent-list")]
     [Authorize]
-    public async Task<List<AgentInstanceDto>> GetAllAgentInstance(int pageIndex = 0, int pageSize = 20)
+    public async Task<List<AgentInstanceDto>> GetAllAgentInstance([FromQuery] GetAllAgentInstancesQueryDto queryDto)
     {
-        return await _agentService.GetAllAgentInstances(pageIndex, pageSize);
+        return await _agentService.GetAllAgentInstances(queryDto);
     }
 
     [HttpPost]
@@ -129,5 +134,27 @@ public class AgentController : AevatarController
     public async Task PublishAsync([FromBody] PublishEventDto input)
     {
         await _subscriptionAppService.PublishEventAsync(input);
+    }
+
+    /// <summary>
+    /// Validate agent configuration
+    /// </summary>
+    /// <param name="request">Validation request containing GAgent namespace and configuration JSON</param>
+    /// <returns>Validation result with success status and error details</returns>
+    [HttpPost("validation/validate-config")]
+    [Authorize]
+    public async Task<ConfigValidationResultDto> ValidateConfigAsync([FromBody] ValidationRequestDto request)
+    {
+        return await _agentValidationService.ValidateConfigAsync(request);
+    }
+
+    /// <summary>
+    /// Health check endpoint for the validation service
+    /// </summary>
+    /// <returns>Service health status</returns>
+    [HttpGet("validation/health")]
+    public IActionResult ValidationHealthCheck()
+    {
+        return Ok(new { status = "healthy", timestamp = DateTime.UtcNow });
     }
 }

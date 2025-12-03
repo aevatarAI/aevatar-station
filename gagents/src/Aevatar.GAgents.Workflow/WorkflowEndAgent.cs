@@ -1,0 +1,100 @@
+using System.Threading.Tasks;
+using Aevatar.Core.Placement;
+using Aevatar.Core.Abstractions;
+using Aevatar.GAgents.Core;
+using Orleans;
+using Microsoft.Extensions.Logging;
+
+namespace Aevatar.GAgents.Workflow;
+
+/// <summary>
+/// Interface for WorkflowEndAgent
+/// </summary>
+public interface IWorkflowEndAgent : IStateGAgentPlus<WorkflowEndState>
+{
+}
+
+/// <summary>
+/// State for WorkflowEndAgent
+/// </summary>
+[GenerateSerializer]
+public class WorkflowEndState : BusinessAgentState
+{
+}
+
+/// <summary>
+/// Base class for WorkflowEndAgent log events
+/// </summary>
+[GenerateSerializer]
+public abstract class WorkflowEndAgentLogEvent : StateLogEventBase<WorkflowEndAgentLogEvent>
+{
+}
+
+/// <summary>
+/// Configuration DTO for WorkflowEndAgent
+/// </summary>
+[GenerateSerializer]
+public class WorkflowEndConfigDto : ConfigurationBase
+{
+    [Id(0)] public string AgentName { get; set; } = "WorkflowEndAgent";
+}
+
+/// <summary>
+/// WorkflowEndAgent for workflow completion
+/// Inherits from BusinessAgentBase to handle WorkflowEvent completion
+/// Simply marks workflow as complete - WorkflowCoordinator has all the information
+/// </summary>
+[GAgent]
+[SiloNamePatternPlacement("Projector")]
+public class WorkflowEndAgent : BusinessAgentBase<WorkflowEndState, WorkflowEndAgentLogEvent, WorkflowEndConfigDto>, IWorkflowEndAgent
+{
+    public override Task<string> GetDescriptionAsync()
+        => Task.FromResult("Workflow End Agent that marks workflow completion - WorkflowCoordinator maintains all workflow information");
+
+    /// <summary>
+    /// Override BusinessAgentBase event handler for workflow completion
+    /// Handles WorkflowEvent and sets WorkflowEventType.WorkflowCompleted
+    /// </summary>
+    protected override async Task OnBusinessAgentEventForwardingEventHandlerAsync(WorkflowEvent workflowEvent)
+    {
+        Logger.LogInformation("[WorkflowEndAgent] Completing workflow execution {WorkflowId}", 
+            workflowEvent.WorkflowId);  // Execution Record Agent ID
+        
+        // Assign the WorkUnitAgentId to represent this processing node
+        workflowEvent.WorkUnitAgentId = this.GetPrimaryKey();
+        
+        // Mark workflow as completed using existing event fields
+        workflowEvent.WorkflowAgentStatus = WorkflowAgentStatus.Completed;
+        workflowEvent.WorkflowEventType = WorkflowEventType.WorkflowCompleted;
+        
+        // Process final result using existing EventBase.Message field (text pipeline)
+        var finalMessage = workflowEvent.Message;     // Text from previous agents
+        var completedMessage = $"Completed: {finalMessage}";
+        workflowEvent.Message = completedMessage;
+        workflowEvent.TaskResult = completedMessage;
+        
+        Logger.LogInformation("[WorkflowEndAgent] Final result: {Message}", completedMessage);
+        
+        // End of workflow - no forwarding needed
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Handle state transitions for WorkflowEndAgent events
+    /// </summary>
+    protected override void GAgentTransitionState(WorkflowEndState state, StateLogEventBase<WorkflowEndAgentLogEvent> @event)
+    {
+        // Handle WorkflowEndAgent-specific events here if needed
+        switch (@event)
+        {
+            // Add custom WorkflowEndAgent event handling here when needed
+            // case SomeWorkflowEndEvent someEvent:
+            //     // Handle custom event
+            //     break;
+        }
+        
+        // CRITICAL: Call base implementation to handle standard GAgent events
+        // (AddChildStateLogEvent, RemoveChildStateLogEvent, AddParentStateLogEvent, etc.)
+        base.GAgentTransitionState(state, @event);
+    }
+}

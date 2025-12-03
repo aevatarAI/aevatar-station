@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Aevatar.Notification;
 using Aevatar.Notification.Parameters;
 using Aevatar.Permissions;
+using Aevatar.Projects;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 using Volo.Abp;
@@ -187,7 +188,14 @@ public class OrganizationService : AevatarAppService, IOrganizationService
             AevatarPermissions.Roles.Delete,
             AevatarPermissions.Dashboard,
             AevatarPermissions.LLMSModels.Default,
-            AevatarPermissions.ApiRequests.Default
+            AevatarPermissions.ApiRequests.Default,
+            AevatarPermissions.ProjectCorsOrigins.Default,
+            AevatarPermissions.ProjectCorsOrigins.Create,
+            AevatarPermissions.ProjectCorsOrigins.Delete,
+            AevatarPermissions.Plugins.Default,
+            AevatarPermissions.Plugins.Create,
+            AevatarPermissions.Plugins.Edit,
+            AevatarPermissions.Plugins.Delete
         ];
     }
 

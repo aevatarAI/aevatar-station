@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Orleans.Hosting;
 using Serilog;
 using Serilog.Events;
+using Aevatar.Domain.Shared.Configuration;
 
 namespace Aevatar.Developer.Host;
 
@@ -17,38 +18,17 @@ public class Program
 {
     public async static Task<int> Main(string[] args)
     {
-        var configuration = new ConfigurationBuilder()
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-            .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
-            .AddJsonFile("appsettings.json")
-            .Build();
-        
-        var hostId = configuration["Host:HostId"];
-        var version = configuration["Host:Version"];
-        Log.Logger = new LoggerConfiguration()
-#if DEBUG
-            .MinimumLevel.Debug()
-#else
-            .MinimumLevel.Information()
-#endif
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-            .Enrich.FromLogContext()
-            .Enrich.WithProperty("HostId", hostId)
-            .Enrich.WithProperty("Version", version)
-            .ReadFrom.Configuration(configuration)
-            .CreateLogger();
-
         try
         {
             Log.Information("Starting Developer.Host.");
             var builder = WebApplication.CreateBuilder(args);
-            builder.Configuration
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"))
-                .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json"))
-                .AddJsonFile("appsettings.json");
+            
+            // Configure all configuration sources once
+            ConfigureAppConfiguration(builder.Configuration, args);
+            ConfigureLogger(builder.Configuration);
+            
             builder.Host
                 .UseOrleansClientConfigration()
-                .ConfigureDefaults(args)
                 .UseAutofac()
                 .UseSerilog();
             builder.Services.AddSignalR().AddOrleans();
@@ -73,5 +53,42 @@ public class Program
         {
             Log.CloseAndFlush();
         }
+    }
+    
+    private static void ConfigureAppConfiguration(IConfigurationBuilder configBuilder, string[] args)
+    {
+        configBuilder
+            .AddAevatarSecureConfiguration(
+                systemConfigPaths: new[]
+                {
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.Shared.json"),
+                    Path.Combine(AppContext.BaseDirectory, "appsettings.HttpApi.Host.Shared.json")
+                })
+            .AddEnvironmentVariables()
+            .AddCommandLine(args);
+            
+        Log.Information("Developer.Host configuration loaded with ephemeral config support");
+    }
+    
+    private static void ConfigureLogger(IConfiguration configuration, LoggerConfiguration? loggerConfiguration = null)
+    {
+        var hostId = configuration["Host:HostId"];
+        var version = configuration["Host:Version"];
+        
+        Log.Logger = (loggerConfiguration ?? new LoggerConfiguration())
+#if DEBUG
+            .MinimumLevel.Debug()
+#else
+            .MinimumLevel.Information()
+#endif
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+            .Enrich.FromLogContext()
+            .Enrich.WithProperty("HostId", hostId)
+            .Enrich.WithProperty("Version", version)
+            .ReadFrom.Configuration(configuration)
+            .CreateLogger();
+            
+        var corsOrigins = configuration["App:CorsOrigins"];
+        Log.Information("Developer.Host configured with CORS origins: {CorsOrigins}", corsOrigins);
     }
 }

@@ -22,6 +22,7 @@ using Aevatar.EventSourcing.MongoDB.Options;
 using Aevatar.EventSourcing.Core.Exceptions;
 using Aevatar.EventSourcing.MongoDB.Hosting;
 using Aevatar.EventSourcing.MongoDB.Serializers;
+using Aevatar.EventSourcing.MongoDB.Collections;
 
 namespace Aevatar.EventSourcing.MongoDB.Tests;
 
@@ -37,6 +38,8 @@ public class MongoDbLogConsistentStorageMongoTests
     private readonly Mock<IMongoClient> _mongoClientMock;
     private readonly Mock<IMongoDatabase> _mongoDatabaseMock;
     private readonly Mock<ICluster> _clusterMock;
+    private readonly Mock<IEventSourcingCollectionFactory> _collectionFactoryMock;
+    private readonly Mock<IEventSourcingCollection> _eventSourcingCollectionMock;
 
     public MongoDbLogConsistentStorageMongoTests()
     {
@@ -45,6 +48,8 @@ public class MongoDbLogConsistentStorageMongoTests
         _mongoDatabaseMock = new Mock<IMongoDatabase>();
         _mongoCollectionMock = new Mock<IMongoCollection<BsonDocument>>();
         _clusterMock = new Mock<ICluster>();
+        _collectionFactoryMock = new Mock<IEventSourcingCollectionFactory>();
+        _eventSourcingCollectionMock = new Mock<IEventSourcingCollection>();
 
         _mongoClientMock.Setup(x => x.GetDatabase(It.IsAny<string>(), null))
             .Returns(_mongoDatabaseMock.Object);
@@ -52,20 +57,20 @@ public class MongoDbLogConsistentStorageMongoTests
             .Returns(_mongoCollectionMock.Object);
         _mongoClientMock.Setup(x => x.Cluster).Returns(_clusterMock.Object);
 
+        // Setup collection factory mock
+        _eventSourcingCollectionMock.Setup(x => x.GetCollection())
+            .Returns(_mongoCollectionMock.Object);
+        _collectionFactoryMock.Setup(x => x.CreateCollection(It.IsAny<IMongoClient>(), It.IsAny<string>(), It.IsAny<string>()))
+            .Returns(_eventSourcingCollectionMock.Object);
+
         _clusterOptionsMock = new Mock<IOptions<ClusterOptions>>();
         _clusterOptionsMock.Setup(x => x.Value).Returns(new ClusterOptions { ServiceId = "TestService" });
         _loggerMock = new Mock<ILogger<MongoDbLogConsistentStorage>>();
 
-        var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
+        var connectionString = AevatarMongoDbFixture.GetRandomConnectionString();
+        var settings = MongoClientSettings.FromConnectionString(connectionString);
         settings.ClusterConfigurator = builder =>
         {
-            builder.Subscribe<CommandStartedEvent>(e =>
-            {
-                if (e.CommandName == "find" || e.CommandName == "insert")
-                {
-                    throw new MongoException("Test error");
-                }
-            });
         };
 
         _mongoDbOptions = new MongoDbStorageOptions
@@ -75,14 +80,15 @@ public class MongoDbLogConsistentStorageMongoTests
             GrainStateSerializer = new BsonGrainSerializer()
         };
 
-        _storage = new MongoDbLogConsistentStorage(_name, _mongoDbOptions, _clusterOptionsMock.Object, _loggerMock.Object);
+        _storage = new MongoDbLogConsistentStorage(_name, _mongoDbOptions, _clusterOptionsMock.Object, 
+            _loggerMock.Object, _collectionFactoryMock.Object);
     }
 
     [Fact]
     public async Task ReadAsync_WhenMongoDbError_ThrowsMongoDbStorageException()
     {
         // Arrange
-        var grainId = GrainId.Create("TestGrain", "TestKey");
+        var grainId = GrainId.Create("TestGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
         // Test data: Reading attempt with ID TestGrain/TestKey
 
@@ -110,7 +116,7 @@ public class MongoDbLogConsistentStorageMongoTests
     public async Task GetLastVersionAsync_WhenMongoDbError_ThrowsMongoDbStorageException()
     {
         // Arrange
-        var grainId = GrainId.Create("TestGrain", "TestKey");
+        var grainId = GrainId.Create("TestGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
 
         var mockCursor = new Mock<IAsyncCursor<BsonDocument>>();
@@ -137,7 +143,7 @@ public class MongoDbLogConsistentStorageMongoTests
     public async Task AppendAsync_WhenMongoDbError_ThrowsMongoDbStorageException()
     {
         // Arrange
-        var grainId = GrainId.Create("TestGrain", "TestKey");
+        var grainId = GrainId.Create("TestGrain", Guid.NewGuid().ToString());
         var grainTypeName = "TestGrainType";
         var entries = new List<TestLogEntry> { new TestLogEntry { Data = "Test" } };
 
@@ -172,7 +178,8 @@ public class MongoDbLogConsistentStorageMongoTests
     {
         // Arrange
         // Test data: Initialize with specific MongoDB connection string
-        var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
+        var connectionString = AevatarMongoDbFixture.GetRandomConnectionString();
+        var settings = MongoClientSettings.FromConnectionString(connectionString);
         settings.ClusterConfigurator = builder =>
         {
             builder.Subscribe<ClusterOpeningEvent>(e =>
@@ -188,12 +195,14 @@ public class MongoDbLogConsistentStorageMongoTests
             GrainStateSerializer = new BsonGrainSerializer()
         };
 
-        var storage = new MongoDbLogConsistentStorage(_name, options, _clusterOptionsMock.Object, _loggerMock.Object);
+        var storage = new MongoDbLogConsistentStorage(_name, options, _clusterOptionsMock.Object, 
+            _loggerMock.Object, _collectionFactoryMock.Object);
 
         var observer = new TestSiloLifecycle();
         storage.Participate(observer);
 
         // Act & Assert
+        // The error will occur when trying to create the MongoDB client with invalid settings
         await Assert.ThrowsAsync<MongoDbStorageException>(() => observer.OnStart(CancellationToken.None));
     }
 
@@ -202,7 +211,8 @@ public class MongoDbLogConsistentStorageMongoTests
     {
         // Arrange
         // Test data: Close connection for storage with name "TestStorage"
-        var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
+        var connectionString = AevatarMongoDbFixture.GetRandomConnectionString();
+        var settings = MongoClientSettings.FromConnectionString(connectionString);
         settings.ClusterConfigurator = builder =>
         {
             builder.Subscribe<ClusterClosingEvent>(e =>
@@ -218,7 +228,8 @@ public class MongoDbLogConsistentStorageMongoTests
             GrainStateSerializer = new BsonGrainSerializer()
         };
 
-        var storage = new MongoDbLogConsistentStorage(_name, options, _clusterOptionsMock.Object, _loggerMock.Object);
+        var storage = new MongoDbLogConsistentStorage(_name, options, _clusterOptionsMock.Object, 
+            _loggerMock.Object, _collectionFactoryMock.Object);
 
         var observer = new TestSiloLifecycle();
         storage.Participate(observer);
@@ -233,7 +244,8 @@ public class MongoDbLogConsistentStorageMongoTests
     public async Task MongoDbStorageOptionsTests()
     {
         // Test data: Testing options with InitStage=0 and Database="TestDb"
-        var settings = MongoClientSettings.FromConnectionString("mongodb://localhost:27017");
+        var connectionString = AevatarMongoDbFixture.GetRandomConnectionString();
+        var settings = MongoClientSettings.FromConnectionString(connectionString);
         settings.ClusterConfigurator = builder =>
         {
             builder.Subscribe<ClusterClosingEvent>(e =>

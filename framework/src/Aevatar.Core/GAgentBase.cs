@@ -9,6 +9,7 @@ using Orleans.EventSourcing;
 using Orleans.Providers;
 using Orleans.Serialization;
 using Orleans.Streams;
+using System.Diagnostics;
 
 namespace Aevatar.Core;
 
@@ -42,6 +43,9 @@ public abstract partial class
     where TEvent : EventBase
     where TConfiguration : ConfigurationBase
 {
+    // ActivitySource for distributed tracing
+    private static readonly ActivitySource ActivitySource = new("Aevatar.Core.GAgent");
+    
     private Lazy<IStreamProvider> LazyStreamProvider => new(()
         => this.GetStreamProvider(AevatarCoreConstants.StreamProvider));
 
@@ -55,6 +59,11 @@ public abstract partial class
     protected AevatarOptions? AevatarOptions;
 
     private DeepCopier? _copier;
+
+    private bool _isActivated = false;
+
+    private int _lastProcessedVersion = -1;
+
     public async Task ActivateAsync()
     {
         await Task.Yield();
@@ -92,6 +101,7 @@ public abstract partial class
         {
             tasks.Add(gAgent.SubscribeToAsync(this));
         }
+
         tasks.Add(AddChildManyAsync(grainIds));
         tasks.Add(OnRegisterAgentManyAsync(grainIds));
         await Task.WhenAll(tasks);
@@ -154,6 +164,24 @@ public abstract partial class
 
     protected virtual Task PerformConfigAsync(TConfiguration configuration)
     {
+        return Task.CompletedTask;
+    }
+
+    public virtual async Task PrepareResourceContextAsync(ResourceContext context)
+    {
+        Logger.LogDebug("Preparing resource context for GAgent {GrainId} with {ResourceCount} resources",
+            this.GetGrainId(), context.AvailableResources.Count);
+
+        await OnPrepareResourceContextAsync(context);
+    }
+
+    /// <summary>
+    /// Override this method in derived classes to handle resource context preparation
+    /// </summary>
+    /// <param name="context">The resource context containing available resources</param>
+    protected virtual Task OnPrepareResourceContextAsync(ResourceContext context)
+    {
+        // Default implementation does nothing - derived classes can override this
         return Task.CompletedTask;
     }
 
@@ -245,14 +273,29 @@ public abstract partial class
         return Task.FromResult(State);
     }
 
+    public virtual Task<string?> GetStateSnapshotAsync()
+    {
+        try
+        {
+            return Task.FromResult<string?>(System.Text.Json.JsonSerializer.Serialize(State));
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogWarning(ex, "Failed to serialize state snapshot for {GrainId}", this.GetGrainId());
+            return Task.FromResult<string?>(null);
+        }
+    }
+
     public sealed override async Task OnActivateAsync(CancellationToken cancellationToken)
-    {   
-         _copier = ServiceProvider.GetRequiredService<DeepCopier>();
+    {
+        _copier = ServiceProvider.GetRequiredService<DeepCopier>();
         StateDispatcher = ServiceProvider.GetService<IStateDispatcher>();
         AevatarOptions = ServiceProvider.GetRequiredService<IOptions<AevatarOptions>>().Value;
         try
         {
             await base.OnActivateAsync(cancellationToken);
+            _isActivated = true;
+            _lastProcessedVersion = Version;
         }
         catch (Exception e)
         {
@@ -341,25 +384,43 @@ public abstract partial class
 
     protected sealed override void OnStateChanged()
     {
-        InternalOnStateChangedAsync().ContinueWith(task =>
+        // If the GAgent is not activated, do not process the state change.
+        if (!_isActivated)
+        {
+            return;
+        }
+
+        // If the version is not greater than the last processed version, do not process the state change.
+        if (Version <= _lastProcessedVersion)
+        {
+            return;
+        }
+        var snapshot = _copier!.Copy(State);
+
+        InternalOnStateChangedAsync(snapshot,Version).ContinueWith(task =>
         {
             if (task.Exception != null)
             {
                 Logger.LogError(task.Exception, "InternalOnStateChangedAsync operation failed");
             }
         }, TaskContinuationOptions.OnlyOnFaulted);
+        
+
+        _lastProcessedVersion = Version;       
     }
 
-    private async Task InternalOnStateChangedAsync()
+    private async Task InternalOnStateChangedAsync(TState snapshot, int version)
     {
         await HandleStateChangedAsync();
         if (StateDispatcher != null)
         {
-            var snapshot = _copier!.Copy(State);
-            await StateDispatcher.PublishSingleAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), snapshot, Version));
-            await StateDispatcher.PublishAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), snapshot, Version));
+            var singleStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, version);
+            singleStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
+            await StateDispatcher.PublishSingleAsync(this.GetGrainId(), singleStateWrapper);
+            
+            var batchStateWrapper = new StateWrapper<TState>(this.GetGrainId(), snapshot, version);
+            batchStateWrapper.PublishedTimestampUtc = DateTime.UtcNow;
+            await StateDispatcher.PublishAsync(this.GetGrainId(), batchStateWrapper);
         }
     }
 
@@ -394,8 +455,18 @@ public abstract partial class
 
     protected virtual IAsyncStream<EventWrapperBase> GetEventBaseStream(GrainId grainId)
     {
+        // Create activity with proper correlation for tracing
+        using var activity = ActivitySource.StartActivity("GetEventBaseStream");
+        activity?.SetTag("grain.id", grainId.ToString());
+        activity?.SetTag("stream.namespace", AevatarOptions!.StreamNamespace);
+        activity?.SetTag("component", "GAgentBase");
+        
         var grainIdString = grainId.ToString();
         var streamId = StreamId.Create(AevatarOptions!.StreamNamespace, grainIdString);
+        
+        activity?.SetTag("stream.id", streamId.ToString());
+        activity?.SetTag("operation", "GetEventBaseStream");
+        
         return StreamProvider.GetStream<EventWrapperBase>(streamId);
     }
 }
