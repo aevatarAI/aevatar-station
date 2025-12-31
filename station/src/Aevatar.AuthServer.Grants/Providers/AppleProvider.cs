@@ -28,10 +28,8 @@ public class AppleProvider : IAppleProvider, ITransientDependency
     {
         try
         {
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: code: {code}", code);
             var aud = source == "ios" ? appOptions.NativeClientId : appOptions.WebClientId;
             var clientSecret = GenerateClientSecret(aud, appOptions);
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: GenerateClientSecret for code {code} success", code);
             using var client = new HttpClient();
             
             var redirectUrl = string.Empty;
@@ -53,19 +51,17 @@ public class AppleProvider : IAppleProvider, ITransientDependency
                 new("client_secret", clientSecret),
             };
             
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: start token exchange for code {code}", code);
             var response = await client.PostAsync(AppleConstants.TokenEndpoint, new FormUrlEncodedContent(body));
             var responseBody = await response.Content.ReadAsStringAsync();
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}", code);
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, ResponseBody {ResponseBody} ", code, responseBody);
             _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange ResponseBody {ResponseBody}", responseBody);
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange Response StatusCode: {StatusCode}", response.StatusCode);
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, StatusCode {StatusCode}", code, response.StatusCode);
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange Response StatusCode: {StatusCode}", response.StatusCode.ToString());
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, StatusCode {StatusCode}", code, response.StatusCode.ToString());
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("Token exchange failed. StatusCode: {StatusCode}", response.StatusCode.ToString());
                 _logger.LogError("Token exchange failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
-                    response.StatusCode, responseBody);
+                    response.StatusCode.ToString(), responseBody);
                 return "";
             }
             _logger.LogDebug("Token exchange response: {ResponseBody}", responseBody);
