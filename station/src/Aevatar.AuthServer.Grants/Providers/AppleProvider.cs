@@ -55,21 +55,25 @@ public class AppleProvider : IAppleProvider, ITransientDependency
             
             _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: start token exchange for code {code}", code);
             var response = await client.PostAsync(AppleConstants.TokenEndpoint, new FormUrlEncodedContent(body));
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code} response StatusCode: {StatusCode}", code, response.StatusCode);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}", code);
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange ResponseBody {ResponseBody}", responseBody);
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange Response StatusCode: {StatusCode}", response.StatusCode);
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, StatusCode {StatusCode}", code, response.StatusCode);
+            
             if (!response.IsSuccessStatusCode)
             {
+                _logger.LogError("Token exchange failed. StatusCode: {StatusCode}", response.StatusCode.ToString());
                 _logger.LogError("Token exchange failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
-                    response.StatusCode, await response.Content.ReadAsStringAsync());
+                    response.StatusCode, responseBody);
                 return "";
             }
-            
-            var json = await response.Content.ReadAsStringAsync();
-            _logger.LogDebug("Token exchange response: {ResponseBody}", json);
+            _logger.LogDebug("Token exchange response: {ResponseBody}", responseBody);
 
-            var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
+            var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(responseBody);
             if(tokenResp == null || tokenResp.IdToken.IsNullOrWhiteSpace())
             {
-                _logger.LogWarning("Token exchange failed. IdToken is null or whitespace. Response: {ResponseBody}", json);
+                _logger.LogWarning("Token exchange failed. IdToken is null or whitespace. Response: {ResponseBody}", responseBody);
             }
             return tokenResp?.IdToken ?? "";
         }
