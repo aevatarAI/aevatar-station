@@ -52,30 +52,21 @@ public class AppleProvider : IAppleProvider, ITransientDependency
             };
             
             var response = await client.PostAsync(AppleConstants.TokenEndpoint, new FormUrlEncodedContent(body));
-            var responseBody = await response.Content.ReadAsStringAsync();
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, ResponseBody {ResponseBody} ", code, responseBody);
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange Response StatusCode: {StatusCode}", (int)response.StatusCode);
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, StatusCode {StatusCode}", code, (int)response.StatusCode);
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError("AppleProvider.ExchangeCodeForTokenAsync: token exchange failed");
+                // HttpStatusCode need to be converted to int, otherwise this log will not be printed.
                 _logger.LogError("Token exchange failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
-                    ((int)response.StatusCode).ToString(), responseBody);
+                    (int)response.StatusCode, await response.Content.ReadAsStringAsync());
                 return "";
             }
-            _logger.LogDebug("Token exchange response: {ResponseBody}", responseBody);
-
-            var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(responseBody);
-            if(tokenResp == null || tokenResp.IdToken.IsNullOrWhiteSpace())
-            {
-                _logger.LogWarning("Token exchange failed. IdToken is null or whitespace. Response: {ResponseBody}", responseBody);
-            }
+            
+            var json = await response.Content.ReadAsStringAsync();
+            var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
             return tokenResp?.IdToken ?? "";
         }
         catch (Exception ex)
         {
-            _logger.LogError("AppleProvider.ExchangeCodeForTokenAsync failed for code {code}", code);
             _logger.LogError(ex, "AppleProvider.ExchangeCodeForTokenAsync failed");
             return "";
         }
