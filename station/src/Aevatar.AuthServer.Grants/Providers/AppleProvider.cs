@@ -54,14 +54,14 @@ public class AppleProvider : IAppleProvider, ITransientDependency
             var response = await client.PostAsync(AppleConstants.TokenEndpoint, new FormUrlEncodedContent(body));
             var responseBody = await response.Content.ReadAsStringAsync();
             _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, ResponseBody {ResponseBody} ", code, responseBody);
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange ResponseBody {ResponseBody}", responseBody);
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange Response StatusCode: {StatusCode}", response.StatusCode.ToString());
-            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, StatusCode {StatusCode}", code, response.StatusCode.ToString());
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange Response StatusCode: {StatusCode}", (int)response.StatusCode);
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code}, StatusCode {StatusCode}", code, (int)response.StatusCode);
             
             if (!response.IsSuccessStatusCode)
             {
+                _logger.LogError("AppleProvider.ExchangeCodeForTokenAsync: token exchange failed");
                 _logger.LogError("Token exchange failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
-                    response.StatusCode.ToString(), responseBody);
+                    ((int)response.StatusCode).ToString(), responseBody);
                 return "";
             }
             _logger.LogDebug("Token exchange response: {ResponseBody}", responseBody);
