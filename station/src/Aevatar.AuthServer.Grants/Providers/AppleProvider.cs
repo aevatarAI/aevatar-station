@@ -28,8 +28,10 @@ public class AppleProvider : IAppleProvider, ITransientDependency
     {
         try
         {
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: code: {code}", code);
             var aud = source == "ios" ? appOptions.NativeClientId : appOptions.WebClientId;
             var clientSecret = GenerateClientSecret(aud, appOptions);
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: GenerateClientSecret for code {code} success", code);
             using var client = new HttpClient();
             
             var redirectUrl = string.Empty;
@@ -51,8 +53,9 @@ public class AppleProvider : IAppleProvider, ITransientDependency
                 new("client_secret", clientSecret),
             };
             
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: start token exchange for code {code}", code);
             var response = await client.PostAsync(AppleConstants.TokenEndpoint, new FormUrlEncodedContent(body));
-            
+            _logger.LogDebug("AppleProvider.ExchangeCodeForTokenAsync: token exchange for code {code} response StatusCode: {StatusCode}", response.StatusCode);
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("Token exchange failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
@@ -61,6 +64,8 @@ public class AppleProvider : IAppleProvider, ITransientDependency
             }
             
             var json = await response.Content.ReadAsStringAsync();
+            _logger.LogDebug("Token exchange response: {ResponseBody}", json);
+
             var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
             if(tokenResp == null || tokenResp.IdToken.IsNullOrWhiteSpace())
             {
