@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Aevatar.Admin.Models;
 using Microsoft.Extensions.Configuration;
@@ -14,14 +12,13 @@ using Volo.Abp.DependencyInjection;
 namespace Aevatar.Admin.Services;
 
 /// <summary>
-/// Simple state export service - streams data directly without storage
+/// Simple state export service - paged queries, no long connections
 /// </summary>
-public class StateExportService : IStateExportService, ISingletonDependency
+public class StateExportService : ISingletonDependency
 {
     private readonly ILogger<StateExportService> _logger;
     private readonly IMongoDatabase _database;
     
-    // Business state types to export
     private static readonly HashSet<string> BusinessStateTypes = new()
     {
         "UserStatistics", "GodChat", "UserQuota", "UserBilling",
@@ -41,34 +38,20 @@ public class StateExportService : IStateExportService, ISingletonDependency
         var databaseName = configuration["OrleansEventSourcing:Mongodb:Database"] 
             ?? "GodgptDb";
         
-        _logger.LogInformation("StateExportService initialized with database: {Database}", databaseName);
+        _logger.LogInformation("StateExportService initialized: {Database}", databaseName);
         
         var client = new MongoClient(connectionString);
         _database = client.GetDatabase(databaseName);
     }
 
     /// <summary>
-    /// Stream export data directly to response - no storage needed
+    /// Get export summary - total counts per type (for planning pagination)
     /// </summary>
-    public async Task StreamExportAsync(Stream outputStream, List<string>? types)
+    public async Task<ExportSummaryDto> GetExportSummaryAsync(List<string>? types)
     {
-        _logger.LogInformation("Starting streaming export for types: {Types}", 
-            types != null ? string.Join(", ", types) : "all");
-        
-        await using var writer = new Utf8JsonWriter(outputStream, new JsonWriterOptions 
-        { 
-            Indented = false  // Compact for streaming
-        });
-        
-        writer.WriteStartObject();
-        writer.WriteString("exportedAt", DateTime.UtcNow.ToString("O"));
-        writer.WritePropertyName("records");
-        writer.WriteStartArray();
-        
-        var totalCount = 0;
+        var summary = new ExportSummaryDto { Types = new List<TypeSummary>() };
         var typesToExport = types?.Count > 0 ? types : BusinessStateTypes.ToList();
         
-        // Get all Stream* collections
         var collectionNames = await _database.ListCollectionNamesAsync();
         var streamCollections = (await collectionNames.ToListAsync())
             .Where(c => c.StartsWith("Stream"))
@@ -82,89 +65,64 @@ public class StateExportService : IStateExportService, ISingletonDependency
             
             var typeName = ExtractTypeName(collectionName);
             var collection = _database.GetCollection<BsonDocument>(collectionName);
+            var count = await collection.CountDocumentsAsync(_ => true);
             
-            using var cursor = await collection.Find(_ => true).ToCursorAsync();
-            while (await cursor.MoveNextAsync())
-            {
-                foreach (var doc in cursor.Current)
-                {
-                    var record = DeserializeDocument(doc, typeName);
-                    if (record == null) continue;
-                    
-                    // Write record directly to stream
-                    writer.WriteStartObject();
-                    writer.WriteString("id", record.Id);
-                    writer.WriteString("type", record.Type);
-                    writer.WritePropertyName("state");
-                    WriteObjectAsJson(writer, record.State);
-                    writer.WriteEndObject();
-                    
-                    totalCount++;
-                    
-                    // Flush periodically to keep connection alive
-                    if (totalCount % 100 == 0)
-                    {
-                        await writer.FlushAsync();
-                        await outputStream.FlushAsync();
-                    }
-                }
-            }
+            summary.Types.Add(new TypeSummary 
+            { 
+                TypeName = typeName, 
+                CollectionName = collectionName,
+                Count = (int)count 
+            });
+            summary.TotalCount += (int)count;
         }
         
-        writer.WriteEndArray();
-        writer.WriteNumber("totalCount", totalCount);
-        writer.WriteEndObject();
-        
-        await writer.FlushAsync();
-        _logger.LogInformation("Streaming export completed. Total: {Count} records", totalCount);
+        return summary;
     }
 
     /// <summary>
-    /// Simple sync export - returns all data directly (for small datasets)
+    /// Export single type with pagination - short request, no timeout
     /// </summary>
-    public async Task<ExportResultDto> ExportAllAsync(List<string>? types)
+    public async Task<PagedExportDto> ExportTypePagedAsync(
+        string collectionName, 
+        int skip = 0, 
+        int limit = 1000)
     {
-        _logger.LogInformation("Starting sync export for types: {Types}", 
-            types != null ? string.Join(", ", types) : "all");
+        _logger.LogInformation("Exporting {Collection} skip={Skip} limit={Limit}", 
+            collectionName, skip, limit);
         
+        var collection = _database.GetCollection<BsonDocument>(collectionName);
+        var typeName = ExtractTypeName(collectionName);
+        
+        var totalCount = await collection.CountDocumentsAsync(_ => true);
         var records = new List<ExportedRecord>();
-        var typesToExport = types?.Count > 0 ? types : BusinessStateTypes.ToList();
         
-        var collectionNames = await _database.ListCollectionNamesAsync();
-        var streamCollections = (await collectionNames.ToListAsync())
-            .Where(c => c.StartsWith("Stream"))
-            .ToList();
+        var documents = await collection.Find(_ => true)
+            .Skip(skip)
+            .Limit(limit)
+            .ToListAsync();
         
-        foreach (var collectionName in streamCollections)
+        foreach (var doc in documents)
         {
-            var matchesType = typesToExport.Any(t => 
-                collectionName.Contains(t, StringComparison.OrdinalIgnoreCase));
-            if (!matchesType) continue;
-            
-            var typeName = ExtractTypeName(collectionName);
-            var collection = _database.GetCollection<BsonDocument>(collectionName);
-            
-            using var cursor = await collection.Find(_ => true).ToCursorAsync();
-            while (await cursor.MoveNextAsync())
-            {
-                foreach (var doc in cursor.Current)
-                {
-                    var record = DeserializeDocument(doc, typeName);
-                    if (record != null) records.Add(record);
-                }
-            }
+            var record = DeserializeDocument(doc, typeName);
+            if (record != null) records.Add(record);
         }
         
-        _logger.LogInformation("Sync export completed. Total: {Count} records", records.Count);
-        
-        return new ExportResultDto
+        return new PagedExportDto
         {
-            ExportedAt = DateTime.UtcNow,
-            TotalCount = records.Count,
+            TypeName = typeName,
+            CollectionName = collectionName,
+            Skip = skip,
+            Limit = limit,
+            TotalCount = (int)totalCount,
+            ReturnedCount = records.Count,
+            HasMore = skip + records.Count < totalCount,
             Records = records
         };
     }
 
+    /// <summary>
+    /// Get available state types
+    /// </summary>
     public async Task<List<string>> GetAvailableTypesAsync()
     {
         var types = new List<string>();
@@ -189,17 +147,6 @@ public class StateExportService : IStateExportService, ISingletonDependency
         
         return types.OrderBy(t => t).ToList();
     }
-
-    #region Legacy interface support (not used in new streaming API)
-    
-    public Task<string> StartExportAsync(List<string>? types) 
-        => Task.FromResult("use-streaming-api");
-    
-    public ExportTask? GetTaskStatus(string taskId) => null;
-    
-    public List<ExportedRecord>? GetAndRemoveTaskData(string taskId) => null;
-    
-    #endregion
 
     #region Helpers
     
@@ -272,52 +219,6 @@ public class StateExportService : IStateExportService, ISingletonDependency
         _ => value.ToString()
     };
 
-    private static void WriteObjectAsJson(Utf8JsonWriter writer, object? obj)
-    {
-        switch (obj)
-        {
-            case null:
-                writer.WriteNullValue();
-                break;
-            case string s:
-                writer.WriteStringValue(s);
-                break;
-            case int i:
-                writer.WriteNumberValue(i);
-                break;
-            case long l:
-                writer.WriteNumberValue(l);
-                break;
-            case double d:
-                writer.WriteNumberValue(d);
-                break;
-            case bool b:
-                writer.WriteBooleanValue(b);
-                break;
-            case DateTime dt:
-                writer.WriteStringValue(dt.ToString("O"));
-                break;
-            case Dictionary<string, object?> dict:
-                writer.WriteStartObject();
-                foreach (var kv in dict)
-                {
-                    writer.WritePropertyName(kv.Key);
-                    WriteObjectAsJson(writer, kv.Value);
-                }
-                writer.WriteEndObject();
-                break;
-            case IEnumerable<object?> list:
-                writer.WriteStartArray();
-                foreach (var item in list)
-                    WriteObjectAsJson(writer, item);
-                writer.WriteEndArray();
-                break;
-            default:
-                writer.WriteStringValue(obj.ToString());
-                break;
-        }
-    }
-
     private static string ExtractTypeName(string collectionName)
     {
         var cleaned = collectionName;
@@ -333,12 +234,31 @@ public class StateExportService : IStateExportService, ISingletonDependency
     #endregion
 }
 
-/// <summary>
-/// Direct export result (for sync API)
-/// </summary>
-public class ExportResultDto
+#region DTOs
+
+public class ExportSummaryDto
 {
-    public DateTime ExportedAt { get; set; }
     public int TotalCount { get; set; }
+    public List<TypeSummary> Types { get; set; } = new();
+}
+
+public class TypeSummary
+{
+    public string TypeName { get; set; } = string.Empty;
+    public string CollectionName { get; set; } = string.Empty;
+    public int Count { get; set; }
+}
+
+public class PagedExportDto
+{
+    public string TypeName { get; set; } = string.Empty;
+    public string CollectionName { get; set; } = string.Empty;
+    public int Skip { get; set; }
+    public int Limit { get; set; }
+    public int TotalCount { get; set; }
+    public int ReturnedCount { get; set; }
+    public bool HasMore { get; set; }
     public List<ExportedRecord> Records { get; set; } = new();
 }
+
+#endregion

@@ -13,7 +13,7 @@ using Volo.Abp;
 namespace Aevatar.Admin.Controllers;
 
 /// <summary>
-/// Simple State Export API - no complex task management
+/// Paged State Export API - short requests, no timeout issues
 /// </summary>
 [RemoteService]
 [ControllerName("StateExport")]
@@ -33,32 +33,41 @@ public class StateExportController : AevatarController
     }
 
     /// <summary>
-    /// Stream export - for large datasets, streams JSON directly
-    /// GET /api/admin/export/stream?types=UserStatistics,UserQuota
+    /// Step 1: Get export summary - shows total counts per type
+    /// GET /api/admin/export/summary?types=UserStatistics,UserQuota
     /// </summary>
-    [HttpGet("stream")]
-    public async Task StreamExport([FromQuery] List<string>? types)
+    [HttpGet("summary")]
+    public async Task<ExportSummaryDto> GetSummary([FromQuery] List<string>? types)
     {
-        _logger.LogInformation("Stream export requested for types: {Types}", 
+        _logger.LogInformation("Getting export summary for types: {Types}", 
             types != null ? string.Join(", ", types) : "all");
         
-        Response.ContentType = "application/json";
-        Response.Headers["Content-Disposition"] = "attachment; filename=\"state_export.json\"";
-        
-        await _exportService.StreamExportAsync(Response.Body, types);
+        return await _exportService.GetExportSummaryAsync(types);
     }
 
     /// <summary>
-    /// Direct export - returns all data synchronously (simpler, for smaller datasets)
-    /// GET /api/admin/export/all?types=UserStatistics,UserQuota
+    /// Step 2: Export single type with pagination
+    /// GET /api/admin/export/page?collection=StreamgodgptXxx&skip=0&limit=1000
+    /// 
+    /// Client loops until hasMore=false
     /// </summary>
-    [HttpGet("all")]
-    public async Task<ExportResultDto> ExportAll([FromQuery] List<string>? types)
+    [HttpGet("page")]
+    public async Task<PagedExportDto> ExportPage(
+        [FromQuery] string collection,
+        [FromQuery] int skip = 0,
+        [FromQuery] int limit = 1000)
     {
-        _logger.LogInformation("Direct export requested for types: {Types}", 
-            types != null ? string.Join(", ", types) : "all");
+        if (string.IsNullOrEmpty(collection))
+        {
+            throw new UserFriendlyException("collection parameter is required");
+        }
         
-        return await _exportService.ExportAllAsync(types);
+        if (limit > 5000)
+        {
+            limit = 5000; // Cap to prevent memory issues
+        }
+        
+        return await _exportService.ExportTypePagedAsync(collection, skip, limit);
     }
 
     /// <summary>
