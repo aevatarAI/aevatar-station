@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Aevatar.Admin.Models;
 using Aevatar.Admin.Services;
@@ -12,7 +13,7 @@ using Volo.Abp;
 namespace Aevatar.Admin.Controllers;
 
 /// <summary>
-/// API controller for exporting GAgent state data
+/// Simple State Export API - no complex task management
 /// </summary>
 [RemoteService]
 [ControllerName("StateExport")]
@@ -20,11 +21,11 @@ namespace Aevatar.Admin.Controllers;
 [Authorize(Policy = AevatarPermissions.AdminPolicy)]
 public class StateExportController : AevatarController
 {
-    private readonly IStateExportService _exportService;
+    private readonly StateExportService _exportService;
     private readonly ILogger<StateExportController> _logger;
 
     public StateExportController(
-        IStateExportService exportService,
+        StateExportService exportService,
         ILogger<StateExportController> logger)
     {
         _exportService = exportService;
@@ -32,100 +33,42 @@ public class StateExportController : AevatarController
     }
 
     /// <summary>
-    /// Start an export task
-    /// POST /api/admin/export/start
+    /// Stream export - for large datasets, streams JSON directly
+    /// GET /api/admin/export/stream?types=UserStatistics,UserQuota
     /// </summary>
-    [HttpPost("start")]
-    public async Task<StartExportResponse> StartExport([FromBody] StartExportRequest? request)
+    [HttpGet("stream")]
+    public async Task StreamExport([FromQuery] List<string>? types)
     {
-        _logger.LogInformation("Starting state export. Types: {Types}", 
-            request?.Types != null ? string.Join(", ", request.Types) : "all");
+        _logger.LogInformation("Stream export requested for types: {Types}", 
+            types != null ? string.Join(", ", types) : "all");
         
-        var taskId = await _exportService.StartExportAsync(request?.Types);
+        Response.ContentType = "application/json";
+        Response.Headers["Content-Disposition"] = "attachment; filename=\"state_export.json\"";
         
-        return new StartExportResponse
-        {
-            TaskId = taskId,
-            Status = "processing",
-            Message = "Export task started. Use GET /api/admin/export/status/{taskId} to check progress."
-        };
+        await _exportService.StreamExportAsync(Response.Body, types);
     }
 
     /// <summary>
-    /// Query export task status
-    /// GET /api/admin/export/status/{taskId}
+    /// Direct export - returns all data synchronously (simpler, for smaller datasets)
+    /// GET /api/admin/export/all?types=UserStatistics,UserQuota
     /// </summary>
-    [HttpGet("status/{taskId}")]
-    public ExportStatusResponse GetStatus(string taskId)
+    [HttpGet("all")]
+    public async Task<ExportResultDto> ExportAll([FromQuery] List<string>? types)
     {
-        var task = _exportService.GetTaskStatus(taskId);
+        _logger.LogInformation("Direct export requested for types: {Types}", 
+            types != null ? string.Join(", ", types) : "all");
         
-        if (task == null)
-        {
-            throw new UserFriendlyException($"Export task {taskId} not found");
-        }
-        
-        return new ExportStatusResponse
-        {
-            TaskId = task.TaskId,
-            Status = task.Status,
-            StartedAt = task.StartedAt,
-            CompletedAt = task.CompletedAt,
-            TotalCount = task.TotalCount,
-            ProcessedCount = task.ProcessedCount,
-            Error = task.Error
-        };
+        return await _exportService.ExportAllAsync(types);
     }
 
     /// <summary>
-    /// Download export data
-    /// GET /api/admin/export/download/{taskId}
-    /// </summary>
-    [HttpGet("download/{taskId}")]
-    public IActionResult Download(string taskId)
-    {
-        var task = _exportService.GetTaskStatus(taskId);
-        
-        if (task == null)
-        {
-            throw new UserFriendlyException($"Export task {taskId} not found");
-        }
-        
-        if (task.Status != "completed")
-        {
-            throw new UserFriendlyException($"Export task {taskId} is not ready. Current status: {task.Status}");
-        }
-        
-        var data = _exportService.GetAndRemoveTaskData(taskId);
-        
-        if (data == null)
-        {
-            throw new UserFriendlyException($"Export data for task {taskId} not available");
-        }
-        
-        _logger.LogInformation("Download completed for task {TaskId}. Records: {Count}", taskId, data.Count);
-        
-        return Ok(new
-        {
-            taskId,
-            exportedAt = task.CompletedAt,
-            totalCount = data.Count,
-            records = data
-        });
-    }
-
-    /// <summary>
-    /// Get list of available state types for export
+    /// Get available state types
     /// GET /api/admin/export/types
     /// </summary>
     [HttpGet("types")]
     public async Task<AvailableTypesResponse> GetAvailableTypes()
     {
         var types = await _exportService.GetAvailableTypesAsync();
-        
-        return new AvailableTypesResponse
-        {
-            AvailableTypes = types
-        };
+        return new AvailableTypesResponse { AvailableTypes = types };
     }
 }
