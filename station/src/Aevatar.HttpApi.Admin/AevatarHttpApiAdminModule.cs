@@ -23,8 +23,8 @@ public class AevatarHttpApiAdminModule : AbpModule
     {
         ConfigureLocalization();
         
-        // Register State Export Service
-        context.Services.AddSingleton<IStateExportService, StateExportService>();
+        // Register State Export Service (singleton for reuse)
+        context.Services.AddSingleton<StateExportService>();
     }
 
     private void ConfigureLocalization()
