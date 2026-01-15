@@ -1,5 +1,7 @@
-﻿using Localization.Resources.AbpUi;
+﻿using Aevatar.Admin.Services;
+using Localization.Resources.AbpUi;
 using Aevatar.Localization;
+using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Account;
 using Volo.Abp.Identity;
 using Volo.Abp.Localization;
@@ -20,7 +22,9 @@ public class AevatarHttpApiAdminModule : AbpModule
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         ConfigureLocalization();
-      
+        
+        // Register State Export Service (singleton for reuse)
+        context.Services.AddSingleton<StateExportService>();
     }
 
     private void ConfigureLocalization()
