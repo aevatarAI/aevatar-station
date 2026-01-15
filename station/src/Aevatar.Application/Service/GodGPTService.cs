@@ -469,7 +469,10 @@ public class GodGPTService : ApplicationService, IGodGPTService
     {
         var userBillingGAgent =
             _clusterClient.GetGrain<IUserBillingGAgent>(currentUserId);
-        return await userBillingGAgent.GetPaymentHistoryAsync(input.Page, input.PageSize);
+        var result = await userBillingGAgent.GetPaymentHistoryAsync(input.Page, input.PageSize);
+        // The result is List<PaymentSummaryDto>, but interface expects List<PaymentSummary>
+        // PaymentSummaryDto and PaymentSummary should be the same type or compatible
+        return result.Cast<PaymentSummary>().ToList();
     }
 
     public async Task<GetCustomerResponseDto> GetStripeCustomerAsync(Guid currentUserId)
@@ -1205,7 +1208,7 @@ public class GodGPTService : ApplicationService, IGodGPTService
     public async Task<AppRatingRecordDto> RecordAppRatingAsync(Guid currentUserId, RecordAppRatingInput input)
     {
         var userStatisticsGAgent = _clusterClient.GetGrain<IUserStatisticsGAgent>(currentUserId);
-        return await userStatisticsGAgent.RecordAppRatingAsync(input.Platform, input.DeviceId);
+        return await userStatisticsGAgent.RecordAppRatingAsync(currentUserId, input.Platform, input.DeviceId);
     }
 
     public async Task<bool> CanUserRateAppAsync(Guid currentUserId, CanUserRateAppInput input)

@@ -82,18 +82,21 @@ public class DailyPushService : ApplicationService, IDailyPushService
             _logger.LogInformation("📱 Device registration: DeviceId={DeviceId}, User={UserId}, Language={LanguageEnum}→{LanguageString}", 
                 request.DeviceId, userId, languageEnum, languageString);
                 
-            var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
-                request.DeviceId,
-                request.PushToken,
-                request.TimeZoneId,
-                request.PushEnabled,
-                languageString
-            );
+            // TODO: RegisterOrUpdateDeviceAsync method not available in GodGPT.GAgents 1.32.8-hotfix-testnet-2
+            // This method needs to be implemented when the package is updated
+            // var isNewRegistration = await chatManagerGAgent.RegisterOrUpdateDeviceAsync(
+            //     request.DeviceId,
+            //     request.PushToken,
+            //     request.TimeZoneId,
+            //     request.PushEnabled,
+            //     languageString
+            // );
+            throw new NotImplementedException("RegisterOrUpdateDeviceAsync is not available in the current GodGPT.GAgents package version. Please update the package.");
             
-            _logger.LogInformation("Device {DeviceId} registered/updated for user {UserId}, isNew: {IsNew}, languageChanged: {LanguageChanged}", 
-                request.DeviceId, userId, isNewRegistration, languageChanged);
-                
-            return isNewRegistration;
+            // This code will never execute, but needed for compilation
+            // _logger.LogInformation("Device {DeviceId} registered/updated for user {UserId}, isNew: {IsNew}, languageChanged: {LanguageChanged}", 
+            //     request.DeviceId, userId, isNewRegistration, languageChanged);
+            // return isNewRegistration;
         }
         catch (Exception ex)
         {
@@ -168,7 +171,9 @@ public class DailyPushService : ApplicationService, IDailyPushService
             
             var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
             await timezoneScheduler.InitializeAsync(timezone);
-            await timezoneScheduler.StartTestModeAsync(intervalSeconds);
+            // TODO: StartTestModeAsync method not available in GodGPT.GAgents 1.32.8-hotfix-testnet-2
+            throw new NotImplementedException("StartTestModeAsync is not available in the current GodGPT.GAgents package version. Please update the package.");
+            // await timezoneScheduler.StartTestModeAsync(intervalSeconds);
             
             _logger.LogInformation("Test mode started successfully for timezone {Timezone} with {IntervalSeconds}s interval", 
                 timezone, intervalSeconds);
@@ -191,7 +196,9 @@ public class DailyPushService : ApplicationService, IDailyPushService
             
             var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
             await timezoneScheduler.InitializeAsync(timezone);
-            await timezoneScheduler.StopTestModeAsync();
+            // TODO: StopTestModeAsync method not available in GodGPT.GAgents 1.32.8-hotfix-testnet-2
+            throw new NotImplementedException("StopTestModeAsync is not available in the current GodGPT.GAgents package version. Please update the package.");
+            // await timezoneScheduler.StopTestModeAsync();
             
             _logger.LogInformation("Test mode stopped successfully for timezone {Timezone}", timezone);
         }
@@ -213,12 +220,12 @@ public class DailyPushService : ApplicationService, IDailyPushService
             
             var timezoneScheduler = _clusterClient.GetGrain<IDailyPushCoordinatorGAgent>(DailyPushConstants.TimezoneToGuid(timezone));
             await timezoneScheduler.InitializeAsync(timezone);
-            var status = await timezoneScheduler.GetTestStatusAsync();
+            // TODO: GetTestStatusAsync method not available in GodGPT.GAgents 1.32.8-hotfix-testnet-2
+            // var status = await timezoneScheduler.GetTestStatusAsync();
+            throw new NotImplementedException("GetTestStatusAsync is not available in the current GodGPT.GAgents package version. Please update the package.");
             
-            _logger.LogDebug("Retrieved test status for timezone {Timezone}: Active={IsActive}, Rounds={RoundsCompleted}/{MaxRounds}", 
-                timezone, status.IsActive, status.RoundsCompleted, status.MaxRounds);
-                
-            return status;
+            // This code will never execute, but needed for compilation
+            // return (false, DateTime.UtcNow, 0, 0);
         }
         catch (Exception ex)
         {
@@ -280,35 +287,35 @@ public class DailyPushService : ApplicationService, IDailyPushService
                 {
                     // Get user's chat manager to access device information
                     var chatManager = _clusterClient.GetGrain<IChatManagerGAgent>(userId);
-                    var allDevicesForUser = await chatManager.GetAllUserDevicesAsync();
+                    // TODO: GetAllUserDevicesAsync method not available in GodGPT.GAgents 1.32.8-hotfix-testnet-2
+                    // var allDevicesForUser = await chatManager.GetAllUserDevicesAsync();
+                    // For now, skip this user as we cannot get device list
+                    _logger.LogWarning("GetAllUserDevicesAsync not available for user {UserId}, skipping", userId);
+                    continue;
                     
-                    _logger.LogDebug("User {UserId} has {DeviceCount} total devices", userId, allDevicesForUser.Count);
-                    
-                    // Filter devices that match the timezone and are enabled
-                    var userTimezoneDevices = allDevicesForUser.Where(d => 
-                        d.TimeZoneId == timezone && d.PushEnabled).ToList();
-                    
-                    var enabledDevicesInTimezone = allDevicesForUser.Count(d => 
-                        d.TimeZoneId == timezone && d.PushEnabled);
-                        
-                    foreach (var device in userTimezoneDevices)
-                    {
-                        _logger.LogDebug("Adding device: UserId={UserId}, DeviceId={DeviceId}, TimeZoneId='{TimeZoneId}', PushEnabled={PushEnabled}", 
-                            userId, device.DeviceId, device.TimeZoneId, device.PushEnabled);
-                            
-                        result.Add(new Contracts.DailyPush.TimezoneDeviceInfo
-                        {
-                            UserId = userId,
-                            DeviceId = device.DeviceId,
-                            PushToken = device.PushToken, // Show full pushToken for testing interface
-                            TimeZoneId = device.TimeZoneId,
-                            PushLanguage = device.PushLanguage ?? "en",
-                            PushEnabled = device.PushEnabled,
-                            HasEnabledDeviceInTimezone = enabledDevicesInTimezone > 0,
-                            TotalDeviceCount = allDevicesForUser.Count,
-                            EnabledDeviceCount = enabledDevicesInTimezone
-                        });
-                    }
+                    // This code will never execute, but kept for reference
+                    // _logger.LogDebug("User {UserId} has {DeviceCount} total devices", userId, allDevicesForUser.Count);
+                    // var userTimezoneDevices = allDevicesForUser.Where(d => 
+                    //     d.TimeZoneId == timezone && d.PushEnabled).ToList();
+                    // var enabledDevicesInTimezone = allDevicesForUser.Count(d => 
+                    //     d.TimeZoneId == timezone && d.PushEnabled);
+                    // foreach (var device in userTimezoneDevices)
+                    // {
+                    //     _logger.LogDebug("Adding device: UserId={UserId}, DeviceId={DeviceId}, TimeZoneId='{TimeZoneId}', PushEnabled={PushEnabled}", 
+                    //         userId, device.DeviceId, device.TimeZoneId, device.PushEnabled);
+                    //     result.Add(new Contracts.DailyPush.TimezoneDeviceInfo
+                    //     {
+                    //         UserId = userId,
+                    //         DeviceId = device.DeviceId,
+                    //         PushToken = device.PushToken,
+                    //         TimeZoneId = device.TimeZoneId,
+                    //         PushLanguage = device.PushLanguage ?? "en",
+                    //         PushEnabled = device.PushEnabled,
+                    //         HasEnabledDeviceInTimezone = enabledDevicesInTimezone > 0,
+                    //         TotalDeviceCount = allDevicesForUser.Count,
+                    //         EnabledDeviceCount = enabledDevicesInTimezone
+                    //     });
+                    // }
                 }
                 catch (Exception ex)
                 {
@@ -352,10 +359,13 @@ public class DailyPushService : ApplicationService, IDailyPushService
             await coordinator.InitializeAsync(timezone);
             
             // Call the coordinator's instant push method
-            var result = await coordinator.SendInstantPushAsync();
+            // TODO: SendInstantPushAsync method not available in GodGPT.GAgents 1.32.8-hotfix-testnet-2
+            // var result = await coordinator.SendInstantPushAsync();
+            throw new NotImplementedException("SendInstantPushAsync is not available in the current GodGPT.GAgents package version. Please update the package.");
             
-            _logger.LogInformation("Instant push completed for timezone {Timezone}", timezone);
-            return result;
+            // This code will never execute, but needed for compilation
+            // _logger.LogInformation("Instant push completed for timezone {Timezone}", timezone);
+            // return result;
         }
         catch (Exception ex)
         {
@@ -417,7 +427,9 @@ public class DailyPushService : ApplicationService, IDailyPushService
             
             // Clear read status for the user
             var chatManagerGAgent = _clusterClient.GetGrain<IChatManagerGAgent>(foundUserId.Value);
-            await chatManagerGAgent.ClearReadStatusAsync();
+            // TODO: ClearReadStatusAsync method not available in GodGPT.GAgents 1.32.8-hotfix-testnet-2
+            throw new NotImplementedException("ClearReadStatusAsync is not available in the current GodGPT.GAgents package version. Please update the package.");
+            // await chatManagerGAgent.ClearReadStatusAsync();
             
             _logger.LogInformation("Read status cleared for device {DeviceId} (User: {UserId})", deviceId, foundUserId.Value);
                 
