@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Aevatar.Admin.Models;
+using Aevatar.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MongoDB.Bson;
@@ -13,7 +13,7 @@ using MongoDB.Driver;
 using Orleans.Serialization;
 using Volo.Abp.DependencyInjection;
 
-namespace Aevatar.Admin.Services;
+namespace Aevatar.Services;
 
 /// <summary>
 /// Simple state export service - paged queries, no long connections
@@ -516,32 +516,3 @@ public class StateExportService : ISingletonDependency
     
     #endregion
 }
-
-#region DTOs
-
-public class ExportSummaryDto
-{
-    public int TotalCount { get; set; }
-    public List<TypeSummary> Types { get; set; } = new();
-}
-
-public class TypeSummary
-{
-    public string TypeName { get; set; } = string.Empty;
-    public string CollectionName { get; set; } = string.Empty;
-    public int Count { get; set; }
-}
-
-public class PagedExportDto
-{
-    public string TypeName { get; set; } = string.Empty;
-    public string CollectionName { get; set; } = string.Empty;
-    public int Skip { get; set; }
-    public int Limit { get; set; }
-    public int TotalCount { get; set; }
-    public int ReturnedCount { get; set; }
-    public bool HasMore { get; set; }
-    public List<ExportedRecord> Records { get; set; } = new();
-}
-
-#endregion

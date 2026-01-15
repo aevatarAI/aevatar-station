@@ -46,6 +46,9 @@ public class AevatarHttpApiModule : AbpModule
         // Configure security options and services
         ConfigureSecurityOptions(context, configuration);
         ConfigureSecurityServices(context);
+        
+        // Register State Export Service (singleton for reuse)
+        context.Services.AddSingleton<Aevatar.Services.StateExportService>();
     }
 
     private void ConfigureLocalization()

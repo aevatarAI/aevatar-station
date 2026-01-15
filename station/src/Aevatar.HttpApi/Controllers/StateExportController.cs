@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Aevatar.Admin.Models;
-using Aevatar.Admin.Services;
+using Aevatar.Models;
+using Aevatar.Services;
 using Aevatar.Controllers;
 using Aevatar.Permissions;
 using Aevatar.StateExport;
@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging;
 using Orleans;
 using Volo.Abp;
 
-namespace Aevatar.Admin.Controllers;
+namespace Aevatar.Controllers;
 
 /// <summary>
 /// Paged State Export API - short requests, no timeout issues
