@@ -138,4 +138,55 @@ public class FirebaseEvent
     /// </summary>
     [JsonProperty("params")]
     public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+}
+
+/// <summary>
+/// Simplified event data for batch processing
+/// </summary>
+public class SimpleBatchEventDto
+{
+    /// <summary>
+    /// Event name
+    /// </summary>
+    [Required]
+    public string EventName { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Event parameters
+    /// </summary>
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
+}
+
+/// <summary>
+/// Google Analytics batch event tracking request DTO (simplified)
+/// </summary>
+public class GoogleAnalyticsBatchEventRequestDto
+{
+    /// <summary>
+    /// App Instance ID for all events
+    /// </summary>
+    [Required]
+    public string AppInstanceId { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// List of simplified events to track
+    /// </summary>
+    [Required]
+    public List<SimpleBatchEventDto> Events { get; set; } = new List<SimpleBatchEventDto>();
+}
+
+/// <summary>
+/// Google Analytics batch event tracking response DTO (simplified)
+/// </summary>
+public class GoogleAnalyticsBatchEventResponseDto
+{
+    /// <summary>
+    /// Whether the batch operation succeeded
+    /// </summary>
+    public bool Success { get; set; }
+    
+    /// <summary>
+    /// Error message (if failed)
+    /// </summary>
+    public string? ErrorMessage { get; set; }
 } 

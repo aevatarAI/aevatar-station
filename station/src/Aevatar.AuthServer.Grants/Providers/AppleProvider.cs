@@ -62,6 +62,10 @@ public class AppleProvider : IAppleProvider, ITransientDependency
             
             var json = await response.Content.ReadAsStringAsync();
             var tokenResp = JsonConvert.DeserializeObject<TokenResponse>(json);
+            if(tokenResp == null || tokenResp.IdToken.IsNullOrWhiteSpace())
+            {
+                _logger.LogWarning("Token exchange failed. IdToken is null or whitespace. Response: {ResponseBody}", json);
+            }
             return tokenResp?.IdToken ?? "";
         }
         catch (Exception ex)

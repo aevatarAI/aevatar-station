@@ -356,7 +356,10 @@ public abstract partial class
         {
             return;
         }
-        InternalOnStateChangedAsync().ContinueWith(task =>
+        
+        var snapshot = _copier!.Copy(State);
+        
+        InternalOnStateChangedAsync(Version, snapshot).ContinueWith(task =>
         {
             if (task.Exception != null)
             {
@@ -366,16 +369,15 @@ public abstract partial class
         _lastProcessedVersion = Version;       
     }
 
-    private async Task InternalOnStateChangedAsync()
+    private async Task InternalOnStateChangedAsync(int version, TState snapshot)
     {
         await HandleStateChangedAsync();
         if (StateDispatcher != null)
         {
-            var snapshot = _copier!.Copy(State);
             await StateDispatcher.PublishSingleAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), snapshot, Version));
+                new StateWrapper<TState>(this.GetGrainId(), snapshot, version));
             await StateDispatcher.PublishAsync(this.GetGrainId(),
-                new StateWrapper<TState>(this.GetGrainId(), snapshot, Version));
+                new StateWrapper<TState>(this.GetGrainId(), snapshot, version));
         }
     }
 
