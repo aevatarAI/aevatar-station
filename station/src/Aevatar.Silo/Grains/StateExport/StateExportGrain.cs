@@ -59,6 +59,58 @@ public class StateExportGrain : Grain, IStateExportGrain
             // Don't throw - allow lazy connection
         }
     }
+    
+    /// <summary>
+    /// Cleans MongoDB connection string by removing incompatible parameters
+    /// </summary>
+    private static string CleanConnectionString(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return connectionString;
+        
+        try
+        {
+            var uri = new Uri(connectionString);
+            var host = uri.Host;
+            
+            // Check if connection string contains multiple hosts (comma-separated)
+            // Extract hosts from the connection string
+            var hostPart = connectionString.Split('@').LastOrDefault()?.Split('/').FirstOrDefault();
+            var hasMultipleHosts = !string.IsNullOrEmpty(hostPart) && hostPart.Contains(',');
+            
+            // If multiple hosts are present and directConnection=true exists, remove it
+            if (hasMultipleHosts && connectionString.Contains("directConnection=true", StringComparison.OrdinalIgnoreCase))
+            {
+                // Remove directConnection=true parameter
+                connectionString = System.Text.RegularExpressions.Regex.Replace(
+                    connectionString,
+                    @"[&?]directConnection=true",
+                    "",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                
+                // Clean up double ampersands or question marks
+                connectionString = System.Text.RegularExpressions.Regex.Replace(connectionString, @"[&]{2,}", "&");
+                connectionString = connectionString.Replace("?&", "?").TrimEnd('&', '?');
+            }
+            
+            return connectionString;
+        }
+        catch
+        {
+            // If parsing fails, try simple string replacement as fallback
+            if (connectionString.Contains(',') && connectionString.Contains("directConnection=true", StringComparison.OrdinalIgnoreCase))
+            {
+                connectionString = System.Text.RegularExpressions.Regex.Replace(
+                    connectionString,
+                    @"[&?]directConnection=true",
+                    "",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                connectionString = System.Text.RegularExpressions.Regex.Replace(connectionString, @"[&]{2,}", "&");
+                connectionString = connectionString.Replace("?&", "?").TrimEnd('&', '?');
+            }
+            return connectionString;
+        }
+    }
 
     public async Task<List<StateCollectionInfo>> GetCollectionsAsync()
     {
@@ -67,7 +119,8 @@ public class StateExportGrain : Grain, IStateExportGrain
         var collectionNames = await _database.ListCollectionNamesAsync();
         var names = await collectionNames.ToListAsync();
         
-        foreach (var name in names.Where(n => n.StartsWith("Stream")))
+        // Support "Stream" and "Orleansgodgptprod" prefixed collections
+        foreach (var name in names.Where(n => n.StartsWith("Stream") || n.StartsWith("Orleansgodgptprod")))
         {
             var collection = _database.GetCollection<BsonDocument>(name);
             var count = await collection.CountDocumentsAsync(_ => true);
@@ -374,11 +427,16 @@ public class StateExportGrain : Grain, IStateExportGrain
     private static string ExtractTypeName(string collectionName)
     {
         var cleaned = collectionName;
+        // Handle Stream prefix
         if (cleaned.StartsWith("Streamgodgpt"))
             cleaned = cleaned["Streamgodgpt".Length..];
         else if (cleaned.StartsWith("Stream"))
             cleaned = cleaned["Stream".Length..];
+        // Handle Orleansgodgptprod prefix (e.g., OrleansgodgptprodUserPaymentState)
+        else if (cleaned.StartsWith("Orleansgodgptprod"))
+            cleaned = cleaned["Orleansgodgptprod".Length..];
         
+        // If still contains dots, extract last part (namespace.ClassName -> ClassName)
         var parts = cleaned.Split('.');
         return parts.LastOrDefault() ?? collectionName;
     }
