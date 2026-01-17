@@ -71,6 +71,11 @@ public class AgentWarmupConfiguration
     /// MongoDB integration configuration
     /// </summary>
     public MongoDbIntegrationConfiguration MongoDbIntegration { get; set; } = new();
+    
+    /// <summary>
+    /// Migration mode configuration for Orleans EventSourcing to Framework conversion
+    /// </summary>
+    public MigrationModeConfiguration MigrationMode { get; set; } = new();
 }
 
 /// <summary>
@@ -195,4 +200,17 @@ public class MongoDbIntegrationConfiguration
     /// Query timeout in milliseconds
     /// </summary>
     public int QueryTimeoutMs { get; set; } = 30000;
+}
+
+/// <summary>
+/// Configuration for migration mode - converts Orleans EventSourcing data to Framework format
+/// When enabled, performs full-scale conversion of ALL historical data with gentle processing parameters
+/// </summary>
+public class MigrationModeConfiguration
+{
+    /// <summary>
+    /// Whether migration mode is enabled - when true, performs full-scale historical data conversion
+    /// Uses gentle processing parameters: small batches, longer delays, lower concurrency
+    /// </summary>
+    public bool Enabled { get; set; } = false;
 } 
