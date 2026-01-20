@@ -46,4 +46,5 @@ public class ExportedStateRecord
     [Id(0)] public string Id { get; set; } = string.Empty;
     [Id(1)] public string ETag { get; set; } = string.Empty;
     [Id(2)] public Dictionary<string, object?> State { get; set; } = new();
+    [Id(3)] public string? DeserializationNote { get; set; }
 }

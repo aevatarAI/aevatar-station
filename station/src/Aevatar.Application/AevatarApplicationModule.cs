@@ -89,7 +89,7 @@ public class AevatarApplicationModule : AbpModule
         var maxMindFilePath = "/app/geoip/GeoLite2-City.mmdb";
         if (System.IO.File.Exists(ipdbFilePath) && System.IO.File.Exists(maxMindFilePath))
         {
-            context.Services.AddSingleton<IIpLocationService, IpLocationService>();
+        context.Services.AddSingleton<IIpLocationService, IpLocationService>();
         }
         else
         {
