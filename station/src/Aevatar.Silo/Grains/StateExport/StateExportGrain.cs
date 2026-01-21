@@ -127,13 +127,12 @@ public class StateExportGrain : Grain, IStateExportGrain
             stateFilter = Builders<BsonDocument>.Filter.Empty;
         }
         
-        var totalCount = await collection.CountDocumentsAsync(stateFilter);
-        
-        // Fetch documents matching filter
+        // Fetch documents matching filter (removed TotalCount calculation for performance)
+        // Fetch limit+1 to determine HasMore efficiently
         var documents = await collection.Find(stateFilter)
             .Project(Builders<BsonDocument>.Projection.Include("_id").Include("_doc").Include("_etag"))
             .Skip(skip)
-            .Limit(limit)
+            .Limit(limit + 1)
             .ToListAsync();
         
         // Find State type once for all documents
@@ -161,10 +160,15 @@ public class StateExportGrain : Grain, IStateExportGrain
         
         _logger.LogInformation("Exported {Success} records from {Collection}", successCount, collectionName);
         
-        // HasMore: if MongoDB returned documents equal to limit, there may be more data to query
-        // This handles the case where many documents are skipped (e.g., old EventLog format)
-        // and ensures the caller continues pagination until MongoDB returns fewer documents than requested
-        var hasMore = documents.Count == limit;
+        // HasMore: if MongoDB returned more documents than limit, there is more data
+        // We fetched limit+1 to check, so if we got limit+1, there's more
+        var hasMore = documents.Count > limit;
+        
+        // If we fetched extra, trim it (keep only limit records)
+        if (hasMore && records.Count > limit)
+        {
+            records = records.Take(limit).ToList();
+        }
         
         return new StateExportResult
         {
@@ -172,7 +176,6 @@ public class StateExportGrain : Grain, IStateExportGrain
             TypeName = typeName,
             Skip = skip,
             Limit = limit,
-            TotalCount = totalCount,
             HasMore = hasMore,
             Records = records
         };
