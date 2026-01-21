@@ -86,10 +86,10 @@ public class StateExportGrain : Grain, IStateExportGrain
         return result.OrderBy(c => c.TypeName).ToList();
     }
 
-    public async Task<StateExportResult> ExportAsync(string collectionName, int skip, int limit)
+    public async Task<StateExportResult> ExportAsync(string collectionName, int skip, int limit, string? cursor = null)
     {
-        _logger.LogInformation("Exporting {Collection} skip={Skip} limit={Limit}", 
-            collectionName, skip, limit);
+        _logger.LogInformation("Exporting {Collection} skip={Skip} limit={Limit} cursor={Cursor}", 
+            collectionName, skip, limit, cursor ?? "none");
         
         var collection = _database.GetCollection<BsonDocument>(collectionName);
         var typeName = ExtractTypeName(collectionName);
@@ -127,13 +127,33 @@ public class StateExportGrain : Grain, IStateExportGrain
             stateFilter = Builders<BsonDocument>.Filter.Empty;
         }
         
+        // Use cursor-based pagination if cursor is provided (much faster for large offsets)
+        // Cursor uses _id index for direct lookup, avoiding skip scan overhead
+        if (!string.IsNullOrEmpty(cursor))
+        {
+            // Cursor-based: _id > cursor (uses _id index efficiently)
+            stateFilter = Builders<BsonDocument>.Filter.And(
+                stateFilter,
+                Builders<BsonDocument>.Filter.Gt("_id", cursor)
+            );
+            skip = 0; // Reset skip when using cursor
+        }
+        
         // Fetch documents matching filter (removed TotalCount calculation for performance)
         // Fetch limit+1 to determine HasMore efficiently
-        var documents = await collection.Find(stateFilter)
+        // Sort by _id ascending for consistent cursor-based pagination
+        var findQuery = collection.Find(stateFilter)
             .Project(Builders<BsonDocument>.Projection.Include("_id").Include("_doc").Include("_etag"))
-            .Skip(skip)
-            .Limit(limit + 1)
-            .ToListAsync();
+            .Sort(Builders<BsonDocument>.Sort.Ascending("_id")) // Ensure consistent ordering for cursor
+            .Limit(limit + 1);
+        
+        // Only use skip if cursor is not provided (for backward compatibility)
+        if (string.IsNullOrEmpty(cursor) && skip > 0)
+        {
+            findQuery = findQuery.Skip(skip);
+        }
+        
+        var documents = await findQuery.ToListAsync();
         
         // Find State type once for all documents
         var stateType = FindStateType(typeName);
@@ -170,6 +190,19 @@ public class StateExportGrain : Grain, IStateExportGrain
             records = records.Take(limit).ToList();
         }
         
+        // Get cursor from last MongoDB document's _id (for cursor-based pagination)
+        // Note: Filtered documents (e.g., EventSourcing format) are intentionally skipped
+        // as they should not be processed. Using MongoDB doc _id is correct and efficient.
+        string? nextCursor = null;
+        if (documents.Count > 0)
+        {
+            // Use the last document's _id as cursor for next page
+            // If we fetched limit+1, use the limit-th document (before trimming records)
+            var lastDocIndex = Math.Min(limit, documents.Count - 1);
+            var lastDoc = documents[lastDocIndex];
+            nextCursor = lastDoc.GetValue("_id", "").AsString;
+        }
+        
         return new StateExportResult
         {
             CollectionName = collectionName,
@@ -177,7 +210,8 @@ public class StateExportGrain : Grain, IStateExportGrain
             Skip = skip,
             Limit = limit,
             HasMore = hasMore,
-            Records = records
+            Records = records,
+            NextCursor = nextCursor
         };
     }
 

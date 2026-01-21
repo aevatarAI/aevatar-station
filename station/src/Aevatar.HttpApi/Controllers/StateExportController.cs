@@ -53,12 +53,14 @@ public class StateExportController : AevatarController
     /// <summary>
     /// Step 2: Export single type with pagination (via Silo Grain - proper deserialization)
     /// GET /api/admin/export/grain?collection=StreamgodgptXxx&skip=0&limit=1000
+    /// GET /api/admin/export/grain?collection=StreamgodgptXxx&cursor=xxx&limit=1000 (cursor-based, recommended for large offsets)
     /// </summary>
     [HttpGet("grain")]
     public async Task<StateExportResult> ExportViaGrain(
         [FromQuery] string collection,
         [FromQuery] int skip = 0,
-        [FromQuery] int limit = 1000)
+        [FromQuery] int limit = 1000,
+        [FromQuery] string? cursor = null)
     {
         if (string.IsNullOrEmpty(collection))
         {
@@ -70,11 +72,11 @@ public class StateExportController : AevatarController
             limit = 5000;
         }
         
-        _logger.LogInformation("Exporting via Grain: {Collection} skip={Skip} limit={Limit}", 
-            collection, skip, limit);
+        _logger.LogInformation("Exporting via Grain: {Collection} skip={Skip} limit={Limit} cursor={Cursor}", 
+            collection, skip, limit, cursor ?? "none");
         
         var grain = _clusterClient.GetGrain<IStateExportGrain>("state-export");
-        return await grain.ExportAsync(collection, skip, limit);
+        return await grain.ExportAsync(collection, skip, limit, cursor);
     }
 
     /// <summary>
