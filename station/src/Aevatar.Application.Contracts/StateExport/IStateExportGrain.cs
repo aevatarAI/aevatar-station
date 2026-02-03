@@ -18,6 +18,11 @@ public interface IStateExportGrain : IGrainWithStringKey
     /// Export State data from a collection with pagination (direct MongoDB read + HybridGrainStateSerializer)
     /// </summary>
     Task<StateExportResult> ExportAsync(string collectionName, int skip, int limit);
+
+    /// <summary>
+    /// Export single State record by ID
+    /// </summary>
+    Task<StateExportResult> ExportByIdAsync(string collectionName, string id);
 }
 
 [GenerateSerializer]

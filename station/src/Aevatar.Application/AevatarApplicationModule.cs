@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Aevatar.Account;
 using Aevatar.ApiRequests;
@@ -84,7 +84,19 @@ public class AevatarApplicationModule : AbpModule
         Configure<ThumbnailOptions>(configuration.GetSection("Thumbnail"));
         Configure<GoogleAnalyticsOptions>(configuration.GetSection("GoogleAnalytics"));
         Configure<FirebaseAnalyticsOptions>(configuration.GetSection("FirebaseAnalytics"));
-        context.Services.AddSingleton<IIpLocationService, IpLocationService>();
+        
+        // IP Location Service - conditionally register only if GeoIP files are available
+        var ipdbFilePath = "/app/geoip/ipipfree.ipdb";
+        var maxMindFilePath = "/app/geoip/GeoLite2-City.mmdb";
+        if (System.IO.File.Exists(ipdbFilePath) && System.IO.File.Exists(maxMindFilePath))
+        {
+            context.Services.AddSingleton<IIpLocationService, IpLocationService>();
+        }
+        else
+        {
+            // Register NullIpLocationService as fallback when GeoIP files are not available
+            context.Services.AddSingleton<IIpLocationService, NullIpLocationService>();
+        }
 
         
         // Daily Push Service
