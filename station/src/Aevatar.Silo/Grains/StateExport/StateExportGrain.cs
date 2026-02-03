@@ -394,6 +394,10 @@ public class StateExportGrain : Grain, IStateExportGrain
         }
         
         // Fallback: return raw BSON structure (for debugging)
+        // Note: If we reach here, it means deserialization failed or stateType was null
+        // Search for "[MIGRATION_ERROR:" to find root causes
+        _logger.LogWarning("[MIGRATION_FALLBACK:RAW_BSON] Returning raw BSON for {AgentType}, id={Id}. " +
+            "Deserialization was not successful.", typeName, id);
         return new ExportedStateRecord
         {
             Id = id,
@@ -408,6 +412,24 @@ public class StateExportGrain : Grain, IStateExportGrain
     private object? TryDeserializeEventSourcingSnapshot(BsonValue innerDoc, Type stateType)
     {
         _logger.LogInformation("🔧 TryDeserializeEventSourcingSnapshot: stateType={StateType}", stateType.FullName);
+        
+        // Early detection: Check if this is an old EventSourcing event log format (not a snapshot)
+        // Event logs have "Log" field instead of "data" field
+        if (innerDoc.IsBsonDocument)
+        {
+            var docContent = innerDoc.AsBsonDocument;
+            var hasLog = docContent.Contains("Log");
+            var hasData = docContent.Contains("data");
+            
+            if (hasLog && !hasData)
+            {
+                // This is an old event log format, not a snapshot - should be skipped
+                _logger.LogInformation("[MIGRATION_SKIP:EVENT_LOG] Skipping old EventSourcing event log for {AgentType}. " +
+                    "Document has 'Log' field (event sequence) instead of 'data' field (snapshot). This is legacy data.", 
+                    stateType.Name);
+                return null;
+            }
+        }
         
         // For EventSourcing (Stream collections), prioritize ViewStateSnapshotWithMetadata format
         // Strategy 1: Try ViewStateSnapshotWithMetadata<T> directly (EventSourcing internal format)
@@ -431,12 +453,15 @@ public class StateExportGrain : Grain, IStateExportGrain
                 var writeVectorProp = metadataType.GetProperty("WriteVector");
                 var writeVector = writeVectorProp?.GetValue(metadataObj);
                 
-                _logger.LogInformation("🔧 ViewStateSnapshotWithMetadata: Snapshot={HasSnapshot}, Version={Version}, WriteVector={WriteVector}", 
-                    snapshot != null, version, writeVector);
+                _logger.LogInformation("🔧 ViewStateSnapshotWithMetadata: Snapshot={HasSnapshot}, SnapshotType={SnapshotType}, Version={Version}, WriteVector={WriteVector}", 
+                    snapshot != null, snapshot?.GetType().Name ?? "null", version, writeVector);
                 
                 if (snapshot != null)
                 {
-                    _logger.LogInformation("✅ ViewStateSnapshotWithMetadata deserialized successfully for {Type}", stateType.Name);
+                    // Log the actual snapshot fields for debugging
+                    var snapshotDict = ObjectToDict(snapshot);
+                    var fieldSample = string.Join(", ", snapshotDict.Take(5).Select(kv => $"{kv.Key}={kv.Value ?? "null"}"));
+                    _logger.LogInformation("✅ ViewStateSnapshotWithMetadata deserialized: {Sample}", fieldSample);
                     return snapshot;
                 }
             }
@@ -519,6 +544,39 @@ public class StateExportGrain : Grain, IStateExportGrain
             _logger.LogWarning("❌ Direct deserialization also failed for {Type}: {Error}", stateType.Name, ex.Message);
         }
         
+        // Check if this is an EventSourcing event log (old data format) vs actual deserialization failure
+        // Event logs contain "LogEvent" in the binary data and should be skipped
+        var isEventLog = false;
+        try
+        {
+            if (innerDoc.IsBsonDocument)
+            {
+                var docContent = innerDoc.AsBsonDocument;
+                if (docContent.Contains("data") && docContent["data"].IsBsonBinaryData)
+                {
+                    var bytes = docContent["data"].AsBsonBinaryData.Bytes;
+                    var text = System.Text.Encoding.UTF8.GetString(bytes);
+                    isEventLog = text.Contains("LogEvent");
+                }
+            }
+        }
+        catch { /* ignore */ }
+        
+        if (isEventLog)
+        {
+            // This is old EventSourcing event log data, not a snapshot - expected to be skipped
+            _logger.LogInformation("[MIGRATION_SKIP:EVENT_LOG] Skipping old EventSourcing event log for {AgentType}. " +
+                "This is legacy data stored as event sequence, not a snapshot.", stateType.Name);
+        }
+        else
+        {
+            // This is a real deserialization failure that needs attention
+            // Search for "[MIGRATION_ERROR:DESERIALIZATION_FAILED]" to find all problematic records
+            _logger.LogError("[MIGRATION_ERROR:DESERIALIZATION_FAILED] Failed to deserialize snapshot for {AgentType}. " +
+                "All strategies failed (ViewStateSnapshotWithMetadata, ViewStateSnapshot, Direct). " +
+                "Check if State type mapping is correct or if binary format is incompatible.", stateType.Name);
+        }
+        
         return null;
     }
 
@@ -540,6 +598,52 @@ public class StateExportGrain : Grain, IStateExportGrain
     {
         if (_stateTypeCache.TryGetValue(typeName, out var cached))
             return cached;
+        
+        // Explicit mappings for special cases where naming convention doesn't match
+        // or where multiple types with similar names exist in different namespaces.
+        // 
+        // Historical context: Some GAgents have both *State and *GAgentState classes:
+        // - ChatManager/UserQuota/UserQuotaState.cs (legacy, in ChatManager namespace)
+        // - UserQuota/UserQuotaGAgentState.cs (current, GAgent actually uses this)
+        // 
+        // The FindStateType logic tries "baseName + State" first, which would incorrectly
+        // match the legacy ChatManager classes. These explicit mappings ensure correct types.
+        var explicitMappings = new Dictionary<string, string>
+        {
+            // UserQuotaGAgent uses UserQuotaGAgentState (NOT UserQuotaState in ChatManager namespace)
+            ["UserQuotaGAgent"] = "Aevatar.Application.Grains.UserQuota.UserQuotaGAgentState",
+            
+            // UserBillingGAgent uses UserBillingGAgentState (NOT UserBillingState in ChatManager namespace)
+            ["UserBillingGAgent"] = "Aevatar.Application.Grains.UserBilling.UserBillingGAgentState",
+            
+            // UserInfoCollectionGAgent uses UserInfoCollectionGAgentState
+            ["UserInfoCollectionGAgent"] = "Aevatar.Application.Grains.UserInfo.UserInfoCollectionGAgentState",
+            
+            // ChatGAgentManager (note: class name differs from type name pattern)
+            ["ChatGAgentManager"] = "Aevatar.Application.Grains.Agents.ChatManager.ChatManagerGAgentState",
+            
+            // Other special cases
+            ["AnonymousUserGAgent"] = "Aevatar.Application.Grains.Agents.Anonymous.AnonymousUserState",
+            ["TwitterIdentityBindingGAgent"] = "Aevatar.Application.Grains.Twitter.TwitterIdentityBindingState",
+        };
+        
+        if (explicitMappings.TryGetValue(typeName, out var explicitTypeName))
+        {
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    var type = assembly.GetType(explicitTypeName);
+                    if (type != null)
+                    {
+                        _stateTypeCache[typeName] = type;
+                        _logger.LogInformation("Found State type via explicit mapping: {Type} for {GrainType}", type.FullName, typeName);
+                        return type;
+                    }
+                }
+                catch { /* ignore */ }
+            }
+        }
         
         // Extract base name (e.g., "UserStatisticsGAgent" -> "UserStatistics")
         var baseName = typeName.Replace("GAgent", "").Replace("Agent", "");
@@ -575,7 +679,11 @@ public class StateExportGrain : Grain, IStateExportGrain
             }
         }
         
-        _logger.LogWarning("State type not found for {Type}, will use raw BSON", typeName);
+        // Use clear error marker for migration troubleshooting
+        // Search for "[MIGRATION_ERROR:STATE_TYPE_NOT_FOUND]" to find all problematic agent types
+        _logger.LogError("[MIGRATION_ERROR:STATE_TYPE_NOT_FOUND] Cannot find State type for agent {AgentType}. " +
+            "Tried patterns: {Patterns}. Add explicit mapping in FindStateType() if needed.",
+            typeName, string.Join(", ", stateNames));
         return null;
     }
 
