@@ -17,11 +17,12 @@ public interface IStateExportGrain : IGrainWithStringKey
     /// <summary>
     /// Export State data from a collection with pagination (direct MongoDB read + HybridGrainStateSerializer)
     /// </summary>
-    /// <param name="collectionName">Collection name</param>
-    /// <param name="skip">Skip count (for offset-based pagination, used when cursor is null)</param>
-    /// <param name="limit">Page size</param>
-    /// <param name="cursor">Optional cursor for cursor-based pagination (use _id from previous response, faster for large offsets)</param>
-    Task<StateExportResult> ExportAsync(string collectionName, int skip, int limit, string? cursor = null);
+    Task<StateExportResult> ExportAsync(string collectionName, int skip, int limit);
+
+    /// <summary>
+    /// Export single State record by ID
+    /// </summary>
+    Task<StateExportResult> ExportByIdAsync(string collectionName, string id);
 }
 
 [GenerateSerializer]
@@ -39,12 +40,9 @@ public class StateExportResult
     [Id(1)] public string TypeName { get; set; } = string.Empty;
     [Id(2)] public int Skip { get; set; }
     [Id(3)] public int Limit { get; set; }
-    [Id(4)] public bool HasMore { get; set; }
-    [Id(5)] public List<ExportedStateRecord> Records { get; set; } = new();
-    /// <summary>
-    /// Cursor for next page (based on last record _id). Use this for cursor-based pagination instead of skip.
-    /// </summary>
-    [Id(6)] public string? NextCursor { get; set; }
+    [Id(4)] public long TotalCount { get; set; }
+    [Id(5)] public bool HasMore { get; set; }
+    [Id(6)] public List<ExportedStateRecord> Records { get; set; } = new();
 }
 
 [GenerateSerializer]
@@ -53,5 +51,4 @@ public class ExportedStateRecord
     [Id(0)] public string Id { get; set; } = string.Empty;
     [Id(1)] public string ETag { get; set; } = string.Empty;
     [Id(2)] public Dictionary<string, object?> State { get; set; } = new();
-    [Id(3)] public string? DeserializationNote { get; set; }
 }
