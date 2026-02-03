@@ -56,7 +56,7 @@ public class NullIpLocationService : IIpLocationService
         });
     }
 
-    public Task<bool> IsInMainlandChinaAsync(string ipAddress, string appTypeString)
+    public Task<bool> IsInMainlandChinaAsync(string ipAddress)
     {
         _logger.LogDebug("NullIpLocationService: IsInMainlandChinaAsync called for {IpAddress}", ipAddress);
         return Task.FromResult(false);
