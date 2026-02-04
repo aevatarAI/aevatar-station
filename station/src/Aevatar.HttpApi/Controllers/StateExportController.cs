@@ -60,7 +60,8 @@ public class StateExportController : AevatarController
         [FromQuery] string collection,
         [FromQuery] int skip = 0,
         [FromQuery] int limit = 1000,
-        [FromQuery] string? cursor = null)
+        [FromQuery] string? cursor = null,
+        [FromQuery] string? id = null)
     {
         if (string.IsNullOrEmpty(collection))
         {
@@ -72,10 +73,18 @@ public class StateExportController : AevatarController
             limit = 5000;
         }
         
+        var grain = _clusterClient.GetGrain<IStateExportGrain>("state-export");
+        
+        // Single record query by id
+        if (!string.IsNullOrEmpty(id))
+        {
+            _logger.LogInformation("Exporting single record via Grain: {Collection} id={Id}", collection, id);
+            return await grain.ExportByIdAsync(collection, id);
+        }
+        
         _logger.LogInformation("Exporting via Grain: {Collection} skip={Skip} limit={Limit} cursor={Cursor}", 
             collection, skip, limit, cursor ?? "none");
         
-        var grain = _clusterClient.GetGrain<IStateExportGrain>("state-export");
         return await grain.ExportAsync(collection, skip, limit, cursor);
     }
 

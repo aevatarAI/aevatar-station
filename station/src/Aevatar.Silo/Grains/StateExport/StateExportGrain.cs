@@ -215,6 +215,52 @@ public class StateExportGrain : Grain, IStateExportGrain
         };
     }
 
+    public async Task<StateExportResult> ExportByIdAsync(string collectionName, string id)
+    {
+        _logger.LogInformation("Exporting single record from \"{Collection}\" id=\"{Id}\"", collectionName, id);
+        
+        var typeName = ExtractTypeName(collectionName);
+        var collection = _database.GetCollection<BsonDocument>(collectionName);
+        
+        // Resolve state type
+        var stateType = FindStateType(typeName);
+        
+        // Find document by _id
+        var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
+        var doc = await collection.Find(filter).FirstOrDefaultAsync();
+        
+        if (doc == null)
+        {
+            _logger.LogWarning("Record not found: {Collection} id={Id}", collectionName, id);
+            return new StateExportResult
+            {
+                CollectionName = collectionName,
+                TypeName = typeName,
+                Skip = 0,
+                Limit = 1,
+                HasMore = false,
+                Records = new List<ExportedStateRecord>()
+            };
+        }
+        
+        var records = new List<ExportedStateRecord>();
+        var record = DeserializeDocument(doc, typeName, stateType);
+        if (record != null)
+        {
+            records.Add(record);
+        }
+        
+        return new StateExportResult
+        {
+            CollectionName = collectionName,
+            TypeName = typeName,
+            Skip = 0,
+            Limit = 1,
+            HasMore = false,
+            Records = records
+        };
+    }
+
     private ExportedStateRecord? DeserializeDocument(BsonDocument doc, string typeName, Type? stateType)
     {
         var id = doc.GetValue("_id", "").AsString;

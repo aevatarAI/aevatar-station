@@ -22,6 +22,13 @@ public interface IStateExportGrain : IGrainWithStringKey
     /// <param name="limit">Page size</param>
     /// <param name="cursor">Optional cursor for cursor-based pagination (use _id from previous response, faster for large offsets)</param>
     Task<StateExportResult> ExportAsync(string collectionName, int skip, int limit, string? cursor = null);
+    
+    /// <summary>
+    /// Export a single record by ID
+    /// </summary>
+    /// <param name="collectionName">Collection name</param>
+    /// <param name="id">Record ID (MongoDB _id field value)</param>
+    Task<StateExportResult> ExportByIdAsync(string collectionName, string id);
 }
 
 [GenerateSerializer]
