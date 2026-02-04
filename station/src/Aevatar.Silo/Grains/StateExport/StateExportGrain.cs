@@ -673,10 +673,10 @@ public class StateExportGrain : Grain, IStateExportGrain
         
         var type = value.GetType();
         
-        // Handle enum types - convert to string representation
+        // Handle enum types - convert to integer value
         if (type.IsEnum)
         {
-            return value.ToString();
+            return Convert.ToInt32(value);
         }
         
         if (type.IsPrimitive || value is string || value is decimal || 
