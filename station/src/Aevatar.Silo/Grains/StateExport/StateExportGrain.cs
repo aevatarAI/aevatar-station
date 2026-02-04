@@ -23,19 +23,16 @@ public class StateExportGrain : Grain, IStateExportGrain
 {
     private readonly ILogger<StateExportGrain> _logger;
     private readonly IGrainStateSerializer _serializer;
-    private readonly Orleans.Serialization.Serializer _orleansSerializer;
     private readonly IMongoDatabase _database;
     private readonly Dictionary<string, Type> _stateTypeCache = new();
 
     public StateExportGrain(
         ILogger<StateExportGrain> logger,
         IGrainStateSerializer serializer,
-        Orleans.Serialization.Serializer orleansSerializer,
         IConfiguration configuration)
     {
         _logger = logger;
         _serializer = serializer;
-        _orleansSerializer = orleansSerializer;
         
         var connectionString = configuration["StateExport:ConnectionString"] 
             ?? configuration["Orleans:MongoDBClient"]
@@ -64,58 +61,6 @@ public class StateExportGrain : Grain, IStateExportGrain
         }
     }
     
-    /// <summary>
-    /// Cleans MongoDB connection string by removing incompatible parameters
-    /// </summary>
-    private static string CleanConnectionString(string connectionString)
-    {
-        if (string.IsNullOrWhiteSpace(connectionString))
-            return connectionString;
-        
-        try
-        {
-            var uri = new Uri(connectionString);
-            var host = uri.Host;
-            
-            // Check if connection string contains multiple hosts (comma-separated)
-            // Extract hosts from the connection string
-            var hostPart = connectionString.Split('@').LastOrDefault()?.Split('/').FirstOrDefault();
-            var hasMultipleHosts = !string.IsNullOrEmpty(hostPart) && hostPart.Contains(',');
-            
-            // If multiple hosts are present and directConnection=true exists, remove it
-            if (hasMultipleHosts && connectionString.Contains("directConnection=true", StringComparison.OrdinalIgnoreCase))
-            {
-                // Remove directConnection=true parameter
-                connectionString = System.Text.RegularExpressions.Regex.Replace(
-                    connectionString,
-                    @"[&?]directConnection=true",
-                    "",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                
-                // Clean up double ampersands or question marks
-                connectionString = System.Text.RegularExpressions.Regex.Replace(connectionString, @"[&]{2,}", "&");
-                connectionString = connectionString.Replace("?&", "?").TrimEnd('&', '?');
-            }
-            
-            return connectionString;
-        }
-        catch
-        {
-            // If parsing fails, try simple string replacement as fallback
-            if (connectionString.Contains(',') && connectionString.Contains("directConnection=true", StringComparison.OrdinalIgnoreCase))
-            {
-                connectionString = System.Text.RegularExpressions.Regex.Replace(
-                    connectionString,
-                    @"[&?]directConnection=true",
-                    "",
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                connectionString = System.Text.RegularExpressions.Regex.Replace(connectionString, @"[&]{2,}", "&");
-                connectionString = connectionString.Replace("?&", "?").TrimEnd('&', '?');
-            }
-            return connectionString;
-        }
-    }
-
     public async Task<List<StateCollectionInfo>> GetCollectionsAsync()
     {
         var result = new List<StateCollectionInfo>();
@@ -123,11 +68,12 @@ public class StateExportGrain : Grain, IStateExportGrain
         var collectionNames = await _database.ListCollectionNamesAsync();
         var names = await collectionNames.ToListAsync();
         
-        // Support "Stream" and "Orleansgodgptprod" prefixed collections
-        foreach (var name in names.Where(n => n.StartsWith("Stream") || n.StartsWith("Orleansgodgptprod")))
+        // Support "Stream" and "Orleans" prefixed collections
+        foreach (var name in names.Where(n => n.StartsWith("Stream") || n.StartsWith("Orleans")))
         {
             var collection = _database.GetCollection<BsonDocument>(name);
-            var count = await collection.CountDocumentsAsync(_ => true);
+            // Use EstimatedDocumentCountAsync for better performance on large collections
+            var count = await collection.EstimatedDocumentCountAsync();
             
             result.Add(new StateCollectionInfo
             {
@@ -140,40 +86,86 @@ public class StateExportGrain : Grain, IStateExportGrain
         return result.OrderBy(c => c.TypeName).ToList();
     }
 
-    public async Task<StateExportResult> ExportAsync(string collectionName, int skip, int limit)
+    public async Task<StateExportResult> ExportAsync(string collectionName, int skip, int limit, string? cursor = null)
     {
-        _logger.LogInformation("Exporting {Collection} skip={Skip} limit={Limit}", 
-            collectionName, skip, limit);
+        _logger.LogInformation("Exporting {Collection} skip={Skip} limit={Limit} cursor={Cursor}", 
+            collectionName, skip, limit, cursor ?? "none");
         
         var collection = _database.GetCollection<BsonDocument>(collectionName);
         var typeName = ExtractTypeName(collectionName);
         
-        // Use estimated count for better performance (doesn't require full scan)
-        var totalCount = await collection.EstimatedDocumentCountAsync();
-        _logger.LogInformation("Collection {Collection} has approximately {Count} documents", collectionName, totalCount);
+        // Determine storage type based on collection prefix
+        var isOrleansGrain = collectionName.StartsWith("Orleans", StringComparison.OrdinalIgnoreCase);
+        var isEventSourcingSnapshot = collectionName.StartsWith("Stream", StringComparison.OrdinalIgnoreCase);
         
-        // Fetch documents with projection to only get _id and _doc fields (more efficient)
-        var documents = await collection.Find(_ => true)
+        
+        FilterDefinition<BsonDocument> stateFilter;
+        if (isOrleansGrain)
+        {
+            // Orleans Grain: accept both direct BSON fields and binary data format
+            // Exclude EventSourcing log format (has Log + GlobalVersion)
+            stateFilter = Builders<BsonDocument>.Filter.Not(
+                Builders<BsonDocument>.Filter.And(
+                    Builders<BsonDocument>.Filter.Exists("_doc.Log", true),
+                    Builders<BsonDocument>.Filter.Exists("_doc.GlobalVersion", true)
+                )
+            );
+        }
+        else if (isEventSourcingSnapshot)
+        {
+            // EventSourcing: filter for State format (has _doc.data), exclude Log format
+            stateFilter = Builders<BsonDocument>.Filter.And(
+                Builders<BsonDocument>.Filter.Exists("_doc.data", true),
+                Builders<BsonDocument>.Filter.Not(
+                    Builders<BsonDocument>.Filter.Exists("_doc.Log", true)
+                )
+            );
+        }
+        else
+        {
+            // Unknown format, try to read all
+            stateFilter = Builders<BsonDocument>.Filter.Empty;
+        }
+        
+        // Use cursor-based pagination if cursor is provided (much faster for large offsets)
+        // Cursor uses _id index for direct lookup, avoiding skip scan overhead
+        if (!string.IsNullOrEmpty(cursor))
+        {
+            // Cursor-based: _id > cursor (uses _id index efficiently)
+            stateFilter = Builders<BsonDocument>.Filter.And(
+                stateFilter,
+                Builders<BsonDocument>.Filter.Gt("_id", cursor)
+            );
+            skip = 0; // Reset skip when using cursor
+        }
+        
+        // Fetch documents matching filter (removed TotalCount calculation for performance)
+        // Fetch limit+1 to determine HasMore efficiently
+        // Sort by _id ascending for consistent cursor-based pagination
+        var findQuery = collection.Find(stateFilter)
             .Project(Builders<BsonDocument>.Projection.Include("_id").Include("_doc").Include("_etag"))
-            .Skip(skip)
-            .Limit(limit)
-            .ToListAsync();
+            .Sort(Builders<BsonDocument>.Sort.Ascending("_id")) // Ensure consistent ordering for cursor
+            .Limit(limit + 1);
         
-        _logger.LogInformation("Fetched {Count} documents from MongoDB", documents.Count);
+        // Only use skip if cursor is not provided (for backward compatibility)
+        if (string.IsNullOrEmpty(cursor) && skip > 0)
+        {
+            findQuery = findQuery.Skip(skip);
+        }
         
-        // Resolve state type and determine storage format
-        var (stateType, isEventSourcingSnapshot) = ResolveStateContext(collectionName, typeName);
+        var documents = await findQuery.ToListAsync();
+        
+        // Find State type once for all documents
+        var stateType = FindStateType(typeName);
         
         var records = new List<ExportedStateRecord>();
         var successCount = 0;
-        var errorCount = 0;
         
-        // Process documents in batches to avoid memory issues
         foreach (var doc in documents)
         {
             try
             {
-                var record = DeserializeDocument(doc, typeName, stateType, isEventSourcingSnapshot);
+                var record = DeserializeDocument(doc, typeName, stateType);
                 if (record != null)
                 {
                     records.Add(record);
@@ -182,26 +174,34 @@ public class StateExportGrain : Grain, IStateExportGrain
             }
             catch (Exception ex)
             {
-                errorCount++;
-                var docId = doc.GetValue("_id", "unknown").ToString();
-                _logger.LogWarning(ex, "Failed to deserialize document {Id} from {Collection}", docId, collectionName);
-                
-                // Add error record for debugging
-                records.Add(new ExportedStateRecord
-                {
-                    Id = docId,
-                    ETag = doc.GetValue("_etag", "").AsString,
-                    State = new Dictionary<string, object?>
-                    {
-                        ["_error"] = ex.Message,
-                        ["_raw"] = "Deserialization failed"
-                    }
-                });
+                _logger.LogDebug(ex, "Failed to deserialize document from {Collection}", collectionName);
             }
         }
         
-        _logger.LogInformation("Exported {Success}/{Total} records from {Collection} (errors: {Errors})", 
-            successCount, records.Count, collectionName, errorCount);
+        _logger.LogInformation("Exported {Success} records from {Collection}", successCount, collectionName);
+        
+        // HasMore: if MongoDB returned more documents than limit, there is more data
+        // We fetched limit+1 to check, so if we got limit+1, there's more
+        var hasMore = documents.Count > limit;
+        
+        // If we fetched extra, trim it (keep only limit records)
+        if (hasMore && records.Count > limit)
+        {
+            records = records.Take(limit).ToList();
+        }
+        
+        // Get cursor from last MongoDB document's _id (for cursor-based pagination)
+        // Note: Filtered documents (e.g., EventSourcing format) are intentionally skipped
+        // as they should not be processed. Using MongoDB doc _id is correct and efficient.
+        string? nextCursor = null;
+        if (documents.Count > 0)
+        {
+            // Use the last document's _id as cursor for next page
+            // If we fetched limit+1, use the limit-th document (before trimming records)
+            var lastDocIndex = Math.Min(limit, documents.Count - 1);
+            var lastDoc = documents[lastDocIndex];
+            nextCursor = lastDoc.GetValue("_id", "").AsString;
+        }
         
         return new StateExportResult
         {
@@ -209,96 +209,13 @@ public class StateExportGrain : Grain, IStateExportGrain
             TypeName = typeName,
             Skip = skip,
             Limit = limit,
-            TotalCount = totalCount,
-            HasMore = skip + records.Count < totalCount,
-            Records = records
+            HasMore = hasMore,
+            Records = records,
+            NextCursor = nextCursor
         };
     }
 
-    public async Task<StateExportResult> ExportByIdAsync(string collectionName, string id)
-    {
-        _logger.LogInformation("Exporting single record: {Collection} id={Id}", collectionName, id);
-        
-        var collection = _database.GetCollection<BsonDocument>(collectionName);
-        var typeName = ExtractTypeName(collectionName);
-        
-        // Build filter for ID - try multiple formats
-        var filters = new List<FilterDefinition<BsonDocument>>
-        {
-            Builders<BsonDocument>.Filter.Eq("_id", id)
-        };
-        
-        // Try GUID format variations
-        if (Guid.TryParse(id, out var guid))
-        {
-            filters.Add(Builders<BsonDocument>.Filter.Eq("_id", guid.ToString("D")));  // With dashes
-            filters.Add(Builders<BsonDocument>.Filter.Eq("_id", guid.ToString("N")));  // Without dashes
-            
-            // Also try full GrainId format: "TypeName/Guid"
-            filters.Add(Builders<BsonDocument>.Filter.Regex("_id", $".*/{guid:D}$"));
-            filters.Add(Builders<BsonDocument>.Filter.Regex("_id", $".*/{guid:N}$"));
-        }
-        
-        var filter = Builders<BsonDocument>.Filter.Or(filters);
-        
-        var document = await collection.Find(filter)
-            .Project(Builders<BsonDocument>.Projection.Include("_id").Include("_doc").Include("_etag"))
-            .FirstOrDefaultAsync();
-        
-        if (document == null)
-        {
-            _logger.LogWarning("Record not found: {Collection} id={Id}", collectionName, id);
-            return new StateExportResult
-            {
-                CollectionName = collectionName,
-                TypeName = typeName,
-                Skip = 0,
-                Limit = 1,
-                TotalCount = 0,
-                HasMore = false,
-                Records = new List<ExportedStateRecord>()
-            };
-        }
-        
-        // Resolve state type and determine storage format
-        var (stateType, isEventSourcingSnapshot) = ResolveStateContext(collectionName, typeName);
-        
-        var records = new List<ExportedStateRecord>();
-        try
-        {
-            var record = DeserializeDocument(document, typeName, stateType, isEventSourcingSnapshot);
-            if (record != null)
-                records.Add(record);
-        }
-        catch (Exception ex)
-        {
-            var docId = document.GetValue("_id", "unknown").ToString();
-            _logger.LogWarning(ex, "Failed to deserialize document {Id} from {Collection}", docId, collectionName);
-            records.Add(new ExportedStateRecord
-            {
-                Id = docId,
-                ETag = document.GetValue("_etag", "").AsString,
-                State = new Dictionary<string, object?>
-                {
-                    ["_error"] = ex.Message,
-                    ["_raw"] = "Deserialization failed"
-                }
-            });
-        }
-        
-        return new StateExportResult
-        {
-            CollectionName = collectionName,
-            TypeName = typeName,
-            Skip = 0,
-            Limit = 1,
-            TotalCount = records.Count,
-            HasMore = false,
-            Records = records
-        };
-    }
-
-    private ExportedStateRecord? DeserializeDocument(BsonDocument doc, string typeName, Type? stateType, bool isEventSourcingSnapshot = false)
+    private ExportedStateRecord? DeserializeDocument(BsonDocument doc, string typeName, Type? stateType)
     {
         var id = doc.GetValue("_id", "").AsString;
         var etag = doc.GetValue("_etag", "").AsString;
@@ -318,66 +235,93 @@ public class StateExportGrain : Grain, IStateExportGrain
         
         var docContent = innerDoc.AsBsonDocument;
         
-        // Use IGrainStateSerializer to deserialize if we have the State type
-        if (stateType != null)
+        // Skip EventSourcing format (historical data - event logs, not snapshots)
+        if (IsEventSourcingFormat(docContent))
+        {
+            // Use clear marker for migration troubleshooting
+            // Search for "[MIGRATION_SKIP:EVENT_LOG]" to find all skipped records
+            _logger.LogInformation("[MIGRATION_SKIP:EVENT_LOG] Skipping old EventSourcing event log for {AgentType}, id={Id}. " +
+                "This is legacy data stored as event sequence, not a snapshot.", typeName, id);
+            return null;
+        }
+        
+        // Check document format
+        var hasData = docContent.Contains("data");
+        var dataSize = 0;
+        if (hasData && docContent["data"].IsBsonBinaryData)
+        {
+            dataSize = docContent["data"].AsBsonBinaryData.Bytes.Length;
+        }
+        
+        // Case 1: Direct BSON fields format (no 'data' field) - Orleans JSON storage
+        if (!hasData && docContent.ElementCount > 0 && !docContent.Contains("__id"))
+        {
+            return new ExportedStateRecord
+            {
+                Id = id,
+                ETag = etag,
+                State = BsonDocumentToDict(docContent)
+            };
+        }
+        
+        // Case 2: Direct BSON fields with __id (Orleans JSON storage variant)
+        if (!hasData && docContent.Contains("__id"))
+        {
+            var stateDict = BsonDocumentToDict(docContent);
+            stateDict.Remove("__id");
+            return new ExportedStateRecord
+            {
+                Id = id,
+                ETag = etag,
+                State = stateDict
+            };
+        }
+        
+        // Case 3: Binary data format - need deserialization
+        if (stateType != null && hasData)
         {
             try
             {
-                // Log raw BSON structure for debugging
-                var hasData = docContent.Contains("data");
-                var bsonKeys = string.Join(", ", docContent.Elements.Select(e => e.Name));
-                var dataSize = 0;
-                if (hasData && docContent["data"].IsBsonBinaryData)
-                {
-                    dataSize = docContent["data"].AsBsonBinaryData.Bytes.Length;
-                }
+                var deserializeMethod = _serializer.GetType()
+                    .GetMethod("Deserialize", new[] { typeof(BsonValue) })!
+                    .MakeGenericMethod(stateType);
                 
-                _logger.LogInformation("🔍 Deserializing {Type}: HasData={HasData}, DataSize={DataSize} bytes, BSON keys: {Keys}, IsEventSourcing={IsES}", 
-                    stateType.Name, hasData, dataSize, bsonKeys, isEventSourcingSnapshot);
-                
-                object? state = null;
-                
-                if (isEventSourcingSnapshot)
-                {
-                    // For EventSourcing snapshots, deserialize as ViewStateSnapshot<T>
-                    state = TryDeserializeEventSourcingSnapshot(innerDoc, stateType);
-                }
-                else
-                {
-                    // For Orleans grain state, deserialize directly as State type
-                    var deserializeMethod = _serializer.GetType()
-                        .GetMethod("Deserialize", new[] { typeof(BsonValue) })!
-                        .MakeGenericMethod(stateType);
-                    
-                    state = deserializeMethod.Invoke(_serializer, new object[] { innerDoc });
-                }
+                var state = deserializeMethod.Invoke(_serializer, new object[] { innerDoc });
                 
                 if (state != null)
                 {
                     var stateDict = ObjectToDict(state);
                     
-                    // Find fields with actual values (not default/null)
-                    var nonDefaultFields = stateDict
-                        .Where(kvp => {
-                            var v = kvp.Value;
-                            if (v == null) return false;
-                            if (v is string s && string.IsNullOrEmpty(s)) return false;
-                            if (v is bool b && !b) return false;
-                            if (v is int i && i == 0) return false;
-                            if (v is Guid g && g == Guid.Empty) return false;
-                            if (v is DateTime dt && dt == default(DateTime)) return false;
-                            if (v is Dictionary<string, object?> dict && dict.Count == 0) return false;
-                            return true;
-                        })
-                        .Select(kvp => $"{kvp.Key}={kvp.Value}")
-                        .Take(10)
-                        .ToList();
+                    // Count non-default fields to detect failed deserialization
+                    var nonNullFields = stateDict.Count(kvp => {
+                        var v = kvp.Value;
+                        if (v == null) return false;
+                        if (v is string s && string.IsNullOrEmpty(s)) return false;
+                        if (v is bool b && !b) return false;
+                        if (v is int i && i == 0) return false;
+                        if (v is Guid g && g == Guid.Empty) return false;
+                        if (v is DateTime dt && dt == default(DateTime)) return false;
+                        if (v is Dictionary<string, object?> dict && dict.Count == 0) return false;
+                        return true;
+                    });
                     
-                    var nonNullFields = nonDefaultFields.Count;
-                    
-                    _logger.LogInformation("✅ Deserialized {Type}: {NonNullFields}/{TotalFields} non-default fields. Sample: {Sample}", 
-                        stateType.Name, nonNullFields, stateDict.Count, 
-                        string.Join(", ", nonDefaultFields));
+                    // If all defaults, try EventSourcing snapshot wrapper
+                    if (nonNullFields == 0 && dataSize > 100)
+                    {
+                        var snapshotRecord = TryDeserializeEventSourcingSnapshot(innerDoc, stateType, id, etag, dataSize);
+                        if (snapshotRecord != null)
+                        {
+                            return snapshotRecord;
+                        }
+
+                        _logger.LogDebug("Deserialization returned all defaults for {Type}, returning raw base64", stateType.Name);
+                        return new ExportedStateRecord
+                        {
+                            Id = id,
+                            ETag = etag,
+                            State = BsonDocumentToDict(innerDoc.AsBsonDocument)
+                        };
+                    }
                     
                     return new ExportedStateRecord
                     {
@@ -389,15 +333,11 @@ public class StateExportGrain : Grain, IStateExportGrain
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "IGrainStateSerializer deserialization failed for {Type}, falling back to raw BSON", typeName);
+                _logger.LogDebug(ex, "Deserialization failed for {Type}, falling back to raw BSON", typeName);
             }
         }
         
         // Fallback: return raw BSON structure (for debugging)
-        // Note: If we reach here, it means deserialization failed or stateType was null
-        // Search for "[MIGRATION_ERROR:" to find root causes
-        _logger.LogWarning("[MIGRATION_FALLBACK:RAW_BSON] Returning raw BSON for {AgentType}, id={Id}. " +
-            "Deserialization was not successful.", typeName, id);
         return new ExportedStateRecord
         {
             Id = id,
@@ -407,191 +347,50 @@ public class StateExportGrain : Grain, IStateExportGrain
     }
     
     /// <summary>
-    /// Deserialize EventSourcing snapshot format: ViewStateSnapshot&lt;T&gt; → extract Snapshot
+    /// Detects EventSourcing format data which contains Log history, not current state
     /// </summary>
-    private object? TryDeserializeEventSourcingSnapshot(BsonValue innerDoc, Type stateType)
+    private static bool IsEventSourcingFormat(BsonDocument doc)
     {
-        _logger.LogInformation("🔧 TryDeserializeEventSourcingSnapshot: stateType={StateType}", stateType.FullName);
-        
-        // Early detection: Check if this is an old EventSourcing event log format (not a snapshot)
-        // Event logs have "Log" field instead of "data" field
-        if (innerDoc.IsBsonDocument)
+        // Check for __type containing EventSourcing markers
+        if (doc.Contains("__type"))
         {
-            var docContent = innerDoc.AsBsonDocument;
-            var hasLog = docContent.Contains("Log");
-            var hasData = docContent.Contains("data");
-            
-            if (hasLog && !hasData)
+            var typeValue = doc["__type"].AsString;
+            if (typeValue.Contains("Orleans.EventSourcing") || 
+                typeValue.Contains("LogStateWithMetaData") ||
+                typeValue.Contains("LogStorage"))
             {
-                // This is an old event log format, not a snapshot - should be skipped
-                _logger.LogInformation("[MIGRATION_SKIP:EVENT_LOG] Skipping old EventSourcing event log for {AgentType}. " +
-                    "Document has 'Log' field (event sequence) instead of 'data' field (snapshot). This is legacy data.", 
-                    stateType.Name);
-                return null;
+                return true;
             }
         }
         
-        // For EventSourcing (Stream collections), prioritize ViewStateSnapshotWithMetadata format
-        // Strategy 1: Try ViewStateSnapshotWithMetadata<T> directly (EventSourcing internal format)
-        try
+        // Check for Log field (EventSourcing log structure)
+        if (doc.Contains("Log"))
         {
-            var metadataType = typeof(ViewStateSnapshotWithMetadata<>).MakeGenericType(stateType);
-            _logger.LogInformation("🔧 Trying ViewStateSnapshotWithMetadata<{Type}>", stateType.Name);
-            
-            var deserializeMethod = _serializer.GetType()
-                .GetMethod("Deserialize", new[] { typeof(BsonValue) })!
-                .MakeGenericMethod(metadataType);
-            
-            var metadataObj = deserializeMethod.Invoke(_serializer, new object[] { innerDoc });
-            
-            if (metadataObj != null)
+            return true;
+        }
+        
+        // Check for GlobalVersion + WriteVector (EventSourcing metadata)
+        if (doc.Contains("GlobalVersion") && doc.Contains("WriteVector"))
+        {
+            return true;
+        }
+        
+        // Check if binary data contains EventLog/LogEvent markers (old event log format)
+        if (doc.Contains("data") && doc["data"].IsBsonBinaryData)
+        {
+            var bytes = doc["data"].AsBsonBinaryData.Bytes;
+            if (bytes.Length > 20 && bytes.Length < 2000) // Event logs are typically small
             {
-                var snapshotProp = metadataType.GetProperty("Snapshot");
-                var snapshot = snapshotProp?.GetValue(metadataObj);
-                var versionProp = metadataType.GetProperty("SnapshotVersion");
-                var version = versionProp?.GetValue(metadataObj);
-                var writeVectorProp = metadataType.GetProperty("WriteVector");
-                var writeVector = writeVectorProp?.GetValue(metadataObj);
-                
-                _logger.LogInformation("🔧 ViewStateSnapshotWithMetadata: Snapshot={HasSnapshot}, SnapshotType={SnapshotType}, Version={Version}, WriteVector={WriteVector}", 
-                    snapshot != null, snapshot?.GetType().Name ?? "null", version, writeVector);
-                
-                if (snapshot != null)
+                // Convert first part of binary to string to check for EventLog markers
+                var sampleText = System.Text.Encoding.UTF8.GetString(bytes, 0, Math.Min(bytes.Length, 200));
+                if (sampleText.Contains("EventLog") || sampleText.Contains("LogEvent"))
                 {
-                    // Log the actual snapshot fields for debugging
-                    var snapshotDict = ObjectToDict(snapshot);
-                    var fieldSample = string.Join(", ", snapshotDict.Take(5).Select(kv => $"{kv.Key}={kv.Value ?? "null"}"));
-                    _logger.LogInformation("✅ ViewStateSnapshotWithMetadata deserialized: {Sample}", fieldSample);
-                    return snapshot;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogInformation("🔧 ViewStateSnapshotWithMetadata failed for {Type}: {Error}", stateType.Name, ex.Message);
-        }
-        
-        // Strategy 3: Try ViewStateSnapshot<T> wrapper (full EventSourcing format)
-        try
-        {
-            var viewStateSnapshotType = typeof(ViewStateSnapshot<>).MakeGenericType(stateType);
-            _logger.LogInformation("🔧 Trying ViewStateSnapshot<{Type}>", stateType.Name);
-            
-            var deserializeMethod = _serializer.GetType()
-                .GetMethod("Deserialize", new[] { typeof(BsonValue) })!
-                .MakeGenericMethod(viewStateSnapshotType);
-            
-            var viewStateSnapshot = deserializeMethod.Invoke(_serializer, new object[] { innerDoc });
-            
-            if (viewStateSnapshot != null)
-            {
-                var stateProp = viewStateSnapshotType.GetProperty("State");
-                var metadataObj = stateProp?.GetValue(viewStateSnapshot);
-                
-                _logger.LogInformation("🔧 ViewStateSnapshot.State: {HasState}", metadataObj != null);
-                
-                if (metadataObj != null)
-                {
-                    var snapshotProp = metadataObj.GetType().GetProperty("Snapshot");
-                    var snapshot = snapshotProp?.GetValue(metadataObj);
-                    
-                    if (snapshot != null)
-                    {
-                        _logger.LogInformation("✅ ViewStateSnapshot deserialized successfully for {Type}", stateType.Name);
-                        return snapshot;
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("❌ ViewStateSnapshot deserialization also failed for {Type}: {Error}", stateType.Name, ex.Message);
-        }
-        
-        // Strategy 4: Last resort - try direct deserialization as State type
-        try
-        {
-            _logger.LogInformation("🔧 Trying direct deserialization for {Type}", stateType.Name);
-            var deserializeMethod = _serializer.GetType()
-                .GetMethod("Deserialize", new[] { typeof(BsonValue) })!
-                .MakeGenericMethod(stateType);
-            
-            var directResult = deserializeMethod.Invoke(_serializer, new object[] { innerDoc });
-            
-            if (directResult != null)
-            {
-                var stateDict = ObjectToDict(directResult);
-                var nonDefaultCount = stateDict.Count(kvp => {
-                    var v = kvp.Value;
-                    if (v == null) return false;
-                    if (v is string s && string.IsNullOrEmpty(s)) return false;
-                    if (v is int i && i == 0) return false;
-                    if (v is Dictionary<string, object?> dict && dict.Count == 0) return false;
-                    if (v is List<object?> list && list.Count == 0) return false;
                     return true;
-                });
-                
-                if (nonDefaultCount > 0)
-                {
-                    _logger.LogInformation("✅ Direct deserialization succeeded for {Type}: {NonDefault} non-default fields", 
-                        stateType.Name, nonDefaultCount);
-                    return directResult;
                 }
             }
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning("❌ Direct deserialization also failed for {Type}: {Error}", stateType.Name, ex.Message);
-        }
         
-        // Check if this is an EventSourcing event log (old data format) vs actual deserialization failure
-        // Event logs contain "LogEvent" in the binary data and should be skipped
-        var isEventLog = false;
-        try
-        {
-            if (innerDoc.IsBsonDocument)
-            {
-                var docContent = innerDoc.AsBsonDocument;
-                if (docContent.Contains("data") && docContent["data"].IsBsonBinaryData)
-                {
-                    var bytes = docContent["data"].AsBsonBinaryData.Bytes;
-                    var text = System.Text.Encoding.UTF8.GetString(bytes);
-                    isEventLog = text.Contains("LogEvent");
-                }
-            }
-        }
-        catch { /* ignore */ }
-        
-        if (isEventLog)
-        {
-            // This is old EventSourcing event log data, not a snapshot - expected to be skipped
-            _logger.LogInformation("[MIGRATION_SKIP:EVENT_LOG] Skipping old EventSourcing event log for {AgentType}. " +
-                "This is legacy data stored as event sequence, not a snapshot.", stateType.Name);
-        }
-        else
-        {
-            // This is a real deserialization failure that needs attention
-            // Search for "[MIGRATION_ERROR:DESERIALIZATION_FAILED]" to find all problematic records
-            _logger.LogError("[MIGRATION_ERROR:DESERIALIZATION_FAILED] Failed to deserialize snapshot for {AgentType}. " +
-                "All strategies failed (ViewStateSnapshotWithMetadata, ViewStateSnapshot, Direct). " +
-                "Check if State type mapping is correct or if binary format is incompatible.", stateType.Name);
-        }
-        
-        return null;
-    }
-
-    /// <summary>
-    /// Resolves the state type and determines storage format for a collection.
-    /// </summary>
-    private (Type? stateType, bool isEventSourcingSnapshot) ResolveStateContext(string collectionName, string typeName)
-    {
-        var stateType = FindStateType(typeName);
-        var isEventSourcingSnapshot = collectionName.StartsWith("Stream", StringComparison.Ordinal);
-        
-        _logger.LogInformation("ResolveStateContext: collection={Collection}, typeName={TypeName}, stateType={StateType}, isEventSourcing={IsES}",
-            collectionName, typeName, stateType?.FullName ?? "NULL", isEventSourcingSnapshot);
-        
-        return (stateType, isEventSourcingSnapshot);
+        return false;
     }
 
     private Type? FindStateType(string typeName)
@@ -608,7 +407,7 @@ public class StateExportGrain : Grain, IStateExportGrain
         // 
         // The FindStateType logic tries "baseName + State" first, which would incorrectly
         // match the legacy ChatManager classes. These explicit mappings ensure correct types.
-        var explicitMappings = new Dictionary<string, string>
+        var explicitFullNameMappings = new Dictionary<string, string>
         {
             // UserQuotaGAgent uses UserQuotaGAgentState (NOT UserQuotaState in ChatManager namespace)
             ["UserQuotaGAgent"] = "Aevatar.Application.Grains.UserQuota.UserQuotaGAgentState",
@@ -621,19 +420,16 @@ public class StateExportGrain : Grain, IStateExportGrain
             
             // ChatGAgentManager (note: class name differs from type name pattern)
             ["ChatGAgentManager"] = "Aevatar.Application.Grains.Agents.ChatManager.ChatManagerGAgentState",
-            
-            // Other special cases
-            ["AnonymousUserGAgent"] = "Aevatar.Application.Grains.Agents.Anonymous.AnonymousUserState",
-            ["TwitterIdentityBindingGAgent"] = "Aevatar.Application.Grains.Twitter.TwitterIdentityBindingState",
         };
         
-        if (explicitMappings.TryGetValue(typeName, out var explicitTypeName))
+        // Check explicit full name mappings first
+        if (explicitFullNameMappings.TryGetValue(typeName, out var explicitFullTypeName))
         {
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 try
                 {
-                    var type = assembly.GetType(explicitTypeName);
+                    var type = assembly.GetType(explicitFullTypeName);
                     if (type != null)
                     {
                         _stateTypeCache[typeName] = type;
@@ -645,22 +441,52 @@ public class StateExportGrain : Grain, IStateExportGrain
             }
         }
         
+        // Legacy explicit mappings (simple name matching)
+        var explicitMappings = new Dictionary<string, string[]>
+        {
+            // AnonymousUserGAgent -> AnonymousUserState (in Aevatar.Application.Grains.Agents.Anonymous)
+            ["AnonymousUserGAgent"] = new[] { "AnonymousUserState" },
+            // TwitterIdentityBindingGAgent -> TwitterIdentityBindingState (in Aevatar.Application.Grains.Twitter)
+            ["TwitterIdentityBindingGAgent"] = new[] { "TwitterIdentityBindingState" },
+        };
+        
         // Extract base name (e.g., "UserStatisticsGAgent" -> "UserStatistics")
         var baseName = typeName.Replace("GAgent", "").Replace("Agent", "");
         
-        // Try common naming patterns for State types
-        var stateNames = new[]
+        // Build state name candidates
+        var stateNamesList = new List<string>();
+        
+        // Add explicit mappings first if available
+        if (explicitMappings.TryGetValue(typeName, out var explicitNames))
         {
-            baseName + "State",           // UserStatisticsState
-            baseName + "GAgentState",      // UserStatisticsGAgentState
+            stateNamesList.AddRange(explicitNames);
+        }
+        
+        // Add common naming patterns
+        stateNamesList.AddRange(new[]
+        {
+            baseName + "GAgentState",      // UserStatisticsGAgentState (prefer GAgent state)
+            baseName + "State",            // UserStatisticsState
             typeName + "State",            // UserStatisticsGAgentState
             baseName,                      // UserStatistics (if State is the class name)
             typeName                       // UserStatisticsGAgent (fallback)
-        };
+        });
+        
+        var stateNames = stateNamesList.Distinct().ToArray();
+        
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+            .OrderBy(a =>
+            {
+                var name = a.GetName().Name ?? string.Empty;
+                if (name.Contains("GodGPT.GAgents", StringComparison.OrdinalIgnoreCase)) return 0;
+                if (name.Contains("Aevatar.Application.Grains", StringComparison.OrdinalIgnoreCase)) return 1;
+                return 2;
+            })
+            .ToList();
         
         foreach (var stateName in stateNames)
         {
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var assembly in assemblies)
             {
                 try
                 {
@@ -671,7 +497,8 @@ public class StateExportGrain : Grain, IStateExportGrain
                     if (type != null && !type.IsInterface && !type.IsAbstract)
                     {
                         _stateTypeCache[typeName] = type;
-                        _logger.LogInformation("Found State type: {Type} for {GrainType}", type.FullName, typeName);
+                        _logger.LogInformation("Found State type: {Type} for {GrainType} (Assembly={Assembly})", 
+                            type.FullName, typeName, assembly.GetName().Name);
                         return type;
                     }
                 }
@@ -703,6 +530,95 @@ public class StateExportGrain : Grain, IStateExportGrain
         }
         
         return result;
+    }
+
+    private ExportedStateRecord? TryDeserializeEventSourcingSnapshot(BsonValue innerDoc, Type stateType, string id, string etag, int dataSize)
+    {
+        try
+        {
+            var serializerType = _serializer.GetType();
+            var deserializeMethodBase = serializerType.GetMethod("Deserialize", new[] { typeof(BsonValue) });
+            if (deserializeMethodBase == null)
+            {
+                return null;
+            }
+
+            // Attempt 1: ViewStateSnapshot<TLogView>
+            var snapshotType = typeof(ViewStateSnapshot<>).MakeGenericType(stateType);
+            var snapshotObj = deserializeMethodBase.MakeGenericMethod(snapshotType)
+                .Invoke(_serializer, new object[] { innerDoc });
+            var record = TryBuildSnapshotRecord(snapshotType, snapshotObj, id, etag, dataSize, "ViewStateSnapshot");
+            if (record != null)
+            {
+                return record;
+            }
+
+            // Attempt 2: ViewStateSnapshotWithMetadata<TLogView>
+            var metadataSnapshotType = typeof(ViewStateSnapshotWithMetadata<>).MakeGenericType(stateType);
+            var metadataObj = deserializeMethodBase.MakeGenericMethod(metadataSnapshotType)
+                .Invoke(_serializer, new object[] { innerDoc });
+            return TryBuildSnapshotRecord(metadataSnapshotType, metadataObj, id, etag, dataSize, "ViewStateSnapshotWithMetadata");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "EventSourcing snapshot deserialization failed for {Type}", stateType.Name);
+            return null;
+        }
+    }
+
+    private ExportedStateRecord? TryBuildSnapshotRecord(Type snapshotType, object? snapshotObj, string id, string etag, int dataSize, string wrapperName)
+    {
+        if (snapshotObj == null)
+        {
+            return null;
+        }
+
+        // ViewStateSnapshot<T> has State.Snapshot; ViewStateSnapshotWithMetadata<T> has Snapshot directly
+        object? snapshotValue = null;
+        object? snapshotVersion = null;
+        object? writeVector = null;
+
+        var stateProp = snapshotType.GetProperty("State");
+        if (stateProp != null)
+        {
+            var stateValue = stateProp.GetValue(snapshotObj);
+            if (stateValue == null)
+            {
+                return null;
+            }
+            var metadataType = stateValue.GetType();
+            snapshotValue = metadataType.GetProperty("Snapshot")?.GetValue(stateValue);
+            snapshotVersion = metadataType.GetProperty("SnapshotVersion")?.GetValue(stateValue);
+            writeVector = metadataType.GetProperty("WriteVector")?.GetValue(stateValue);
+        }
+        else
+        {
+            snapshotValue = snapshotType.GetProperty("Snapshot")?.GetValue(snapshotObj);
+            snapshotVersion = snapshotType.GetProperty("SnapshotVersion")?.GetValue(snapshotObj);
+            writeVector = snapshotType.GetProperty("WriteVector")?.GetValue(snapshotObj);
+        }
+
+        if (snapshotValue == null)
+        {
+            return null;
+        }
+
+        var stateDict = ObjectToDict(snapshotValue);
+        if (snapshotVersion != null)
+        {
+            stateDict["_snapshotVersion"] = snapshotVersion;
+        }
+        if (writeVector != null)
+        {
+            stateDict["_writeVector"] = writeVector;
+        }
+
+        return new ExportedStateRecord
+        {
+            Id = id,
+            ETag = etag,
+            State = stateDict
+        };
     }
 
     private object? ConvertValue(object? value)
@@ -755,7 +671,7 @@ public class StateExportGrain : Grain, IStateExportGrain
         BsonType.DateTime => value.ToUniversalTime(),
         BsonType.Null => null,
         BsonType.ObjectId => value.AsObjectId.ToString(),
-        BsonType.Binary => new Dictionary<string, string> { ["_base64"] = Convert.ToBase64String(value.AsBsonBinaryData.Bytes) },
+        BsonType.Binary => new Dictionary<string, object?> { ["_base64"] = Convert.ToBase64String(value.AsBsonBinaryData.Bytes), ["_size"] = value.AsBsonBinaryData.Bytes.Length },
         _ => value.ToString()
     };
 
