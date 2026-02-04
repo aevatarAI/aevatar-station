@@ -673,6 +673,12 @@ public class StateExportGrain : Grain, IStateExportGrain
         
         var type = value.GetType();
         
+        // Handle enum types - convert to string representation
+        if (type.IsEnum)
+        {
+            return value.ToString();
+        }
+        
         if (type.IsPrimitive || value is string || value is decimal || 
             value is DateTime || value is Guid || value is DateTimeOffset)
             return value;
